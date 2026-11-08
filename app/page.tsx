@@ -149,38 +149,48 @@ export default function Home() {
     setCheckoutMessage("");
 
     try {
-      const { data, error } = await supabase.rpc("create_store_order", {
-        p_customer_name: customerName.trim(),
-        p_customer_email: customerEmail.trim(),
-        p_customer_phone: customerPhone.trim(),
-        p_delivery_address: deliveryAddress.trim(),
-        p_items: cart.map((item) => ({
-          id: item.id,
-          qty: item.qty,
-        })),
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerName,
+          customerEmail,
+          customerPhone,
+          deliveryAddress,
+          items: cart.map((item) => ({
+            id: item.id,
+            qty: item.qty,
+          })),
+        }),
       });
 
-      if (error) {
+      const result = await response.json();
+
+      if (!response.ok) {
         setCheckoutMessage(
-          "Não foi possível registrar o pedido: " + error.message
+          result.error || "Não foi possível iniciar o pagamento."
         );
         return;
       }
 
-      setCart([]);
-      setCheckoutOpen(false);
-      setCartOpen(false);
-      setCustomerName("");
-      setCustomerEmail("");
-      setCustomerPhone("");
-      setDeliveryAddress("");
+      if (
+        !result.checkoutUrl ||
+        typeof result.checkoutUrl !== "string"
+      ) {
+        setCheckoutMessage(
+          "O pagamento foi solicitado, mas o endereço de pagamento não foi recebido."
+        );
+        return;
+      }
 
-      await loadProducts();
+      window.location.href = result.checkoutUrl;
+    } catch (error) {
+      console.error("Erro ao iniciar checkout:", error);
 
-      alert("Pedido registrado com sucesso! Número: " + data);
-    } catch {
       setCheckoutMessage(
-        "Ocorreu um erro inesperado. Verifique sua conexão e tente novamente."
+        "Não foi possível conectar ao pagamento. Verifique sua conexão e tente novamente."
       );
     } finally {
       setSubmitting(false);
@@ -604,8 +614,7 @@ export default function Home() {
                     </button>
 
                     <p className="cart-note">
-                      O pedido será registrado para confirmação.
-                      O pagamento será configurado posteriormente.
+                      Você será encaminhado ao ambiente seguro de pagamento.
                     </p>
                   </>
                 ) : (
@@ -622,7 +631,7 @@ export default function Home() {
                     }}
                   >
                     <p style={{ fontSize: 14, color: "#666" }}>
-                      Informe seus dados para registrar seu pedido.
+                      Informe seus dados para continuar com o pagamento.
                     </p>
 
                     <label style={{ fontSize: 14, fontWeight: 600 }}>
@@ -728,8 +737,8 @@ export default function Home() {
                       disabled={submitting}
                     >
                       {submitting
-                        ? "Registrando pedido..."
-                        : "Confirmar pedido"}
+                        ? "Conectando ao pagamento..."
+                        : "Ir para pagamento"}
                     </button>
 
                     <button
@@ -751,8 +760,7 @@ export default function Home() {
                     </button>
 
                     <p className="cart-note">
-                      O pedido será registrado. Esta etapa ainda não
-                      processa pagamentos.
+                      O pagamento será realizado no ambiente do Mercado Pago.
                     </p>
                   </form>
                 )}
