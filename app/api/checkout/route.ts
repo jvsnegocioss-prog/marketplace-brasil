@@ -15,7 +15,20 @@ const supabaseAdmin = createClient(
   }
 );
 
+async function cancelOrder(orderId: string) {
+  const { error } = await supabaseAdmin.rpc(
+    "cancel_unpaid_order_and_restore_stock",
+    { p_order_id: orderId }
+  );
+
+  if (error) {
+    console.error("Erro ao restaurar estoque:", error);
+  }
+}
+
 export async function POST(request: Request) {
+  let createdOrderId: string | null = null;
+
   try {
     const body = await request.json();
 
@@ -28,14 +41,24 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !customerName?.trim() ||
-      !customerPhone?.trim() ||
-      !deliveryAddress?.trim() ||
+      typeof customerName !== "string" ||
+      !customerName.trim() ||
+      typeof customerPhone !== "string" ||
+      !customerPhone.trim() ||
+      typeof deliveryAddress !== "string" ||
+      !deliveryAddress.trim() ||
       !Array.isArray(items) ||
-      items.length === 0
+      items.length === 0 ||
+      items.some(
+        (item: { id?: unknown; qty?: unknown }) =>
+          typeof item.id !== "string" ||
+          !item.id ||
+          !Number.isInteger(item.qty) ||
+          Number(item.qty) < 1
+      )
     ) {
       return NextResponse.json(
-        { error: "Preencha os dados obrigatórios e informe os produtos." },
+        { error: "Confira os dados e os produtos do pedido." },
         { status: 400 }
       );
     }
@@ -49,17 +72,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Registra o pedido e reserva o estoque pelo procedimento existente.
     const { data: orderId, error: orderError } =
       await supabaseAdmin.rpc("create_store_order", {
         p_customer_name: customerName.trim(),
-        p_customer_email: (customerEmail || "").trim(),
+        p_customer_email:
+          typeof customerEmail === "string"
+            ? customerEmail.trim()
+            : "",
         p_customer_phone: customerPhone.trim(),
         p_delivery_address: deliveryAddress.trim(),
-        p_items: items.map((item: { id: string; qty: number }) => ({
-          id: item.id,
-          qty: item.qty,
-        })),
+        p_items: items.map(
+          (item: { id: string; qty: number }) => ({
+            id: item.id,
+            qty: item.qty,
+          })
+        ),
       });
 
     if (orderError || !orderId) {
@@ -72,6 +99,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    createdOrderId = orderId;
 
     const { data: order, error: fetchOrderError } =
       await supabaseAdmin
@@ -92,11 +121,11 @@ export async function POST(request: Request) {
       !order ||
       !orderItems?.length
     ) {
+      await cancelOrder(orderId);
+      createdOrderId = null;
+
       return NextResponse.json(
-        {
-          error: "Pedido registrado, mas não foi possível preparar o pagamento.",
-          orderId,
-        },
+        { error: "Não foi possível preparar o pagamento." },
         { status: 500 }
       );
     }
@@ -115,7 +144,10 @@ export async function POST(request: Request) {
       })),
     };
 
-    if (customerEmail?.trim()) {
+    if (
+      typeof customerEmail === "string" &&
+      customerEmail.trim()
+    ) {
       paymentBody.payer = {
         email: customerEmail.trim(),
       };
@@ -137,13 +169,15 @@ export async function POST(request: Request) {
     const paymentData = await paymentResponse.json();
 
     if (!paymentResponse.ok || !paymentData.checkout_url) {
-      console.error("Mercado Pago:", paymentData);
+      console.error("Erro Mercado Pago:", paymentData);
+
+      await cancelOrder(orderId);
+      createdOrderId = null;
 
       return NextResponse.json(
         {
           error:
-            "O pedido foi registrado, mas o Mercado Pago não conseguiu gerar o pagamento. Entre em contato com a loja antes de tentar novamente.",
-          orderId,
+            "Não foi possível gerar o pagamento. O pedido foi cancelado e o estoque restaurado.",
         },
         { status: 502 }
       );
@@ -156,6 +190,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Erro no checkout:", error);
+
+    if (createdOrderId) {
+      await cancelOrder(createdOrderId);
+    }
 
     return NextResponse.json(
       { error: "Ocorreu um erro ao iniciar o pagamento." },
