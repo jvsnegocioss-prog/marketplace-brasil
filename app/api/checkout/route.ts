@@ -168,7 +168,12 @@ export async function POST(request: Request) {
 
     const paymentData = await paymentResponse.json();
 
-    if (!paymentResponse.ok || !paymentData.checkout_url) {
+    if (
+      !paymentResponse.ok ||
+      !paymentData.checkout_url ||
+      paymentData.id === undefined ||
+      paymentData.id === null
+    ) {
       console.error("Erro Mercado Pago:", paymentData);
 
       await cancelOrder(orderId);
@@ -183,9 +188,27 @@ export async function POST(request: Request) {
       );
     }
 
+    const mercadoPagoOrderId = String(paymentData.id);
+
+    const { error: savePaymentIdError } =
+      await supabaseAdmin
+        .from("orders")
+        .update({
+          mercado_pago_order_id: mercadoPagoOrderId,
+        })
+        .eq("id", orderId);
+
+    if (savePaymentIdError) {
+      console.error(
+        "Erro ao salvar ID do Mercado Pago:",
+        savePaymentIdError
+      );
+    }
+
     return NextResponse.json({
       success: true,
       orderId,
+      mercadoPagoOrderId,
       checkoutUrl: paymentData.checkout_url,
     });
   } catch (error) {
