@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -90,6 +91,11 @@ export async function POST(request: Request) {
     );
 
     if (!mpResponse.ok) {
+      console.error(
+        "Erro ao consultar pedido no Mercado Pago:",
+        await mpResponse.text()
+      );
+
       return NextResponse.json(
         { error: "Não foi possível consultar o pedido." },
         { status: 502 }
@@ -117,6 +123,7 @@ export async function POST(request: Request) {
 
       if (error) {
         console.error("Erro ao atualizar pedido:", error);
+
         return NextResponse.json(
           { error: "Erro ao atualizar pedido." },
           { status: 500 }
@@ -125,8 +132,8 @@ export async function POST(request: Request) {
     }
 
     if (
-      mpStatus === "cancelled" ||
-      mpStatus === "expired"
+      mpStatus === "canceled" ||
+      mpStatus === "failed"
     ) {
       const { error } = await supabaseAdmin.rpc(
         "cancel_unpaid_order_and_restore_stock",
@@ -135,6 +142,7 @@ export async function POST(request: Request) {
 
       if (error) {
         console.error("Erro ao cancelar pedido:", error);
+
         return NextResponse.json(
           { error: "Erro ao cancelar pedido." },
           { status: 500 }
