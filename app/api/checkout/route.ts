@@ -22,7 +22,7 @@ async function cancelOrder(orderId: string) {
   );
 
   if (error) {
-    console.error("Erro ao restaurar estoque:", error);
+    console.error("ERRO AO RESTAURAR ESTOQUE:", error);
   }
 }
 
@@ -90,6 +90,8 @@ export async function POST(request: Request) {
       });
 
     if (orderError || !orderId) {
+      console.error("ERRO AO CRIAR PEDIDO:", orderError);
+
       return NextResponse.json(
         {
           error:
@@ -109,23 +111,38 @@ export async function POST(request: Request) {
         .eq("id", orderId)
         .single();
 
+    if (fetchOrderError || !order) {
+      console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
+
+      await cancelOrder(orderId);
+      createdOrderId = null;
+
+      return NextResponse.json(
+        {
+          error: "Falha ao consultar o pedido.",
+          detalhe: fetchOrderError?.message || "Pedido não encontrado.",
+        },
+        { status: 500 }
+      );
+    }
+
     const { data: orderItems, error: itemsError } =
       await supabaseAdmin
         .from("order_items")
         .select("product_name,quantity,unit_price")
         .eq("order_id", orderId);
 
-    if (
-      fetchOrderError ||
-      itemsError ||
-      !order ||
-      !orderItems?.length
-    ) {
+    if (itemsError || !orderItems?.length) {
+      console.error("ERRO AO BUSCAR ITENS:", itemsError);
+
       await cancelOrder(orderId);
       createdOrderId = null;
 
       return NextResponse.json(
-        { error: "Não foi possível preparar o pagamento." },
+        {
+          error: "Falha ao consultar os itens do pedido.",
+          detalhe: itemsError?.message || "Nenhum item encontrado.",
+        },
         { status: 500 }
       );
     }
@@ -174,15 +191,15 @@ export async function POST(request: Request) {
       paymentData.id === undefined ||
       paymentData.id === null
     ) {
-      console.error("Erro Mercado Pago:", paymentData);
+      console.error("ERRO MERCADO PAGO:", paymentData);
 
       await cancelOrder(orderId);
       createdOrderId = null;
 
       return NextResponse.json(
         {
-          error:
-            "Não foi possível gerar o pagamento. O pedido foi cancelado e o estoque restaurado.",
+          error: "Não foi possível gerar o pagamento.",
+          detalhe: paymentData,
         },
         { status: 502 }
       );
@@ -200,7 +217,7 @@ export async function POST(request: Request) {
 
     if (savePaymentIdError) {
       console.error(
-        "Erro ao salvar ID do Mercado Pago:",
+        "ERRO AO SALVAR ID MERCADO PAGO:",
         savePaymentIdError
       );
     }
@@ -212,15 +229,20 @@ export async function POST(request: Request) {
       checkoutUrl: paymentData.checkout_url,
     });
   } catch (error) {
-    console.error("Erro no checkout:", error);
+    console.error("ERRO GERAL NO CHECKOUT:", error);
 
     if (createdOrderId) {
       await cancelOrder(createdOrderId);
     }
 
     return NextResponse.json(
-      { error: "Ocorreu um erro ao iniciar o pagamento." },
+      {
+        error: "Ocorreu um erro ao iniciar o pagamento.",
+        detalhe:
+          error instanceof Error ? error.message : "Erro desconhecido.",
+      },
       { status: 500 }
     );
   }
 }
+
