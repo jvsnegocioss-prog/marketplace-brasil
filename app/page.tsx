@@ -52,6 +52,14 @@ export default function Home() {
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState("");
+
   async function loadProducts() {
     setLoading(true);
     setError("");
@@ -132,6 +140,51 @@ export default function Home() {
         )
         .filter((item) => item.qty > 0)
     );
+  };
+
+  const submitOrder = async () => {
+    if (cart.length === 0 || submitting) return;
+
+    setSubmitting(true);
+    setCheckoutMessage("");
+
+    try {
+      const { data, error } = await supabase.rpc("create_store_order", {
+        p_customer_name: customerName.trim(),
+        p_customer_email: customerEmail.trim(),
+        p_customer_phone: customerPhone.trim(),
+        p_delivery_address: deliveryAddress.trim(),
+        p_items: cart.map((item) => ({
+          id: item.id,
+          qty: item.qty,
+        })),
+      });
+
+      if (error) {
+        setCheckoutMessage(
+          "Não foi possível registrar o pedido: " + error.message
+        );
+        return;
+      }
+
+      setCart([]);
+      setCheckoutOpen(false);
+      setCartOpen(false);
+      setCustomerName("");
+      setCustomerEmail("");
+      setCustomerPhone("");
+      setDeliveryAddress("");
+
+      await loadProducts();
+
+      alert("Pedido registrado com sucesso! Número: " + data);
+    } catch {
+      setCheckoutMessage(
+        "Ocorreu um erro inesperado. Verifique sua conexão e tente novamente."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -443,17 +496,27 @@ export default function Home() {
       {cartOpen && (
         <div
           className="cart-overlay"
-          onClick={() => setCartOpen(false)}
+          onClick={() => {
+            setCartOpen(false);
+            setCheckoutOpen(false);
+          }}
         >
           <aside
             className="cart-drawer"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="cart-heading">
-              <h2>Meu carrinho ({totalItems})</h2>
+              <h2>
+                {checkoutOpen
+                  ? "Finalizar pedido"
+                  : `Meu carrinho (${totalItems})`}
+              </h2>
               <button
                 className="icon-btn"
-                onClick={() => setCartOpen(false)}
+                onClick={() => {
+                  setCartOpen(false);
+                  setCheckoutOpen(false);
+                }}
               >
                 <X />
               </button>
@@ -469,80 +532,230 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="cart-items">
-                  {cart.map((item) => {
-                    const product = products.find(
-                      (p) => p.id === item.id
-                    );
+                {!checkoutOpen ? (
+                  <>
+                    <div className="cart-items">
+                      {cart.map((item) => {
+                        const product = products.find(
+                          (p) => p.id === item.id
+                        );
 
-                    if (!product) return null;
+                        if (!product) return null;
 
-                    return (
-                      <div className="cart-item" key={item.id}>
-                        <div className="cart-product-icon">
-                          {product.image_url ? (
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "contain",
-                              }}
-                            />
-                          ) : (
-                            <Package size={28} />
-                          )}
-                        </div>
+                        return (
+                          <div className="cart-item" key={item.id}>
+                            <div className="cart-product-icon">
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : (
+                                <Package size={28} />
+                              )}
+                            </div>
 
-                        <div className="cart-product-info">
-                          <strong>{product.name}</strong>
-                          <span>{money(product.price)}</span>
+                            <div className="cart-product-info">
+                              <strong>{product.name}</strong>
+                              <span>{money(product.price)}</span>
 
-                          <div className="quantity">
-                            <button
-                              onClick={() => changeQty(item.id, -1)}
-                            >
-                              <Minus size={14} />
-                            </button>
-                            {item.qty}
-                            <button
-                              disabled={item.qty >= product.stock}
-                              onClick={() => changeQty(item.id, 1)}
-                            >
-                              <Plus size={14} />
-                            </button>
+                              <div className="quantity">
+                                <button
+                                  onClick={() => changeQty(item.id, -1)}
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                {item.qty}
+                                <button
+                                  disabled={item.qty >= product.stock}
+                                  onClick={() => changeQty(item.id, 1)}
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <strong>
+                              {money(Number(product.price) * item.qty)}
+                            </strong>
                           </div>
-                        </div>
+                        );
+                      })}
+                    </div>
 
-                        <strong>
-                          {money(Number(product.price) * item.qty)}
-                        </strong>
-                      </div>
-                    );
-                  })}
-                </div>
+                    <div className="cart-total">
+                      <span>Total</span>
+                      <strong>{money(total)}</strong>
+                    </div>
 
-                <div className="cart-total">
-                  <span>Total</span>
-                  <strong>{money(total)}</strong>
-                </div>
+                    <button
+                      className="checkout-button"
+                      onClick={() => {
+                        setCheckoutMessage("");
+                        setCheckoutOpen(true);
+                      }}
+                    >
+                      Finalizar compra
+                    </button>
 
-                <button
-                  className="checkout-button"
-                  onClick={() =>
-                    alert(
-                      "O checkout será configurado na próxima etapa."
-                    )
-                  }
-                >
-                  Finalizar compra
-                </button>
+                    <p className="cart-note">
+                      O pedido será registrado para confirmação.
+                      O pagamento será configurado posteriormente.
+                    </p>
+                  </>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void submitOrder();
+                    }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      paddingTop: 16,
+                    }}
+                  >
+                    <p style={{ fontSize: 14, color: "#666" }}>
+                      Informe seus dados para registrar seu pedido.
+                    </p>
 
-                <p className="cart-note">
-                  Ambiente demonstrativo. Pagamentos serão
-                  configurados posteriormente.
-                </p>
+                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                      Nome completo *
+                      <input
+                        required
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Seu nome completo"
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: 12,
+                          marginTop: 6,
+                          border: "1px solid #ccc",
+                          borderRadius: 8,
+                          fontSize: 15,
+                        }}
+                      />
+                    </label>
+
+                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                      E-mail
+                      <input
+                        type="email"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="seuemail@exemplo.com"
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: 12,
+                          marginTop: 6,
+                          border: "1px solid #ccc",
+                          borderRadius: 8,
+                          fontSize: 15,
+                        }}
+                      />
+                    </label>
+
+                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                      Telefone / WhatsApp *
+                      <input
+                        required
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="(92) 99999-9999"
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: 12,
+                          marginTop: 6,
+                          border: "1px solid #ccc",
+                          borderRadius: 8,
+                          fontSize: 15,
+                        }}
+                      />
+                    </label>
+
+                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                      Endereço completo de entrega *
+                      <textarea
+                        required
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Rua, número, bairro, cidade e ponto de referência"
+                        rows={3}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: 12,
+                          marginTop: 6,
+                          border: "1px solid #ccc",
+                          borderRadius: 8,
+                          fontSize: 15,
+                          resize: "vertical",
+                        }}
+                      />
+                    </label>
+
+                    <div className="cart-total">
+                      <span>Total do pedido</span>
+                      <strong>{money(total)}</strong>
+                    </div>
+
+                    {checkoutMessage && (
+                      <p
+                        role="alert"
+                        style={{
+                          color: "#b42318",
+                          fontSize: 13,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {checkoutMessage}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="checkout-button"
+                      disabled={submitting}
+                    >
+                      {submitting
+                        ? "Registrando pedido..."
+                        : "Confirmar pedido"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutOpen(false);
+                        setCheckoutMessage("");
+                      }}
+                      disabled={submitting}
+                      style={{
+                        padding: 12,
+                        border: "1px solid #ccc",
+                        borderRadius: 8,
+                        background: "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Voltar ao carrinho
+                    </button>
+
+                    <p className="cart-note">
+                      O pedido será registrado. Esta etapa ainda não
+                      processa pagamentos.
+                    </p>
+                  </form>
+                )}
               </>
             )}
           </aside>
@@ -551,4 +764,3 @@ export default function Home() {
     </main>
   );
 }
-
