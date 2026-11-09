@@ -71,7 +71,7 @@ export default function OrdersPage() {
       alert("Erro ao atualizar: " + error.message);
     } else {
       alert("Status atualizado com sucesso!");
-      loadOrders();
+      await loadOrders();
     }
   }
 
@@ -84,6 +84,21 @@ export default function OrdersPage() {
       style: "currency",
       currency: "BRL",
     });
+  }
+
+  function statusLabel(status: string) {
+    const normalized = status.toLowerCase();
+
+    const labels: Record<string, string> = {
+      aguardando: "Aguardando",
+      pago: "Pago",
+      aprovado: "Aprovado",
+      enviado: "Enviado",
+      concluido: "Concluído",
+      cancelado: "Cancelado",
+    };
+
+    return labels[normalized] || status;
   }
 
   return (
@@ -106,6 +121,7 @@ export default function OrdersPage() {
             >
               Atualizar
             </button>
+
             <Link
               href="/admin"
               className="rounded-lg border bg-white px-4 py-2 text-gray-800"
@@ -156,6 +172,7 @@ export default function OrdersPage() {
                   <h2 className="text-xl font-bold text-gray-900">
                     {order.customer_name}
                   </h2>
+
                   <p className="text-sm text-gray-500">
                     {new Date(order.created_at).toLocaleString("pt-BR")}
                   </p>
@@ -167,9 +184,15 @@ export default function OrdersPage() {
               </div>
 
               <div className="mt-4 space-y-1 text-sm text-gray-700">
-                <p>Email: {order.customer_email || "Não informado"}</p>
-                <p>Telefone: {order.customer_phone || "Não informado"}</p>
-                <p>Endereço: {order.delivery_address || "Não informado"}</p>
+                <p>
+                  Email: {order.customer_email || "Não informado"}
+                </p>
+                <p>
+                  Telefone: {order.customer_phone || "Não informado"}
+                </p>
+                <p>
+                  Endereço: {order.delivery_address || "Não informado"}
+                </p>
               </div>
 
               <div className="mt-4 border-t pt-4">
@@ -185,7 +208,10 @@ export default function OrdersPage() {
                     <span>
                       {item.product_name} — {item.quantity} unidade(s)
                     </span>
-                    <span>{formatMoney(item.subtotal)}</span>
+
+                    <span>
+                      {formatMoney(item.subtotal)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -203,11 +229,17 @@ export default function OrdersPage() {
                   className="rounded-lg border border-gray-300 bg-white p-2"
                 >
                   <option value="aguardando">Aguardando</option>
+                  <option value="Pago">Pago</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="enviado">Enviado</option>
                   <option value="concluido">Concluído</option>
-                  <option value="cancelado">Cancelado</option>
+                  <option value="Cancelado">Cancelado</option>
+                  <option value="cancelado">Cancelado (antigo)</option>
                 </select>
+
+                <span className="text-sm font-semibold text-gray-600">
+                  {statusLabel(order.status)}
+                </span>
               </div>
             </section>
           ))}
