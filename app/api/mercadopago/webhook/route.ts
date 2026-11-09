@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -59,8 +60,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // IDs alfanuméricos devem ser normalizados
+    // para letras minúsculas na validação.
+    const normalizedDataId = dataId.toLowerCase();
+
     const manifest =
-      `id:${dataId};request-id:${requestId};ts:${ts};`;
+      `id:${normalizedDataId};request-id:${requestId};ts:${ts};`;
 
     const expectedHash = createHmac("sha256", secret)
       .update(manifest)
