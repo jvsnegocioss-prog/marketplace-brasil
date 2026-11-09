@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -119,7 +118,7 @@ export async function POST(request: Request) {
         .from("orders")
         .update({ status: "Pago" })
         .eq("id", orderId)
-        .eq("status", "Aguardando");
+        .ilike("status", "aguardando");
 
       if (error) {
         console.error("Erro ao atualizar pedido:", error);
