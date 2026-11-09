@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -555,6 +554,21 @@ export default function Home() {
           Marketplace<span className="logo-dot">.</span>
         </div>
         <p>Sua loja online de variedades, tecnologia e muito mais.</p>
+
+        {/* LINK DE ACOMPANHAMENTO NO RODAPÉ */}
+        <div style={{ margin: "18px 0" }}>
+          <a
+            href="/acompanhar"
+            style={{
+              color: "#ffffff",
+              textDecoration: "underline",
+              fontWeight: 600,
+            }}
+          >
+            Acompanhar meu pedido
+          </a>
+        </div>
+
         <div className="footer-bottom">
           © 2026 Marketplace. Todos os direitos reservados.
         </div>
