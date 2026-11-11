@@ -105,7 +105,7 @@ function DashboardCard({
   detail: string;
 }) {
   return (
-    <article style={dashboardCardStyle}>
+    <article className="admin-stat-card" style={dashboardCardStyle}>
       <p style={{ margin: 0, color: "#555555" }}>{title}</p>
       <h2 style={{ margin: "12px 0", fontSize: 25 }}>{value}</h2>
       <small style={{ color: "#666666" }}>{detail}</small>
@@ -427,7 +427,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main
+    <main className="admin-dashboard"
       style={{
         maxWidth: 1100,
         margin: "auto",
@@ -435,7 +435,7 @@ export default function AdminPage() {
         fontFamily: "Arial, sans-serif",
       }}
     >
-      <header
+      <header className="admin-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -509,7 +509,7 @@ export default function AdminPage() {
         {editingId ? "Editar produto" : "Cadastrar produto"}
       </h2>
 
-      <form onSubmit={saveProduct} style={formStyle}>
+      <form className="admin-product-form" onSubmit={saveProduct} style={formStyle}>
         <label>Nome do produto</label>
 
         <input
@@ -619,6 +619,7 @@ export default function AdminPage() {
 
       {products.map((product) => (
         <article
+          className="admin-product-card"
           key={product.id}
           style={{
             border: "1px solid #dddddd",
