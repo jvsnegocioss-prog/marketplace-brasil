@@ -50,6 +50,9 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favoritesReady, setFavoritesReady] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -83,6 +86,26 @@ export default function Home() {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("novashopp_favorites");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setFavoriteIds(parsed.filter((id): id is string => typeof id === "string"));
+      }
+    } catch (error) {
+      console.error("Não foi possível carregar favoritos:", error);
+    } finally {
+      setFavoritesReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (favoritesReady) {
+      localStorage.setItem("novashopp_favorites", JSON.stringify(favoriteIds));
+    }
+  }, [favoriteIds, favoritesReady]);
+
   const categories = [
     ...baseCategories,
     ...Array.from(
@@ -97,10 +120,17 @@ export default function Home() {
   ];
 
   const filtered = products.filter((p) =>
+    (!showFavorites || favoriteIds.includes(p.id)) &&
     (category === "Todos" || p.category === category) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.description || "").toLowerCase().includes(search.toLowerCase()))
   );
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((old) =>
+      old.includes(id) ? old.filter((item) => item !== id) : [...old, id]
+    );
+  };
 
   const addToCart = (id: string) => {
     const product = products.find((p) => p.id === id);
@@ -235,8 +265,17 @@ export default function Home() {
         </div>
 
         <div className="header-actions">
-          <button className="icon-btn favorite-btn" aria-label="Favoritos">
-            <Heart size={23} />
+          <button
+            className={`icon-btn favorite-btn ${showFavorites ? "favorite-active" : ""}`}
+            aria-label={showFavorites ? "Mostrar todos os produtos" : "Ver favoritos"}
+            aria-pressed={showFavorites}
+            onClick={() => {
+              setShowFavorites((old) => !old);
+              document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            <Heart size={23} fill={showFavorites ? "currentColor" : "none"} />
+            {favoriteIds.length > 0 && <span className="favorite-count">{favoriteIds.length}</span>}
           </button>
 
           <button
@@ -448,7 +487,9 @@ export default function Home() {
           </div>
         ) : filtered.length === 0 ? (
           <p className="empty-message">
-            Nenhum produto encontrado. Tente outra pesquisa ou categoria.
+            {showFavorites
+              ? "Você ainda não salvou produtos favoritos. Toque no coração de um produto para adicioná-lo."
+              : "Nenhum produto encontrado. Tente outra pesquisa ou categoria."}
           </p>
         ) : (
           <div className="product-grid">
@@ -460,10 +501,12 @@ export default function Home() {
                   )}
 
                   <button
-                    className="heart-button"
-                    aria-label="Favoritar"
+                    className={`heart-button ${favoriteIds.includes(product.id) ? "is-favorite" : ""}`}
+                    aria-label={favoriteIds.includes(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                    aria-pressed={favoriteIds.includes(product.id)}
+                    onClick={() => toggleFavorite(product.id)}
                   >
-                    <Heart size={19} />
+                    <Heart size={19} fill={favoriteIds.includes(product.id) ? "currentColor" : "none"} />
                   </button>
 
                   {product.image_url ? (
