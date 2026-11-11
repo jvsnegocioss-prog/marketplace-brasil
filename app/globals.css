@@ -1541,3 +1541,57 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .header-actions .favorite-btn { display: inline-flex; }
   .header-actions .favorite-btn svg { width: 21px; height: 21px; }
 }
+
+
+/* NOVASHOPP STORE — área do cliente */
+.customer-account-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 16px;
+  background: radial-gradient(circle at 15% 10%, #fff2c7 0, transparent 28%), linear-gradient(145deg, #071b43, #102f5d 58%, #173f73);
+}
+.customer-account-card {
+  width: 100%;
+  max-width: 470px;
+  padding: 30px;
+  border: 1px solid #e8edf4;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px #020d253d;
+}
+.customer-account-back { display: inline-block; margin-bottom: 24px; color: #49617f; font-size: 12px; font-weight: 700; text-decoration: none; }
+.customer-account-brand {
+  display: grid; width: 48px; height: 48px; margin-bottom: 18px; place-items: center;
+  border-radius: 15px; background: linear-gradient(145deg, #ffdc58, #f5b900); color: #071b43; font-size: 25px; font-weight: 900;
+}
+.customer-account-eyebrow { margin: 0 0 7px; color: #a47a00; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+.customer-account-card h1 { margin: 0; color: #102747; font-size: 27px; line-height: 1.2; font-weight: 900; }
+.customer-account-intro { margin: 9px 0 22px; color: #718096; font-size: 13px; line-height: 1.6; }
+.customer-account-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; padding: 5px; border-radius: 12px; background: #f0f3f8; }
+.customer-account-tabs button { min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #64748b; font-size: 12px; font-weight: 800; }
+.customer-account-tabs button.active { background: #fff; color: #102747; box-shadow: 0 2px 8px #071b4312; }
+.customer-account-form { display: grid; gap: 15px; }
+.customer-account-form label { display: grid; gap: 7px; color: #344762; font-size: 12px; font-weight: 800; }
+.customer-account-form input { width: 100%; min-height: 47px; padding: 0 13px; border: 1px solid #dce3ed; border-radius: 10px; outline: none; background: #fbfcfe; color: #172b49; font-size: 13px; }
+.customer-account-form input:focus { border-color: #315b91; box-shadow: 0 0 0 3px #315b9118; }
+.customer-account-submit, .customer-account-secondary {
+  display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: center; margin-top: 5px; padding: 12px 15px;
+  border: 0; border-radius: 11px; background: linear-gradient(135deg, #071b43, #17477f); color: #fff; font-size: 13px; font-weight: 900; text-align: center; text-decoration: none; cursor: pointer;
+}
+.customer-account-submit:disabled { opacity: .6; cursor: wait; }
+.customer-account-secondary { margin: 18px 0 10px; border: 1px solid #dce3ed; background: #f7f9fc; color: #18375f; }
+.customer-account-success, .customer-account-error { margin: 15px 0 0; padding: 11px 12px; border-radius: 9px; font-size: 12px; line-height: 1.5; }
+.customer-account-success { background: #edf9f1; color: #17633a; }
+.customer-account-error { background: #fff0f0; color: #a52d2d; }
+.customer-account-footnote { margin: 17px 0 0; color: #8995a6; font-size: 10px; line-height: 1.5; text-align: center; }
+.customer-account-profile { display: flex; align-items: center; gap: 13px; margin: 20px 0; padding: 15px; border: 1px solid #e7edf5; border-radius: 14px; background: #f8fafd; }
+.customer-account-avatar { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #fff0c2; font-size: 20px; }
+.customer-account-profile strong { color: #172b49; font-size: 13px; }
+.customer-account-profile p { margin: 4px 0 0; color: #718096; font-size: 11px; overflow-wrap: anywhere; }
+.customer-account-notice { padding: 13px; border-radius: 11px; background: #fff8e5; color: #705500; font-size: 12px; line-height: 1.6; }
+@media (max-width: 480px) {
+  .customer-account-card { padding: 23px 19px; border-radius: 20px; }
+  .customer-account-card h1 { font-size: 24px; }
+}
