@@ -15,7 +15,7 @@ const supabaseAdmin = createClient(
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
 
 function digits(value: string) {
-  return value.replace(/\\D/g, "");
+  return value.replace(/\D/g, "");
 }
 
 function phoneHash(phone: string) {
@@ -161,7 +161,7 @@ export async function PATCH(request: Request) {
 
     const validation = await validatePurchase(orderId, productId, phone);
     if ("error" in validation) {
-      return NextResponse.json({ error: validation.error, status: validation.status });
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
     const { data, error } = await supabaseAdmin
