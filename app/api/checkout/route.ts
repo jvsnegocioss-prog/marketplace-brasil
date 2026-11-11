@@ -63,6 +63,26 @@ export async function POST(request: Request) {
       );
     }
 
+    let verifiedCustomerEmail =
+      typeof customerEmail === "string" ? customerEmail.trim() : "";
+
+    const authorization = request.headers.get("authorization") || "";
+    if (authorization.startsWith("Bearer ")) {
+      const customerAccessToken = authorization.slice(7);
+      const { data: customerAuth, error: customerAuthError } =
+        await supabaseAdmin.auth.getUser(customerAccessToken);
+
+      if (customerAuthError || !customerAuth.user?.email) {
+        return NextResponse.json(
+          { error: "Sua sessão da conta expirou. Entre novamente ou finalize como visitante." },
+          { status: 401 }
+        );
+      }
+
+      // Usa o e-mail confirmado da sessão, nunca um e-mail enviado livremente pelo navegador.
+      verifiedCustomerEmail = customerAuth.user.email;
+    }
+
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -75,10 +95,7 @@ export async function POST(request: Request) {
     const { data: orderId, error: orderError } =
       await supabaseAdmin.rpc("create_store_order", {
         p_customer_name: customerName.trim(),
-        p_customer_email:
-          typeof customerEmail === "string"
-            ? customerEmail.trim()
-            : "",
+        p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
         p_delivery_address: deliveryAddress.trim(),
         p_items: items.map(
@@ -162,11 +179,10 @@ export async function POST(request: Request) {
     };
 
     if (
-      typeof customerEmail === "string" &&
-      customerEmail.trim()
+      verifiedCustomerEmail
     ) {
       paymentBody.payer = {
-        email: customerEmail.trim(),
+        email: verifiedCustomerEmail,
       };
     }
 
