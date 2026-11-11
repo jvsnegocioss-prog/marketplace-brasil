@@ -95,8 +95,21 @@ export default function Home() {
           ? accountUser.user_metadata.full_name
           : "";
 
+      const metadata = accountUser.user_metadata || {};
+      const savedAddress = [
+        metadata.street,
+        metadata.number,
+        metadata.complement,
+        metadata.neighborhood,
+        [metadata.city, metadata.state].filter(Boolean).join(" - "),
+        metadata.postal_code ? "CEP " + metadata.postal_code : "",
+        metadata.reference ? "Referência: " + metadata.reference : "",
+      ].filter(Boolean).join(", ");
+
       setCustomerName((current) => current || accountName);
       setCustomerEmail((current) => current || accountUser.email || "");
+      setCustomerPhone((current) => current || (typeof metadata.phone === "string" ? metadata.phone : ""));
+      setDeliveryAddress((current) => current || savedAddress);
     });
   }, []);
 
