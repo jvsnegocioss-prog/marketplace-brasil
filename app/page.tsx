@@ -475,12 +475,7 @@ export default function Home() {
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          padding: 12,
-                        }}
+                        className="product-photo"
                       />
                     </a>
                   ) : (
@@ -498,11 +493,7 @@ export default function Home() {
                   <h3>{product.name}</h3>
 
                   {product.description && (
-                    <p style={{
-                      fontSize: 12,
-                      color: "#777",
-                      marginBottom: 8,
-                    }}>
+                    <p className="product-description">
                       {product.description}
                     </p>
                   )}
