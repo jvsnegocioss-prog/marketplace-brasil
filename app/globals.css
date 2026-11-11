@@ -967,3 +967,67 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .admin-product-form { padding: 17px !important; }
   .admin-product-card { padding: 13px !important; }
 }
+
+
+/* NOVASHOPP STORE — acompanhamento de pedidos */
+.tracking-page {
+  padding: 42px 16px 64px !important;
+  background: linear-gradient(180deg, #f2f5fa, #f8faff 55%, #eef3fa) !important;
+  color: #17243b;
+  font-family: 'DM Sans', sans-serif;
+}
+.tracking-container { max-width: 720px !important; }
+.tracking-heading { margin-bottom: 26px !important; }
+.tracking-heading h1 {
+  color: #071b43;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(29px, 5vw, 39px);
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+.tracking-heading p { margin-top: 9px !important; color: #718096 !important; font-size: 14px; }
+.tracking-panel, .tracking-result {
+  padding: clamp(20px, 4vw, 32px) !important;
+  border: 1px solid #e4eaf3;
+  border-radius: 22px !important;
+  background: #fff;
+  box-shadow: 0 13px 38px #071b4310 !important;
+}
+.tracking-panel label { color: #34445d !important; font-size: 13px !important; font-weight: 700 !important; }
+.tracking-input {
+  min-height: 49px;
+  margin-top: 7px;
+  border: 1px solid #dfe6ef !important;
+  border-radius: 11px !important;
+  background: #fbfcfe;
+  color: #253651;
+  font: inherit;
+}
+.tracking-input:focus { border-color: #8aa4ca !important; box-shadow: 0 0 0 4px #123b780e; }
+.tracking-submit {
+  min-height: 50px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 11px !important;
+  background: #071b43 !important;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 7px 17px #071b4320;
+}
+.tracking-submit:hover { background: #153d79 !important; }
+.tracking-result h2 {
+  color: #071b43;
+  font-family: 'Outfit', sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+}
+.tracking-result .text-sm { color: #7b8798; }
+.tracking-result .font-semibold, .tracking-result .font-medium { color: #243650; overflow-wrap: anywhere; }
+.tracking-result hr { border: 0; border-top: 1px solid #e8edf4; }
+.tracking-back { display: inline-flex; margin-top: 5px; color: #315b91 !important; font-weight: 700; }
+@media (max-width: 600px) {
+  .tracking-page { padding: 26px 13px 45px !important; }
+  .tracking-panel, .tracking-result { border-radius: 17px !important; padding: 20px 17px !important; }
+  .tracking-heading h1 { font-size: 30px; }
+}
