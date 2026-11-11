@@ -1751,3 +1751,128 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .tracking-extra-grid { grid-template-columns: 1fr; gap: 15px; }
   .tracking-extra-card strong { font-size: 11px; }
 }
+
+
+/* NOVASHOPP STORE — experiência premium da área Minha conta */
+.customer-account-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 18%, #f9d76c38 0, transparent 24%),
+    radial-gradient(circle at 88% 82%, #8db7e52b 0, transparent 27%),
+    linear-gradient(135deg, #061632 0%, #0b2851 52%, #174477 100%);
+}
+.customer-account-page::before,
+.customer-account-page::after {
+  position: absolute;
+  z-index: -1;
+  width: 340px;
+  height: 340px;
+  border: 1px solid #ffffff14;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.customer-account-page::before { top: -190px; right: -100px; }
+.customer-account-page::after { bottom: -220px; left: -120px; width: 420px; height: 420px; }
+.customer-account-card {
+  position: relative;
+  max-width: 500px;
+  padding: clamp(24px, 5vw, 38px);
+  border: 1px solid #ffffffd9;
+  border-radius: 26px;
+  box-shadow: 0 30px 90px #020b1d66, 0 2px 8px #071b4310;
+  animation: account-card-enter .45s ease both;
+}
+@keyframes account-card-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.customer-account-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  margin-bottom: 25px;
+  color: #526985;
+  transition: color .2s ease, transform .2s ease;
+}
+.customer-account-back:hover { color: #102747; transform: translateX(-2px); }
+.customer-account-brand {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 21px;
+  border: 1px solid #f1d36c;
+  border-radius: 17px;
+  box-shadow: 0 9px 20px #e7b92c3b, inset 0 1px 0 #ffffffa6;
+  font-size: 28px;
+}
+.customer-account-eyebrow { font-size: 10px; letter-spacing: .2em; }
+.customer-account-card h1 { font-size: clamp(25px, 5vw, 30px); letter-spacing: -.035em; }
+.customer-account-intro { max-width: 390px; font-size: 13px; }
+.customer-account-tabs {
+  border: 1px solid #e8edf4;
+  background: #f3f6fa;
+}
+.customer-account-tabs button { transition: background .2s ease, color .2s ease, box-shadow .2s ease; }
+.customer-account-tabs button.active {
+  background: #fff;
+  color: #0c2a52;
+  box-shadow: 0 3px 10px #071b4317;
+}
+.customer-account-form { gap: 17px; }
+.customer-account-form label { gap: 8px; color: #263e5d; font-size: 12px; }
+.customer-account-form input {
+  min-height: 50px;
+  padding: 0 15px;
+  border: 1px solid #d8e1ec;
+  border-radius: 12px;
+  background: #fbfcfe;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.customer-account-form input:focus {
+  border-color: #d1a51b;
+  background: #fff;
+  box-shadow: 0 0 0 4px #f2cb4a24;
+}
+.customer-account-submit {
+  min-height: 51px;
+  margin-top: 7px;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #071b43, #17477f 72%, #20558c);
+  box-shadow: 0 8px 18px #0b2c5730;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.customer-account-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px #0b2c5738;
+  filter: brightness(1.08);
+}
+.customer-account-secondary {
+  min-height: 47px;
+  border-radius: 12px;
+  transition: background .2s ease, border-color .2s ease;
+}
+.customer-account-secondary:hover { border-color: #e4c45d; background: #fff9e8; }
+.customer-account-profile {
+  padding: 17px;
+  border-color: #e5ebf3;
+  background: linear-gradient(135deg, #f9fbfe, #f2f6fb);
+}
+.customer-account-avatar {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #f0d77e;
+  background: linear-gradient(145deg, #fff5d5, #ffe69a);
+}
+.customer-account-notice {
+  border: 1px solid #f2df9d;
+  background: linear-gradient(135deg, #fff9e8, #fff4d2);
+}
+.customer-account-footnote { padding-top: 14px; border-top: 1px solid #edf0f5; }
+@media (max-width: 480px) {
+  .customer-account-page { min-height: 100svh; padding: 20px 13px; }
+  .customer-account-card { padding: 24px 19px; border-radius: 22px; }
+  .customer-account-back { margin-bottom: 20px; }
+}
