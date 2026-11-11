@@ -67,6 +67,9 @@ function dateLabel(value: string) {
 export default function ContaClientePage() {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [name, setName] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -84,6 +87,10 @@ export default function ContaClientePage() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    setProfileName(user?.user_metadata?.full_name || "");
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -153,6 +160,33 @@ export default function ContaClientePage() {
     }
   }
 
+  async function handleSaveProfile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanName = profileName.trim();
+    if (cleanName.length < 3) {
+      setError("Informe seu nome completo para continuar.");
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setSavingProfile(true);
+    try {
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        data: { full_name: cleanName },
+      });
+      if (updateError) throw updateError;
+      if (data.user) setUser(data.user);
+      setProfileName(cleanName);
+      setEditingProfile(false);
+      setMessage("Seus dados foram atualizados. O nome será preenchido no próximo checkout.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar seu nome.");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   async function handleLogout() {
     setError("");
     const { error: authError } = await supabase.auth.signOut();
@@ -180,6 +214,47 @@ export default function ContaClientePage() {
                 <p>{user.email}</p>
               </div>
             </div>
+
+            {!editingProfile ? (
+              <button
+                type="button"
+                className="customer-account-submit"
+                style={{ marginTop: 12, marginBottom: 18 }}
+                onClick={() => {
+                  setProfileName(user.user_metadata?.full_name || "");
+                  setEditingProfile(true);
+                  setError("");
+                  setMessage("");
+                }}
+              >
+                Editar meus dados
+              </button>
+            ) : (
+              <form onSubmit={handleSaveProfile} className="customer-account-form" style={{ marginTop: 14, marginBottom: 20 }}>
+                <label>
+                  Nome completo
+                  <input
+                    value={profileName}
+                    onChange={(event) => setProfileName(event.target.value)}
+                    autoComplete="name"
+                    minLength={3}
+                    required
+                    placeholder="Digite seu nome completo"
+                  />
+                </label>
+                <p className="customer-account-footnote">Esse nome será usado automaticamente no preenchimento dos seus próximos pedidos.</p>
+                <button className="customer-account-submit" type="submit" disabled={savingProfile}>
+                  {savingProfile ? "Salvando..." : "Salvar meus dados"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingProfile(false); setError(""); }}
+                  style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d7deea", background: "#fff", color: "#24324a", fontWeight: 700 }}
+                >
+                  Cancelar
+                </button>
+              </form>
+            )}
 
             <div className="customer-orders-heading">
               <div>
