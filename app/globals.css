@@ -1161,3 +1161,157 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .hero p { font-size: 13px; }
   .hero-button { min-height: 47px; padding: 0 18px; }
 }
+
+
+/* NOVASHOPP STORE — categorias e navegação refinadas */
+.navigation {
+  position: relative;
+  z-index: 5;
+  padding: 13px 5%;
+  gap: clamp(8px, 1.8vw, 22px);
+  border-bottom: 1px solid #e8edf4;
+  background: #fff;
+}
+.navigation button {
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #58677d;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.navigation button:hover {
+  border-color: #e3eaf4;
+  background: #f6f8fc;
+  color: #071b43;
+}
+.navigation .nav-active {
+  border-color: #071b43;
+  background: #071b43;
+  color: #fff;
+  box-shadow: 0 5px 13px #071b4320;
+}
+.categories-section {
+  padding-top: 44px;
+  padding-bottom: 42px;
+}
+.categories-section .section-heading { margin-bottom: 22px; }
+.categories-section .eyebrow {
+  display: inline-block;
+  margin-bottom: 7px;
+  color: #a17a08;
+  font-size: 10px;
+  font-weight: 800;
+}
+.category-grid {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 14px;
+}
+.category-card {
+  position: relative;
+  min-height: 132px;
+  padding: 20px 13px;
+  overflow: hidden;
+  border: 1px solid #e5ebf3;
+  border-radius: 17px;
+  background: linear-gradient(150deg, #fff 0%, #f8faff 100%);
+  color: #172b49;
+  box-shadow: 0 7px 20px #102b5009;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.category-card::after {
+  content: "";
+  position: absolute;
+  right: -23px;
+  bottom: -35px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #ffc92812;
+  transition: transform .22s ease;
+}
+.category-card svg {
+  position: relative;
+  z-index: 1;
+  width: 31px;
+  height: 31px;
+  padding: 5px;
+  box-sizing: content-box;
+  border-radius: 11px;
+  background: #fff3c8;
+  color: #8b6800;
+}
+.category-card strong {
+  position: relative;
+  z-index: 1;
+  color: #233754;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+.category-card > svg:last-child {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background: transparent;
+  color: #8796aa;
+}
+.category-card:hover {
+  transform: translateY(-4px);
+  border-color: #e6c45c;
+  box-shadow: 0 13px 27px #102b5014;
+}
+.category-card:hover::after { transform: scale(1.35); }
+.filter-row {
+  gap: 9px;
+  padding: 3px 1px 9px;
+}
+.filter-row button {
+  min-height: 38px;
+  padding: 9px 16px;
+  border: 1px solid #e2e8f1;
+  border-radius: 999px;
+  background: #fff;
+  color: #53647b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.filter-row button:hover {
+  border-color: #9aacc5;
+  background: #f7f9fc;
+  color: #071b43;
+}
+.filter-row .filter-active {
+  border-color: #071b43;
+  background: #071b43;
+  color: #fff;
+  box-shadow: 0 5px 13px #071b431c;
+}
+@media (max-width: 760px) {
+  .navigation {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 14px 5%;
+  }
+  .navigation.nav-open {
+    display: flex;
+    flex-wrap: wrap;
+    background: #fff;
+    box-shadow: 0 12px 22px #071b4310;
+  }
+  .navigation button { min-height: 36px; padding: 8px 12px; font-size: 11px; }
+  .categories-section { padding-top: 30px; padding-bottom: 28px; }
+  .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .category-card { min-height: 112px; padding: 13px 6px; border-radius: 14px; gap: 8px; }
+  .category-card svg { width: 25px; height: 25px; }
+  .category-card strong { font-size: 10px; }
+  .filter-row { flex-wrap: nowrap; overflow-x: auto; margin-right: -5%; padding-right: 5%; scrollbar-width: none; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-row button { flex: 0 0 auto; }
+}
+@media (max-width: 390px) {
+  .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .category-card { min-height: 105px; }
+}
