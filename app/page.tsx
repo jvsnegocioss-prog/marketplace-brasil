@@ -265,6 +265,10 @@ export default function Home() {
         </div>
 
         <div className="header-actions">
+          <a className="customer-account-link" href="/conta" aria-label="Minha conta">
+            <span aria-hidden="true">👤</span>
+            <span>Minha conta</span>
+          </a>
           <button
             className={`icon-btn favorite-btn ${showFavorites ? "favorite-active" : ""}`}
             aria-label={showFavorites ? "Mostrar todos os produtos" : "Ver favoritos"}
