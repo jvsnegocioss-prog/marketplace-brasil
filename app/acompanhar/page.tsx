@@ -94,9 +94,9 @@ export default function AcompanharPedidoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 px-4 py-10">
-      <div className="mx-auto max-w-xl">
-        <div className="mb-6 text-center">
+    <main className="tracking-page min-h-screen bg-gray-100 px-4 py-10">
+      <div className="tracking-container mx-auto max-w-xl">
+        <div className="tracking-heading mb-6 text-center">
           <h1 className="text-3xl font-bold text-gray-900">
             Acompanhar pedido
           </h1>
@@ -105,7 +105,7 @@ export default function AcompanharPedidoPage() {
           </p>
         </div>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="tracking-panel rounded-2xl bg-white p-6 shadow-sm">
           <form onSubmit={handleSearch} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">
@@ -116,7 +116,7 @@ export default function AcompanharPedidoPage() {
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 placeholder="Cole aqui o número do pedido"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-600"
+                className="tracking-input w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-600"
                 required
               />
             </div>
@@ -144,7 +144,7 @@ export default function AcompanharPedidoPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+              className="tracking-submit w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
             >
               {loading ? "Consultando..." : "Consultar pedido"}
             </button>
@@ -152,7 +152,7 @@ export default function AcompanharPedidoPage() {
         </section>
 
         {order && (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+          <section className="tracking-result mt-6 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-5 text-xl font-bold text-gray-900">
               Informações do pedido
             </h2>
@@ -213,7 +213,7 @@ export default function AcompanharPedidoPage() {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm font-semibold text-blue-600 hover:underline">
+          <a href="/" className="tracking-back text-sm font-semibold text-blue-600 hover:underline">
             Voltar para a loja
           </a>
         </div>
