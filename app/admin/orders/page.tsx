@@ -65,7 +65,7 @@ function whatsappLink(order: Order) {
   const digits = (order.customer_phone || "").replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
 
-  const message = `Olá, ${order.customer_name}! Seu pedido na Marketplace Brasil foi enviado. ${
+  const message = `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${
     order.tracking_code
       ? `Código de rastreio: ${order.tracking_code}. `
       : ""
