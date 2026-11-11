@@ -16,6 +16,7 @@ type AccountUser = {
     number?: string;
     complement?: string;
     reference?: string;
+    avatar_url?: string;
   };
 };
 
@@ -90,6 +91,8 @@ export default function ContaClientePage() {
   const [reference, setReference] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -120,6 +123,7 @@ export default function ContaClientePage() {
     setAddressNumber(metadata?.number || "");
     setComplement(metadata?.complement || "");
     setReference(metadata?.reference || "");
+    setAvatarUrl(metadata?.avatar_url || "");
   }, [user]);
 
   useEffect(() => {
@@ -233,6 +237,79 @@ export default function ContaClientePage() {
     }
   }
 
+  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !user) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Escolha uma imagem JPG, PNG ou WEBP.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setError("A foto deve ter no máximo 3 MB.");
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setUploadingAvatar(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      if (!userId) throw new Error("Entre novamente na sua conta.");
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(`${userId}/avatar`, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: "3600",
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(`${userId}/avatar`);
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicData.publicUrl },
+      });
+      if (updateError) throw updateError;
+      if (data.user) setUser(data.user);
+      setAvatarUrl(publicData.publicUrl);
+      setMessage("Foto de perfil atualizada com sucesso.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar a foto.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    if (!user) return;
+    setError("");
+    setMessage("");
+    setUploadingAvatar(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      if (!userId) throw new Error("Entre novamente na sua conta.");
+      const { error: removeError } = await supabase.storage
+        .from("avatars")
+        .remove([`${userId}/avatar`]);
+      if (removeError) throw removeError;
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: null },
+      });
+      if (updateError) throw updateError;
+      if (data.user) setUser(data.user);
+      setAvatarUrl("");
+      setMessage("Foto removida. Seu perfil voltou ao avatar padrão.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível remover a foto.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   async function handleLogout() {
     setError("");
     const { error: authError } = await supabase.auth.signOut();
@@ -254,11 +331,36 @@ export default function ContaClientePage() {
             <h1>Bem-vindo à sua conta!</h1>
             <p className="customer-account-intro">Acesse seus pedidos e acompanhe suas compras na NOVASHOPP STORE.</p>
             <div className="customer-account-profile">
-              <span className="customer-account-avatar">👤</span>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Foto do perfil"
+                  className="customer-account-avatar customer-account-avatar-image"
+                />
+              ) : (
+                <span className="customer-account-avatar">👤</span>
+              )}
               <div>
                 <strong>{user.user_metadata?.full_name || "Cliente NOVASHOPP"}</strong>
                 <p>{user.email}</p>
               </div>
+            </div>
+            <div className="customer-avatar-actions">
+              <label className="customer-avatar-upload">
+                {uploadingAvatar ? "Enviando foto..." : avatarUrl ? "Trocar foto" : "Adicionar foto"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  disabled={uploadingAvatar}
+                />
+              </label>
+              {avatarUrl && (
+                <button type="button" className="customer-avatar-remove" onClick={handleRemoveAvatar} disabled={uploadingAvatar}>
+                  Remover foto
+                </button>
+              )}
+              <small>JPG, PNG ou WEBP • até 3 MB</small>
             </div>
 
             {!editingProfile ? (
