@@ -1,8 +1,17 @@
-
 "use client";
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  PackageSearch,
+  Search,
+  ShieldCheck,
+  Truck,
+  CheckCircle2,
+  Clock3,
+  CalendarDays,
+  PackageCheck,
+} from "lucide-react";
 
 type TrackingResult = {
   order_id: string;
@@ -16,11 +25,9 @@ type TrackingResult = {
 
 function paymentLabel(status: string) {
   const value = status?.toLowerCase();
-
-  if (["pago", "paid", "approved"].includes(value)) return "Pagamento aprovado";
+  if (["pago", "paid", "approved", "aprovado"].includes(value)) return "Pagamento aprovado";
   if (["cancelado", "cancelled", "rejected"].includes(value)) return "Pagamento cancelado";
   if (["aguardando", "pending", "in_process"].includes(value)) return "Aguardando pagamento";
-
   return status || "Não informado";
 }
 
@@ -31,13 +38,21 @@ function deliveryLabel(status: string | null) {
     enviado: "Pedido enviado",
     entregue: "Entregue",
   };
+  return status ? labels[status] || status.replaceAll("_", " ") : "Ainda não atualizado";
+}
 
-  return status ? labels[status] || status : "Ainda não atualizado";
+function deliveryStepIndex(status: string | null) {
+  const steps: Record<string, number> = {
+    aguardando_separacao: 0,
+    em_preparacao: 1,
+    enviado: 2,
+    entregue: 3,
+  };
+  return status ? (steps[status] ?? 0) : 0;
 }
 
 function formatDate(date: string | null) {
-  if (!date) return "Ainda não registrado";
-
+  if (!date) return "Aguardando atualização";
   return new Date(date).toLocaleString("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
@@ -53,7 +68,6 @@ export default function AcompanharPedidoPage() {
 
   async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setError("");
     setOrder(null);
 
@@ -63,15 +77,11 @@ export default function AcompanharPedidoPage() {
     }
 
     setLoading(true);
-
     try {
-      const { data, error: rpcError } = await supabase.rpc(
-        "track_customer_order",
-        {
-          p_order_id: orderId.trim(),
-          p_phone: phone.trim(),
-        }
-      );
+      const { data, error: rpcError } = await supabase.rpc("track_customer_order", {
+        p_order_id: orderId.trim(),
+        p_phone: phone.trim(),
+      });
 
       if (rpcError) {
         setError("Não foi possível consultar o pedido. Confira os dados e tente novamente.");
@@ -79,12 +89,10 @@ export default function AcompanharPedidoPage() {
       }
 
       const result = Array.isArray(data) ? data[0] : data;
-
       if (!result) {
         setError("Não encontramos pedido com esses dados. Confira o número e o telefone.");
         return;
       }
-
       setOrder(result as TrackingResult);
     } catch {
       setError("Ocorreu um erro na consulta. Tente novamente.");
@@ -93,130 +101,146 @@ export default function AcompanharPedidoPage() {
     }
   }
 
-  return (
-    <main className="tracking-page min-h-screen bg-gray-100 px-4 py-10">
-      <div className="tracking-container mx-auto max-w-xl">
-        <div className="tracking-heading mb-6 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Acompanhar pedido
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Consulte o pagamento e o andamento da sua entrega.
-          </p>
-        </div>
+  const currentStep = order ? deliveryStepIndex(order.delivery_status) : 0;
+  const steps = [
+    { title: "Pedido recebido", description: "Seu pedido foi registrado", date: order?.created_at },
+    { title: "Em preparação", description: "Estamos preparando seus produtos", date: null },
+    { title: "Saiu para entrega", description: "Seu pedido está a caminho", date: order?.shipped_at },
+    { title: "Pedido entregue", description: "Entrega concluída com sucesso", date: order?.delivered_at },
+  ];
 
-        <section className="tracking-panel rounded-2xl bg-white p-6 shadow-sm">
-          <form onSubmit={handleSearch} className="space-y-4">
+  return (
+    <main className="tracking-page">
+      <div className="tracking-container">
+        <a href="/" className="tracking-brand">
+          <span className="tracking-brand-mark">N</span>
+          <span>NOVASHOPP <b>STORE</b></span>
+        </a>
+
+        <section className="tracking-hero">
+          <div className="tracking-hero-copy">
+            <span className="tracking-eyebrow">CENTRAL DE PEDIDOS</span>
+            <h1>Acompanhe sua compra <span>em cada etapa.</span></h1>
+            <p>Tenha informações atualizadas sobre o pagamento e a entrega do seu pedido, em um só lugar.</p>
+            <div className="tracking-trust"><ShieldCheck size={16} /> Consulta segura com seus dados de compra</div>
+          </div>
+          <div className="tracking-hero-art" aria-hidden="true">
+            <div className="tracking-art-circle"><PackageSearch size={76} strokeWidth={1.35} /></div>
+            <span className="tracking-art-dot dot-one"></span>
+            <span className="tracking-art-dot dot-two"></span>
+          </div>
+        </section>
+
+        <section className="tracking-panel">
+          <div className="tracking-panel-heading">
+            <div className="tracking-panel-icon"><Search size={20} /></div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-gray-700">
-                Número do pedido
-              </label>
+              <h2>Localizar meu pedido</h2>
+              <p>Informe os mesmos dados utilizados na compra.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSearch} className="tracking-form">
+            <label>
+              <span>Número do pedido</span>
               <input
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Cole aqui o número do pedido"
-                className="tracking-input w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-600"
+                placeholder="Cole o número do seu pedido"
+                className="tracking-input"
                 required
               />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-gray-700">
-                Telefone utilizado na compra
-              </label>
+            </label>
+            <label>
+              <span>Telefone da compra</span>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(92) 99999-9999"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-600"
+                className="tracking-input"
                 required
               />
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="tracking-submit w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-            >
-              {loading ? "Consultando..." : "Consultar pedido"}
+            </label>
+            {error && <p className="tracking-error">{error}</p>}
+            <button type="submit" disabled={loading} className="tracking-submit">
+              <Search size={18} /> {loading ? "Consultando pedido..." : "Consultar pedido"}
             </button>
           </form>
+          <p className="tracking-privacy"><ShieldCheck size={14} /> Seus dados são utilizados somente para localizar sua compra.</p>
         </section>
 
         {order && (
-          <section className="tracking-result mt-6 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-gray-900">
-              Informações do pedido
-            </h2>
-
-            <div className="space-y-4">
+          <section className="tracking-result">
+            <div className="tracking-result-top">
               <div>
-                <p className="text-sm text-gray-500">Número do pedido</p>
-                <p className="break-all font-semibold text-gray-900">
-                  {order.order_id}
-                </p>
+                <span className="tracking-eyebrow">RESULTADO DA CONSULTA</span>
+                <h2>Detalhes do pedido</h2>
+                <p className="tracking-order-number">Pedido <strong>{order.order_id}</strong></p>
               </div>
+              <span className="tracking-status-pill"><CheckCircle2 size={15} /> Pedido localizado</span>
+            </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Pagamento</p>
-                <p className="font-semibold text-gray-900">
-                  {paymentLabel(order.payment_status)}
-                </p>
+            <div className="tracking-status-grid">
+              <article className="tracking-status-card">
+                <span className="tracking-status-icon payment"><ShieldCheck size={19} /></span>
+                <div><small>Pagamento</small><strong>{paymentLabel(order.payment_status)}</strong></div>
+              </article>
+              <article className="tracking-status-card">
+                <span className="tracking-status-icon delivery"><Truck size={19} /></span>
+                <div><small>Entrega</small><strong>{deliveryLabel(order.delivery_status)}</strong></div>
+              </article>
+            </div>
+
+            <div className="tracking-timeline-block">
+              <div className="tracking-section-title"><PackageCheck size={19} /><h3>Etapas do pedido</h3></div>
+              <div className="tracking-timeline">
+                {steps.map((step, index) => {
+                  const complete = index <= currentStep;
+                  return (
+                    <div className={`tracking-timeline-step ${complete ? "is-complete" : ""} ${index === currentStep ? "is-current" : ""}`} key={step.title}>
+                      <div className="tracking-timeline-marker">
+                        {complete ? <CheckCircle2 size={19} /> : <span>{index + 1}</span>}
+                      </div>
+                      <div className="tracking-timeline-copy">
+                        <strong>{step.title}</strong>
+                        <p>{step.description}</p>
+                        {step.date && <small><Clock3 size={12} /> {formatDate(step.date)}</small>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Situação da entrega</p>
-                <p className="font-semibold text-gray-900">
-                  {deliveryLabel(order.delivery_status)}
-                </p>
+            <div className="tracking-extra-grid">
+              <div className="tracking-extra-card">
+                <CalendarDays size={18} />
+                <div><small>Data do pedido</small><strong>{formatDate(order.created_at)}</strong></div>
               </div>
-
-              <div>
-                <p className="text-sm text-gray-500">Código de rastreio</p>
-                <p className="break-all font-semibold text-gray-900">
-                  {order.tracking_code || "Ainda não disponível"}
-                </p>
+              <div className="tracking-extra-card">
+                <Truck size={18} />
+                <div><small>Data do envio</small><strong>{formatDate(order.shipped_at)}</strong></div>
               </div>
-
-              <hr />
-
-              <div>
-                <p className="text-sm text-gray-500">Data do pedido</p>
-                <p className="font-medium text-gray-900">
-                  {formatDate(order.created_at)}
-                </p>
+              <div className="tracking-extra-card">
+                <PackageCheck size={18} />
+                <div><small>Data da entrega</small><strong>{formatDate(order.delivered_at)}</strong></div>
               </div>
+            </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Data do envio</p>
-                <p className="font-medium text-gray-900">
-                  {formatDate(order.shipped_at)}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-500">Data da entrega</p>
-                <p className="font-medium text-gray-900">
-                  {formatDate(order.delivered_at)}
-                </p>
-              </div>
+            <div className="tracking-code-box">
+              <div><small>CÓDIGO DE RASTREIO</small><strong>{order.tracking_code || "Ainda não disponível"}</strong></div>
+              <Truck size={22} />
             </div>
           </section>
         )}
 
-        <div className="mt-6 text-center">
-          <a href="/" className="tracking-back text-sm font-semibold text-blue-600 hover:underline">
-            Voltar para a loja
-          </a>
-        </div>
+        <footer className="tracking-footer">
+          <p>Precisa de ajuda? Estamos aqui para ajudar você.</p>
+          <a href="/">← Voltar para a NOVASHOPP STORE</a>
+          <span>© NOVASHOPP STORE · Sua compra acompanhada com cuidado.</span>
+        </footer>
       </div>
     </main>
   );
