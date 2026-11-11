@@ -206,8 +206,8 @@ export default function Home() {
   return (
     <main>
       <div className="topbar">
-        <span>Ofertas especiais todos os dias!</span>
-        <span>Compre com segurança e praticidade</span>
+        <span>Mais variedade. Mais ofertas. Mais para você!</span>
+        <span>Compre fácil, receba rápido!</span>
       </div>
 
       <header className="header">
@@ -219,8 +219,8 @@ export default function Home() {
         </button>
 
         <a href="#" className="logo">
-          <span className="logo-icon">M</span>
-          <span>Marketplace<span className="logo-dot">.</span></span>
+          <span className="logo-icon">N</span>
+          <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE</small></span>
         </a>
 
         <div className="search-box">
@@ -269,11 +269,11 @@ export default function Home() {
 
       <section className="hero">
         <div className="hero-content">
-          <span className="hero-label">SEU NOVO JEITO DE COMPRAR</span>
-          <h1>Encontre tudo o que você procura em um só lugar.</h1>
+          <span className="hero-label">NOVASHOPP STORE • COMPRE FÁCIL, RECEBA RÁPIDO</span>
+          <h1>Tudo o que você precisa, <em>em um só lugar!</em></h1>
           <p>
-            Tecnologia, acessórios, casa, moda e muito mais.
-            Aproveite nossas ofertas!
+            Mais variedade, mais ofertas e praticidade para suas compras.
+            Encontre tecnologia, casa, moda e muito mais.
           </p>
           <button
             className="hero-button"
@@ -550,10 +550,10 @@ export default function Home() {
 
       <footer className="footer">
         <div className="footer-logo">
-          <span className="logo-icon">M</span>
-          Marketplace<span className="logo-dot">.</span>
+          <span className="logo-icon">N</span>
+          <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE</small></span>
         </div>
-        <p>Sua loja online de variedades, tecnologia e muito mais.</p>
+        <p>Tudo o que você precisa, em um só lugar!</p>
 
         {/* LINK DE ACOMPANHAMENTO NO RODAPÉ */}
         <div style={{ margin: "18px 0" }}>
@@ -570,7 +570,7 @@ export default function Home() {
         </div>
 
         <div className="footer-bottom">
-          © 2026 Marketplace. Todos os direitos reservados.
+          © 2026 NovaShopp Store. Todos os direitos reservados.
         </div>
       </footer>
 
