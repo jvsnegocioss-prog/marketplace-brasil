@@ -820,3 +820,150 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .price { font-size: 18px; }
   .add-button { padding: 11px 5px; font-size: 10px; }
 }
+
+
+/* NOVASHOPP STORE — painel administrativo */
+.admin-dashboard {
+  max-width: 1180px !important;
+  padding: 28px 22px 60px !important;
+  color: #17243b;
+  font-family: 'DM Sans', sans-serif !important;
+}
+.admin-dashboard > header {
+  padding: 25px 28px;
+  border: 1px solid #e5ebf4;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #071b43, #123b78);
+  color: #fff;
+  box-shadow: 0 14px 35px #071b431c;
+}
+.admin-dashboard > header h1 {
+  margin: 0 0 7px;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(25px, 4vw, 34px);
+  letter-spacing: -.035em;
+}
+.admin-dashboard > header p { color: #dbe5f5; margin-bottom: 15px; }
+.admin-dashboard button {
+  border-radius: 10px !important;
+  font-weight: 700;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.admin-dashboard button:hover { transform: translateY(-1px); }
+.admin-dashboard > header button {
+  background: #ffc928 !important;
+  color: #071b43 !important;
+  padding: 11px 16px !important;
+}
+.admin-dashboard > hr {
+  border: 0;
+  border-top: 1px solid #e8edf4;
+  margin: 28px 0;
+}
+.admin-dashboard > h2 {
+  margin: 0 0 14px;
+  color: #071b43;
+  font-family: 'Outfit', sans-serif;
+  font-size: 23px;
+  letter-spacing: -.025em;
+}
+.admin-dashboard section { gap: 15px !important; }
+.admin-stat-card {
+  border: 1px solid #e5ebf4 !important;
+  border-radius: 17px !important;
+  padding: 20px !important;
+  background: #fff !important;
+  box-shadow: 0 7px 22px #0b21400a;
+}
+.admin-stat-card p { color: #718096 !important; font-size: 13px; font-weight: 600; }
+.admin-stat-card h2 {
+  color: #071b43;
+  font-family: 'Outfit', sans-serif;
+  font-size: 27px !important;
+  letter-spacing: -.035em;
+}
+.admin-stat-card small { color: #8793a5 !important; font-size: 11px; }
+.admin-dashboard > button {
+  background: #071b43 !important;
+  color: #fff !important;
+  padding: 12px 18px !important;
+  margin-top: 18px !important;
+}
+.admin-product-form {
+  gap: 7px !important;
+  padding: 24px !important;
+  border: 1px solid #e4eaf3 !important;
+  border-radius: 18px !important;
+  background: #fff;
+  box-shadow: 0 8px 25px #0b214008;
+}
+.admin-product-form label {
+  color: #34445d;
+  font-size: 13px;
+  font-weight: 700;
+}
+.admin-product-form input,
+.admin-product-form textarea {
+  border: 1px solid #dfe6ef !important;
+  border-radius: 10px !important;
+  background: #fbfcfe;
+  color: #253651;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.admin-product-form input:focus,
+.admin-product-form textarea:focus {
+  border-color: #8aa4ca !important;
+  box-shadow: 0 0 0 4px #123b780e;
+}
+.admin-product-form button[type="submit"] {
+  background: #071b43 !important;
+  color: #fff !important;
+  min-height: 46px;
+}
+.admin-product-form button[type="button"] {
+  background: #f0f4fa !important;
+  color: #315783 !important;
+}
+.admin-product-card {
+  margin: 0 0 14px !important;
+  padding: 18px !important;
+  border: 1px solid #e5ebf4 !important;
+  border-radius: 16px !important;
+  background: #fff;
+  box-shadow: 0 6px 20px #0b214008;
+}
+.admin-product-card h3 {
+  color: #071b43;
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+}
+.admin-product-card p { color: #68778d; font-size: 13px; margin-top: 7px; }
+.admin-product-card img {
+  border: 1px solid #edf1f7;
+  border-radius: 12px;
+  background: #f7f9fc;
+  padding: 5px;
+}
+.admin-product-card button { padding: 10px 15px !important; }
+.admin-product-card button:nth-child(1) { background: #071b43 !important; color: #fff !important; }
+.admin-product-card button:nth-child(2) { background: #fff4c9 !important; color: #765700 !important; }
+.admin-product-card button:nth-child(3) { background: #fff0ef !important; color: #a83d3d !important; }
+.admin-dashboard > p {
+  border: 1px solid #dce8f6;
+  background: #f2f7fd !important;
+  color: #315783;
+  border-radius: 12px !important;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .admin-dashboard { padding: 16px 12px 40px !important; }
+  .admin-dashboard > header { padding: 20px 17px; border-radius: 16px; }
+  .admin-dashboard > header h1 { font-size: 25px; }
+  .admin-dashboard > h2 { font-size: 20px; }
+  .admin-stat-card { padding: 16px !important; }
+  .admin-product-form { padding: 17px !important; }
+  .admin-product-card { padding: 13px !important; }
+}
