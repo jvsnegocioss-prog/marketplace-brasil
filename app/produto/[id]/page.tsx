@@ -154,54 +154,54 @@ export default function ProductPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <Link href="/" className="mb-6 inline-flex items-center gap-2 font-semibold text-blue-700">
+    <main className="product-detail-page">
+      <div className="product-detail-container">
+        <Link href="/" className="detail-back-link">
           <ArrowLeft size={18} /> Voltar à loja
         </Link>
 
-        <section className="grid gap-8 rounded-2xl bg-white p-5 shadow-sm md:grid-cols-2 md:p-8">
-          <div className="flex h-56 w-full items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-3 sm:h-80 md:h-[420px]">
+        <section className="detail-overview">
+          <div className="detail-photo-frame">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
+              <img src={product.image_url} alt={product.name} className="detail-product-photo" />
             ) : (
-              <Package size={100} className="text-gray-300" />
+              <Package size={100} className="detail-placeholder" />
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{product.category || "Geral"}</p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">{product.name}</h1>
-            <div className="mt-3 flex items-center gap-2 text-amber-500">
+            <p className="detail-category">{product.category || "Geral"}</p>
+            <h1 className="detail-product-title">{product.name}</h1>
+            <div className="detail-rating">
               <span>{"★".repeat(Math.round(average))}{"☆".repeat(5 - Math.round(average))}</span>
-              <span className="text-sm text-gray-600">
+              <span className="detail-rating-caption">
                 {reviews.length ? `${average.toFixed(1)} de 5 • ${reviews.length} avaliação(ões)` : "Ainda sem avaliações"}
               </span>
             </div>
-            <p className="mt-5 text-3xl font-bold text-gray-900">{money(product.price)}</p>
-            <p className="mt-2 text-sm text-gray-500">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Produto indisponível"}</p>
-            {product.description && <p className="mt-5 whitespace-pre-wrap leading-7 text-gray-700">{product.description}</p>}
-            <Link href="/#produtos" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white">
+            <p className="detail-price">{money(product.price)}</p>
+            <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Produto indisponível"}</p>
+            {product.description && <p className="detail-description">{product.description}</p>}
+            <Link href="/#produtos" className="detail-buy-link">
               <ShoppingCart size={18} /> Voltar e comprar
             </Link>
           </div>
         </section>
 
-        <section className="mt-8 grid gap-8 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl bg-white p-5 shadow-sm md:p-7">
-            <h2 className="text-2xl font-bold text-gray-900">Avaliações dos clientes</h2>
+        <section className="detail-review-layout">
+          <div className="detail-panel">
+            <h2 className="detail-panel-title">Avaliações dos clientes</h2>
             {reviews.length === 0 ? (
               <p className="mt-5 text-gray-600">Este produto ainda não recebeu avaliações aprovadas.</p>
             ) : (
-              <div className="mt-5 space-y-5">
+              <div className="review-list">
                 {reviews.map((review) => (
-                  <article key={review.id} className="border-b border-gray-100 pb-5 last:border-0">
+                  <article key={review.id} className="review-item">
                     <div className="flex items-center justify-between gap-3">
-                      <strong className="text-gray-900">{review.reviewer_name}</strong>
-                      <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString("pt-BR")}</span>
+                      <strong className="reviewer-name">{review.reviewer_name}</strong>
+                      <span className="review-date">{new Date(review.created_at).toLocaleDateString("pt-BR")}</span>
                     </div>
-                    <div className="mt-1 text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
-                    <p className="mt-2 whitespace-pre-wrap text-gray-700">{review.comment}</p>
-                    <span className="mt-2 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">Compra verificada</span>
+                    <div className="review-stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
+                    <p className="review-comment">{review.comment}</p>
+                    <span className="verified-purchase">Compra verificada</span>
                   </article>
                 ))}
               </div>
@@ -210,27 +210,27 @@ export default function ProductPage() {
 
           <div className="rounded-2xl bg-white p-5 shadow-sm md:p-7">
             <h2 className="text-2xl font-bold text-gray-900">Avalie este produto</h2>
-            <p className="mt-2 text-sm text-gray-600">Disponível somente para quem comprou, pagou e recebeu este produto.</p>
-            <label className="mt-5 block text-sm font-semibold text-gray-700">Número do pedido</label>
-            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Cole o código do pedido" />
-            <label className="mt-4 block text-sm font-semibold text-gray-700">Telefone usado na compra</label>
+            <p className="review-form-intro">Disponível somente para quem comprou, pagou e recebeu este produto.</p>
+            <label className="review-label">Número do pedido</label>
+            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} className="review-input" placeholder="Cole o código do pedido" />
+            <label className="review-label review-label-spaced">Telefone usado na compra</label>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Seu telefone" inputMode="tel" />
-            <button type="button" onClick={findMyReview} disabled={saving || !orderId || !phone} className="mt-3 w-full rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">
+            <button type="button" onClick={findMyReview} disabled={saving || !orderId || !phone} className="review-secondary-button">
               Buscar minha avaliação anterior
             </button>
             <label className="mt-4 block text-sm font-semibold text-gray-700">Sua nota</label>
-            <div className="mt-2 flex gap-2">
+            <div className="review-star-picker">
               {[1, 2, 3, 4, 5].map((value) => (
-                <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} className={value <= rating ? "text-3xl text-amber-400" : "text-3xl text-gray-300"}>★</button>
+                <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
               ))}
             </div>
             <label className="mt-4 block text-sm font-semibold text-gray-700">Comentário</label>
-            <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="mt-1 w-full rounded-lg border p-3" placeholder="Conte como foi sua experiência..." />
-            <button onClick={submitReview} disabled={saving || !orderId || !phone || !comment.trim()} className="mt-4 w-full rounded-lg bg-blue-700 px-4 py-3 font-bold text-white disabled:opacity-50">
+            <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="review-input review-textarea" placeholder="Conte como foi sua experiência..." />
+            <button onClick={submitReview} disabled={saving || !orderId || !phone || !comment.trim()} className="review-submit-button">
               {saving ? "Enviando..." : reviewId ? "Salvar alterações" : "Enviar avaliação"}
             </button>
-            {reviewId && <button onClick={deleteReview} disabled={saving} className="mt-2 w-full rounded-lg border border-red-200 px-4 py-3 font-semibold text-red-700">Excluir minha avaliação</button>}
-            {message && <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">{message}</p>}
+            {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
+            {message && <p className="review-message">{message}</p>}
           </div>
         </section>
       </div>
