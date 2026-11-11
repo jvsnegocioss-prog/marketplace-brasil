@@ -1876,3 +1876,99 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .customer-account-card { padding: 24px 19px; border-radius: 22px; }
   .customer-account-back { margin-bottom: 20px; }
 }
+
+
+/* NOVASHOPP STORE — histórico de compras na conta do cliente */
+.customer-orders-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 27px 0 15px;
+  padding-top: 22px;
+  border-top: 1px solid #e9eef5;
+}
+.customer-orders-heading h2 {
+  margin: 5px 0 0;
+  color: #102747;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+.customer-orders-count {
+  display: grid;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  place-items: center;
+  border: 1px solid #f0d77e;
+  border-radius: 12px;
+  background: #fff5d5;
+  color: #725500;
+  font-size: 13px;
+  font-weight: 900;
+}
+.customer-orders-feedback {
+  padding: 18px 12px;
+  color: #60718a;
+  font-size: 12px;
+  text-align: center;
+}
+.customer-orders-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 25px 18px;
+  border: 1px dashed #d8e1ec;
+  border-radius: 15px;
+  background: #f8fafd;
+  text-align: center;
+}
+.customer-orders-empty > span { font-size: 28px; }
+.customer-orders-empty strong { color: #203957; font-size: 13px; }
+.customer-orders-empty p { max-width: 280px; margin: 0; color: #78869a; font-size: 11px; line-height: 1.6; }
+.customer-orders-list { display: grid; gap: 13px; margin: 14px 0 18px; }
+.customer-order-card {
+  padding: 16px;
+  border: 1px solid #e3eaf3;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff, #f9fbfe);
+  box-shadow: 0 5px 17px #071b4309;
+}
+.customer-order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.customer-order-top > div { min-width: 0; }
+.customer-order-top small { display: block; margin-bottom: 5px; color: #8b98aa; font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+.customer-order-id { display: block; max-width: 220px; overflow-wrap: anywhere; color: #263e5d; font-size: 10px; }
+.customer-order-total { color: #126344; font-size: 15px; white-space: nowrap; }
+.customer-order-date { margin: 8px 0 13px; color: #8591a1; font-size: 10px; }
+.customer-order-statuses { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.customer-order-statuses span { display: grid; gap: 5px; padding: 10px; border: 1px solid #e9eef5; border-radius: 10px; background: #fff; }
+.customer-order-statuses small { color: #8793a3; font-size: 9px; }
+.customer-order-statuses b { color: #29415f; font-size: 10px; line-height: 1.4; }
+.customer-order-items { display: grid; gap: 8px; margin-top: 13px; padding-top: 12px; border-top: 1px solid #edf1f6; }
+.customer-order-items > strong { color: #405671; font-size: 10px; }
+.customer-order-items > div { display: flex; justify-content: space-between; gap: 10px; color: #68788d; font-size: 10px; }
+.customer-order-items b { color: #304863; white-space: nowrap; }
+.customer-order-tracking { margin: 12px 0 0; padding: 10px; border-radius: 9px; background: #eef5ff; color: #506985; font-size: 10px; overflow-wrap: anywhere; }
+.customer-order-tracking strong { color: #183e70; }
+.customer-order-track-link {
+  display: flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  border: 1px solid #d9e4f1;
+  border-radius: 10px;
+  background: #f5f8fc;
+  color: #173c6a;
+  font-size: 10px;
+  font-weight: 900;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease;
+}
+.customer-order-track-link:hover { border-color: #e4c45d; background: #fff8e6; }
+@media (max-width: 380px) {
+  .customer-order-card { padding: 13px; }
+  .customer-order-statuses { grid-template-columns: 1fr; }
+  .customer-order-total { font-size: 13px; }
+}
