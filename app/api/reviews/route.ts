@@ -82,7 +82,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Não foi possível carregar as avaliações." }, { status: 500 });
   }
 
-  return NextResponse.json({ reviews: data || [] });
+  let ownReview = null;
+  const orderId = searchParams.get("orderId");
+  const phone = searchParams.get("phone");
+  if (orderId && phone) {
+    const { data: owned } = await supabaseAdmin
+      .from("product_reviews")
+      .select("id,rating,comment,status")
+      .eq("product_id", productId)
+      .eq("order_id", orderId)
+      .eq("customer_phone_hash", phoneHash(phone))
+      .maybeSingle();
+    ownReview = owned || null;
+  }
+
+  return NextResponse.json({ reviews: data || [], ownReview });
 }
 
 export async function POST(request: Request) {
