@@ -161,9 +161,9 @@ export default function ProductPage() {
         </Link>
 
         <section className="grid gap-8 rounded-2xl bg-white p-5 shadow-sm md:grid-cols-2 md:p-8">
-          <div className="flex min-h-72 items-center justify-center rounded-xl bg-gray-50 p-4">
+          <div className="flex h-56 w-full items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-3 sm:h-80 md:h-[420px]">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="max-h-64 max-w-full w-auto object-contain" />
+              <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
             ) : (
               <Package size={100} className="text-gray-300" />
             )}
