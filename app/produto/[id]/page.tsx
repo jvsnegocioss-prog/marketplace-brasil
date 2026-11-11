@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Star, Package } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Product = {
