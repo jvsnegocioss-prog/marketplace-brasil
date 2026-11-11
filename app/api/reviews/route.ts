@@ -197,7 +197,7 @@ export async function DELETE(request: Request) {
 
     const validation = await validatePurchase(orderId, productId, phone);
     if ("error" in validation) {
-      return NextResponse.json({ error: validation.error, status: validation.status });
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
     const { data, error } = await supabaseAdmin
