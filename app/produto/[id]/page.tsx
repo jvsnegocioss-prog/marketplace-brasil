@@ -208,23 +208,23 @@ export default function ProductPage() {
             )}
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm md:p-7">
-            <h2 className="text-2xl font-bold text-gray-900">Avalie este produto</h2>
+          <div className="detail-panel review-form-panel">
+            <h2 className="detail-panel-title">Avalie este produto</h2>
             <p className="review-form-intro">Disponível somente para quem comprou, pagou e recebeu este produto.</p>
             <label className="review-label">Número do pedido</label>
             <input value={orderId} onChange={(e) => setOrderId(e.target.value)} className="review-input" placeholder="Cole o código do pedido" />
             <label className="review-label review-label-spaced">Telefone usado na compra</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Seu telefone" inputMode="tel" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="review-input" placeholder="Seu telefone" inputMode="tel" />
             <button type="button" onClick={findMyReview} disabled={saving || !orderId || !phone} className="review-secondary-button">
               Buscar minha avaliação anterior
             </button>
-            <label className="mt-4 block text-sm font-semibold text-gray-700">Sua nota</label>
+            <label className="review-label review-label-spaced">Sua nota</label>
             <div className="review-star-picker">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
               ))}
             </div>
-            <label className="mt-4 block text-sm font-semibold text-gray-700">Comentário</label>
+            <label className="review-label review-label-spaced">Comentário</label>
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="review-input review-textarea" placeholder="Conte como foi sua experiência..." />
             <button onClick={submitReview} disabled={saving || !orderId || !phone || !comment.trim()} className="review-submit-button">
               {saving ? "Enviando..." : reviewId ? "Salvar alterações" : "Enviar avaliação"}
