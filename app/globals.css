@@ -1502,3 +1502,36 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .price { font-size: 18px; }
   .add-button { min-height: 40px; font-size: 9px; }
 }
+
+
+/* NOVASHOPP STORE — favoritos funcionais */
+.favorite-btn {
+  position: relative;
+  transition: color .2s ease, transform .2s ease;
+}
+.favorite-btn.favorite-active,
+.heart-button.is-favorite { color: #d74763; }
+.favorite-btn.favorite-active { background: #fff0f3; border-radius: 50%; }
+.favorite-count {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #d74763;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+.heart-button.is-favorite {
+  border-color: #f5c4ce;
+  background: #fff0f3;
+}
+.heart-button.is-favorite svg { fill: currentColor; }
+.favorite-btn:hover, .heart-button:hover { transform: scale(1.06); }
