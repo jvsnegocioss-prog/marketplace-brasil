@@ -5,7 +5,18 @@ import { supabase } from "@/lib/supabase";
 
 type AccountUser = {
   email?: string;
-  user_metadata?: { full_name?: string };
+  user_metadata?: {
+    full_name?: string;
+    phone?: string;
+    postal_code?: string;
+    state?: string;
+    city?: string;
+    neighborhood?: string;
+    street?: string;
+    number?: string;
+    complement?: string;
+    reference?: string;
+  };
 };
 
 type CustomerOrder = {
@@ -68,6 +79,15 @@ export default function ContaClientePage() {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [name, setName] = useState("");
   const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [city, setCity] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [street, setStreet] = useState("");
+  const [addressNumber, setAddressNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [reference, setReference] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [email, setEmail] = useState("");
@@ -89,7 +109,17 @@ export default function ContaClientePage() {
   }, []);
 
   useEffect(() => {
-    setProfileName(user?.user_metadata?.full_name || "");
+    const metadata = user?.user_metadata;
+    setProfileName(metadata?.full_name || "");
+    setProfilePhone(metadata?.phone || "");
+    setPostalCode(metadata?.postal_code || "");
+    setAddressState(metadata?.state || "");
+    setCity(metadata?.city || "");
+    setNeighborhood(metadata?.neighborhood || "");
+    setStreet(metadata?.street || "");
+    setAddressNumber(metadata?.number || "");
+    setComplement(metadata?.complement || "");
+    setReference(metadata?.reference || "");
   }, [user]);
 
   useEffect(() => {
@@ -167,19 +197,35 @@ export default function ContaClientePage() {
       setError("Informe seu nome completo para continuar.");
       return;
     }
+    if (!profilePhone.trim() || !postalCode.trim() || !addressState.trim() ||
+        !city.trim() || !neighborhood.trim() || !street.trim() || !addressNumber.trim()) {
+      setError("Preencha telefone e todos os campos obrigatórios do endereço.");
+      return;
+    }
 
     setError("");
     setMessage("");
     setSavingProfile(true);
     try {
       const { data, error: updateError } = await supabase.auth.updateUser({
-        data: { full_name: cleanName },
+        data: {
+          full_name: cleanName,
+          phone: profilePhone.trim(),
+          postal_code: postalCode.trim(),
+          state: addressState.trim(),
+          city: city.trim(),
+          neighborhood: neighborhood.trim(),
+          street: street.trim(),
+          number: addressNumber.trim(),
+          complement: complement.trim(),
+          reference: reference.trim(),
+        },
       });
       if (updateError) throw updateError;
       if (data.user) setUser(data.user);
       setProfileName(cleanName);
       setEditingProfile(false);
-      setMessage("Seus dados foram atualizados. O nome será preenchido no próximo checkout.");
+      setMessage("Seus dados foram atualizados. Nome, telefone e endereço serão preenchidos nos próximos checkouts.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível atualizar seu nome.");
     } finally {
@@ -231,18 +277,37 @@ export default function ContaClientePage() {
               </button>
             ) : (
               <form onSubmit={handleSaveProfile} className="customer-account-form" style={{ marginTop: 14, marginBottom: 20 }}>
-                <label>
-                  Nome completo
-                  <input
-                    value={profileName}
-                    onChange={(event) => setProfileName(event.target.value)}
-                    autoComplete="name"
-                    minLength={3}
-                    required
-                    placeholder="Digite seu nome completo"
-                  />
+                <label>Nome completo *
+                  <input value={profileName} onChange={(event) => setProfileName(event.target.value)} autoComplete="name" minLength={3} required placeholder="Digite seu nome completo" />
                 </label>
-                <p className="customer-account-footnote">Esse nome será usado automaticamente no preenchimento dos seus próximos pedidos.</p>
+                <label>Telefone / WhatsApp *
+                  <input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} autoComplete="tel" type="tel" required placeholder="(92) 99999-9999" />
+                </label>
+                <label>CEP *
+                  <input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} autoComplete="postal-code" required placeholder="00000-000" />
+                </label>
+                <label>Estado (UF) *
+                  <input value={addressState} onChange={(event) => setAddressState(event.target.value.toUpperCase())} autoComplete="address-level1" maxLength={2} required placeholder="AM" />
+                </label>
+                <label>Cidade *
+                  <input value={city} onChange={(event) => setCity(event.target.value)} autoComplete="address-level2" required placeholder="Sua cidade" />
+                </label>
+                <label>Bairro *
+                  <input value={neighborhood} onChange={(event) => setNeighborhood(event.target.value)} required placeholder="Seu bairro" />
+                </label>
+                <label>Rua / Avenida *
+                  <input value={street} onChange={(event) => setStreet(event.target.value)} autoComplete="street-address" required placeholder="Nome da rua ou avenida" />
+                </label>
+                <label>Número *
+                  <input value={addressNumber} onChange={(event) => setAddressNumber(event.target.value)} required placeholder="Número" />
+                </label>
+                <label>Complemento
+                  <input value={complement} onChange={(event) => setComplement(event.target.value)} placeholder="Apartamento, bloco, casa..." />
+                </label>
+                <label>Ponto de referência
+                  <input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Próximo a..." />
+                </label>
+                <p className="customer-account-footnote">Esses dados serão salvos no seu perfil e usados para preencher seus próximos pedidos. Você poderá alterá-los quando precisar.</p>
                 <button className="customer-account-submit" type="submit" disabled={savingProfile}>
                   {savingProfile ? "Salvando..." : "Salvar meus dados"}
                 </button>
