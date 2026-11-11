@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Search, ShoppingCart, Menu, X, Heart, Star,
   Truck, ShieldCheck, CreditCard, Plus, Minus,
@@ -468,25 +467,26 @@ export default function Home() {
                   </button>
 
                   {product.image_url ? (
-                    <Link
+                    <a
                       href={`/produto/${product.id}`}
                       aria-label={`Ver detalhes e avaliações de ${product.name}`}
-                      className="flex h-full w-full items-center justify-center"
+                      style={{ display: "block", width: "100%", height: "100%" }}
                     >
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        className="h-full w-full object-contain p-3"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          padding: 12,
+                        }}
                       />
-                    </Link>
+                    </a>
                   ) : (
-                    <Link
-                      href={`/produto/${product.id}`}
-                      aria-label={`Ver detalhes e avaliações de ${product.name}`}
-                      className="product-art flex h-full w-full items-center justify-center"
-                    >
+                    <div className="product-art">
                       <Package size={76} strokeWidth={1.2} />
-                    </Link>
+                    </div>
                   )}
                 </div>
 
