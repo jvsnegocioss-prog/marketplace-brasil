@@ -84,6 +84,20 @@ export default function Home() {
 
   useEffect(() => {
     loadProducts();
+
+    // Se o cliente já estiver autenticado, aproveita os dados da conta no checkout.
+    supabase.auth.getSession().then(({ data }) => {
+      const accountUser = data.session?.user;
+      if (!accountUser) return;
+
+      const accountName =
+        typeof accountUser.user_metadata?.full_name === "string"
+          ? accountUser.user_metadata.full_name
+          : "";
+
+      setCustomerName((current) => current || accountName);
+      setCustomerEmail((current) => current || accountUser.email || "");
+    });
   }, []);
 
   useEffect(() => {
@@ -178,10 +192,14 @@ export default function Home() {
     setCheckoutMessage("");
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           customerName,
@@ -750,6 +768,11 @@ export default function Home() {
                   >
                     <p style={{ fontSize: 14, color: "#666" }}>
                       Informe seus dados para continuar com o pagamento.
+                      {customerEmail && (
+                        <span style={{ display: "block", marginTop: 5, color: "#176044", fontWeight: 600 }}>
+                          { "Conta identificada: " + customerEmail }
+                        </span>
+                      )}
                     </p>
 
                     <label style={{ fontSize: 14, fontWeight: 600 }}>
