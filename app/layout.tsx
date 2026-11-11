@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Marketplace | Sua loja online",
+  title: "NovaShopp Store | Tudo o que você precisa, em um só lugar!",
   description:
-    "Encontre tecnologia, acessórios, produtos para casa, moda e muito mais em um só lugar.",
+    "NovaShopp Store: tecnologia, variedades, ofertas e praticidade em um só lugar. Compre fácil, receba rápido.",
 };
 
 export default function RootLayout({
