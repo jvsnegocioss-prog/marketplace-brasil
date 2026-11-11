@@ -501,9 +501,12 @@ export default function Home() {
                     </p>
                   )}
 
-                  <div className="rating">
-                    ★★★★★ <small>(Avaliações)</small>
-                  </div>
+                  <a
+                    href={`/produto/${product.id}`}
+                    className="mb-3 inline-block text-sm font-semibold text-blue-700 hover:underline"
+                  >
+                    Ver detalhes e avaliações
+                  </a>
 
                   <strong className="price">
                     {money(product.price)}
