@@ -1535,3 +1535,9 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 }
 .heart-button.is-favorite svg { fill: currentColor; }
 .favorite-btn:hover, .heart-button:hover { transform: scale(1.06); }
+
+
+@media (max-width: 600px) {
+  .header-actions .favorite-btn { display: inline-flex; }
+  .header-actions .favorite-btn svg { width: 21px; height: 21px; }
+}
