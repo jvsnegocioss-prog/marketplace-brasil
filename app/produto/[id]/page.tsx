@@ -163,7 +163,7 @@ export default function ProductPage() {
         <section className="grid gap-8 rounded-2xl bg-white p-5 shadow-sm md:grid-cols-2 md:p-8">
           <div className="flex min-h-72 items-center justify-center rounded-xl bg-gray-50 p-4">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="max-h-96 w-full object-contain" />
+              <img src={product.image_url} alt={product.name} className="max-h-64 max-w-full w-auto object-contain" />
             ) : (
               <Package size={100} className="text-gray-300" />
             )}
