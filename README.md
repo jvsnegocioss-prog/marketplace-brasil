@@ -1,2 +1,2 @@
-# marketplace-brasil
-Plataforma de comércio eletrônico e marketplace de produtos variados.
+# NovaShopp Store
+Loja virtual de produtos variados: tecnologia, acessórios, casa, moda e muito mais.
