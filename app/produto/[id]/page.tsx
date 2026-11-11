@@ -70,6 +70,27 @@ export default function ProductPage() {
     ? reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length
     : 0;
 
+  async function findMyReview() {
+    if (!orderId || !phone) {
+      setMessage("Informe o número do pedido e o telefone da compra.");
+      return;
+    }
+    setSaving(true);
+    const query = new URLSearchParams({ productId, orderId, phone });
+    const response = await fetch(`/api/reviews?${query.toString()}`);
+    const result = await response.json();
+    if (response.ok && result.ownReview) {
+      setReviewId(result.ownReview.id);
+      setRating(result.ownReview.rating);
+      setComment(result.ownReview.comment);
+      setMessage(`Sua avaliação foi localizada. Situação: ${result.ownReview.status === "approved" ? "publicada" : "aguardando aprovação"}.`);
+    } else {
+      setReviewId("");
+      setMessage("Não encontramos uma avaliação sua para este produto e pedido.");
+    }
+    setSaving(false);
+  }
+
   async function submitReview() {
     if (saving) return;
     setSaving(true);
@@ -194,6 +215,9 @@ export default function ProductPage() {
             <input value={orderId} onChange={(e) => setOrderId(e.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Cole o código do pedido" />
             <label className="mt-4 block text-sm font-semibold text-gray-700">Telefone usado na compra</label>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Seu telefone" inputMode="tel" />
+            <button type="button" onClick={findMyReview} disabled={saving || !orderId || !phone} className="mt-3 w-full rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">
+              Buscar minha avaliação anterior
+            </button>
             <label className="mt-4 block text-sm font-semibold text-gray-700">Sua nota</label>
             <div className="mt-2 flex gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
