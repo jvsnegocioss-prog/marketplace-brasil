@@ -1031,3 +1031,133 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   .tracking-panel, .tracking-result { border-radius: 17px !important; padding: 20px 17px !important; }
   .tracking-heading h1 { font-size: 30px; }
 }
+
+
+/* NOVASHOPP STORE — banner principal premium */
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 390px;
+  margin: 38px 6%;
+  padding: clamp(38px, 5.5vw, 76px) clamp(28px, 6vw, 82px);
+  border: 1px solid #244777;
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 82% 18%, #2b69b8a8 0%, transparent 34%),
+    radial-gradient(ellipse at 68% 100%, #123d79 0%, transparent 42%),
+    linear-gradient(115deg, #061632 0%, #092653 54%, #0b3470 100%);
+  box-shadow: 0 22px 55px #071b4330, inset 0 1px 0 #ffffff12;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 340px;
+  height: 340px;
+  right: 5%;
+  top: 50%;
+  border: 1px solid #ffffff20;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 28px #ffffff08, 0 0 0 58px #ffffff05;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 9px;
+  height: 9px;
+  right: 17%;
+  top: 18%;
+  border-radius: 50%;
+  background: var(--shop-yellow);
+  box-shadow: 0 0 22px #ffc928b8, -245px 210px 0 2px #ffffff55;
+}
+.hero-content { position: relative; z-index: 1; max-width: 610px; }
+.hero-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid #ffffff2c;
+  border-radius: 999px;
+  background: #ffffff0d;
+  color: #ffda63;
+  font-size: 10px;
+  letter-spacing: 1.55px;
+}
+.hero h1 {
+  max-width: 590px;
+  margin: 22px 0 16px;
+  color: #fff;
+  font-size: clamp(36px, 4.6vw, 58px);
+  line-height: 1.06;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.hero h1 em {
+  color: #ffd34e;
+  text-shadow: 0 5px 25px #ffc92824;
+}
+.hero p {
+  max-width: 485px;
+  color: #d7e2f3;
+  font-size: clamp(14px, 1.25vw, 16px);
+  line-height: 1.8;
+}
+.hero-button {
+  min-height: 51px;
+  margin-top: 27px;
+  padding: 0 23px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffda5b, #ffc21d);
+  box-shadow: 0 9px 24px #ffc92830;
+  font-size: 14px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.hero-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 13px 28px #ffc92845;
+}
+.hero-art {
+  z-index: 1;
+  width: clamp(220px, 27vw, 310px);
+  height: 280px;
+  margin-right: 1%;
+}
+.hero-circle {
+  width: clamp(185px, 19vw, 230px);
+  height: clamp(185px, 19vw, 230px);
+  border: 9px solid #ffffff20;
+  background: linear-gradient(145deg, #ffdc61, #f6b900);
+  color: #09234d;
+  box-shadow: 0 22px 55px #020d224d, inset 0 2px 5px #ffffff80;
+  transform: rotate(-7deg);
+}
+.hero-circle svg { filter: drop-shadow(0 5px 4px #8a61002c); }
+.hero-circle span { font-size: 12px; letter-spacing: 5px; }
+.floating-card {
+  right: -8px;
+  bottom: 19px;
+  padding: 14px 18px;
+  border: 1px solid #e7edf6;
+  border-radius: 13px;
+  color: #0b2a58;
+  font-size: 12px;
+  box-shadow: 0 12px 30px #020d2240;
+}
+@media (max-width: 760px) {
+  .hero { margin: 24px 4%; padding: 34px 27px; border-radius: 22px; }
+  .hero::before { width: 235px; height: 235px; right: -90px; top: auto; bottom: -100px; transform: none; }
+  .hero::after { right: 13%; top: 13%; }
+  .hero h1 { max-width: 520px; font-size: clamp(32px, 7vw, 42px); }
+  .hero p { max-width: 430px; font-size: 14px; }
+  .hero-art { display: none; }
+}
+@media (max-width: 390px) {
+  .hero { margin: 18px 3%; padding: 29px 21px; }
+  .hero-label { font-size: 8px; letter-spacing: 1px; }
+  .hero h1 { font-size: 30px; }
+  .hero p { font-size: 13px; }
+  .hero-button { min-height: 47px; padding: 0 18px; }
+}
