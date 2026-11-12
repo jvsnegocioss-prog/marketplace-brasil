@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         rating,
         comment: "",
         photos,
-        status: "pending",
+        status: "approved",
       })
       .select("id,status")
       .single();
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto nesta compra." }, { status: 409 });
       return NextResponse.json({ error: "Não foi possível salvar a avaliação." }, { status: 500 });
     }
-    return NextResponse.json({ success: true, review: data, message: "Avaliação enviada para aprovação." }, { status: 201 });
+    return NextResponse.json({ success: true, review: data, message: "Avaliação publicada com sucesso!" }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a avaliação." }, { status: 500 });
   }
@@ -184,7 +184,7 @@ export async function PATCH(request: Request) {
 
     if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
     if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
-    return NextResponse.json({ success: true, review: data, message: "Alteração enviada para nova aprovação." });
+    return NextResponse.json({ success: true, review: data, message: "Avaliação atualizada e publicada com sucesso!" });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a alteração." }, { status: 500 });
   }
