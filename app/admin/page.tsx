@@ -298,8 +298,8 @@ export default function AdminPage() {
         if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) {
           throw new Error("Para a análise com IA, use uma foto JPG, PNG ou WEBP.");
         }
-        if (image.size > 4 * 1024 * 1024) {
-          throw new Error("A foto deve ter no máximo 4 MB para análise.");
+        if (image.size > 2.5 * 1024 * 1024) {
+          throw new Error("A foto deve ter no máximo 2,5 MB para análise.");
         }
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
