@@ -455,7 +455,7 @@ export default function ContaClientePage() {
                   </div>
                   <p className="customer-order-date">Realizado em {dateLabel(order.created_at)}</p>
                   {Number(order.discount_amount || 0) > 0 && (
-                    <div className="customer-order-coupon">
+                    <div className="customer-order-coupon" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8, padding: "10px 12px", margin: "10px 0", borderRadius: 10, background: "#fff8db", color: "#674b00", fontSize: 13 }}>
                       <span>🎟️ Cupom {order.coupon_code || "aplicado"}</span>
                       <strong>Você economizou {money(order.discount_amount)}</strong>
                     </div>
