@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, ShoppingBag, Wallet, Clock3, PackageCheck,
@@ -62,6 +63,8 @@ function whatsappLink(order: Order) {
 }
 
 export default function OrdersPage() {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -132,7 +135,45 @@ export default function OrdersPage() {
     await loadOrders();
   }
 
-  useEffect(() => { void loadOrders(); }, []);
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !userData.user) {
+          router.replace("/admin/login");
+          return;
+        }
+
+        const { data, error } = await supabase.rpc("is_marketplace_admin");
+
+        if (error || data !== true) {
+          await supabase.auth.signOut();
+          router.replace("/admin/login");
+          return;
+        }
+
+        setAuthorized(true);
+        await loadOrders();
+      } catch {
+        router.replace("/admin/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void checkAdmin();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] p-8 text-center text-sm text-slate-500">
+        Verificando acesso administrativo...
+      </main>
+    );
+  }
+
+  if (!authorized) return null;
 
   const money = (value: number) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const date = (value: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não registrado";
