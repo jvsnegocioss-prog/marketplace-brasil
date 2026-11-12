@@ -2382,3 +2382,70 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   top: max(12px, env(safe-area-inset-top)); right: 12px;
   background: rgba(20,20,20,.5);
 }
+
+
+/* NOVASHOPP STORE — padrão unificado dos botões da experiência de compra */
+.hero-button,
+.add-button,
+.checkout-button,
+.detail-buy-link,
+.detail-back-link,
+.review-secondary-button,
+.review-submit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid #173b70;
+  border-radius: 12px;
+  background: linear-gradient(115deg, #071b43 0%, #17477f 100%);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-decoration: none;
+  box-shadow: 0 4px 0 #d6a91d, 0 8px 18px #071b4320;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.hero-button:hover,
+.add-button:hover,
+.checkout-button:hover,
+.detail-buy-link:hover,
+.detail-back-link:hover,
+.review-secondary-button:hover,
+.review-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 6px 0 #d6a91d, 0 12px 22px #071b4328;
+}
+.hero-button:active,
+.add-button:active,
+.checkout-button:active,
+.detail-buy-link:active,
+.detail-back-link:active,
+.review-secondary-button:active,
+.review-submit-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #d6a91d, 0 4px 10px #071b4318;
+}
+.review-submit-button:disabled,
+.add-button:disabled,
+.checkout-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.detail-back-link { margin-bottom: 22px; }
+.hero-button { color: #fff; }
+.checkout-button { width: 100%; }
+.review-secondary-button { width: 100%; }
+.review-submit-button { width: 100%; }
+.cart-remove-button {
+  box-shadow: none;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+.cart-remove-button:hover { transform: translateY(-1px); box-shadow: none; }
