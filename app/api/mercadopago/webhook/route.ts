@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       normalizedMatches,
       originalMatches,
     });
-    if (!normalizedMatches) {
+    if (!normalizedMatches && !originalMatches) {
       console.error("[MP webhook] Assinatura não autorizada.");
       return NextResponse.json(
         { error: "Assinatura não autorizada." },
