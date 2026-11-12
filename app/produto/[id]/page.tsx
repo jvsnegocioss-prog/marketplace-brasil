@@ -29,6 +29,7 @@ type Review = {
   reviewer_name: string;
   rating: number;
   comment: string;
+  photos?: string[] | null;
   created_at: string;
 };
 
@@ -48,10 +49,8 @@ export default function ProductPage() {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [orderId, setOrderId] = useState("");
-  const [phone, setPhone] = useState("");
   const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState("");
+  const [reviewFiles, setReviewFiles] = useState<File[]>([]);
   const [reviewId, setReviewId] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,9 +115,20 @@ export default function ProductPage() {
   }, []);
 
   async function loadReviews() {
-    const response = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const response = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
     const result = await response.json();
-    if (response.ok) setReviews(result.reviews || []);
+    if (response.ok) {
+      setReviews(result.reviews || []);
+      if (result.ownReview) {
+        setReviewId(result.ownReview.id);
+        setRating(result.ownReview.rating);
+      }
+    }
   }
 
   useEffect(() => {
@@ -152,74 +162,67 @@ export default function ProductPage() {
     ? reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length
     : 0;
 
-  async function findMyReview() {
-    if (!orderId || !phone) {
-      setMessage("Informe o número do pedido e o telefone da compra.");
-      return;
-    }
-    setSaving(true);
-    const query = new URLSearchParams({ productId, orderId, phone });
-    const response = await fetch(`/api/reviews?${query.toString()}`);
-    const result = await response.json();
-    if (response.ok && result.ownReview) {
-      setReviewId(result.ownReview.id);
-      setRating(result.ownReview.rating);
-      setComment(result.ownReview.comment);
-      setMessage(`Sua avaliação foi localizada. Situação: ${result.ownReview.status === "approved" ? "publicada" : "aguardando aprovação"}.`);
-    } else {
-      setReviewId("");
-      setMessage("Não encontramos uma avaliação sua para este produto e pedido.");
-    }
-    setSaving(false);
-  }
-
   async function submitReview() {
     if (saving) return;
     setSaving(true);
     setMessage("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setMessage("Entre na sua conta para avaliar este produto.");
+        return;
+      }
 
-    const response = await fetch("/api/reviews", {
-      method: reviewId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reviewId: reviewId || undefined,
-        orderId,
-        productId,
-        phone,
-        rating,
-        comment,
-      }),
-    });
-    const result = await response.json();
+      const form = new FormData();
+      form.append("productId", productId);
+      form.append("rating", String(rating));
+      reviewFiles.forEach((file) => form.append("media", file));
 
-    if (!response.ok) {
-      setMessage(result.error || "Não foi possível enviar sua avaliação.");
-    } else {
-      setReviewId(result.review?.id || reviewId);
-      setMessage(result.message || "Avaliação enviada para aprovação.");
-      await loadReviews();
+      const response = await fetch("/api/reviews", {
+        method: reviewId ? "PATCH" : "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: reviewId ? (() => { form.append("reviewId", reviewId); return form; })() : form,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setMessage(result.error || "Não foi possível enviar a avaliação.");
+      } else {
+        setReviewId(result.review?.id || reviewId);
+        setReviewFiles([]);
+        setMessage(result.message || "Avaliação enviada para aprovação.");
+        await loadReviews();
+      }
+    } catch {
+      setMessage("Não foi possível enviar sua avaliação. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function deleteReview() {
     if (!reviewId || saving) return;
     if (!window.confirm("Deseja excluir sua avaliação?")) return;
     setSaving(true);
-    const response = await fetch("/api/reviews", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reviewId, orderId, productId, phone }),
-    });
-    const result = await response.json();
-    setMessage(result.message || result.error || "");
-    if (response.ok) {
-      setReviewId("");
-      setComment("");
-      setRating(5);
-      await loadReviews();
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const response = await fetch("/api/reviews", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ reviewId, productId }),
+      });
+      const result = await response.json();
+      setMessage(result.message || result.error || "");
+      if (response.ok) {
+        setReviewId("");
+        setRating(5);
+        setReviewFiles([]);
+        await loadReviews();
+      }
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   if (loading) {
@@ -647,7 +650,8 @@ export default function ProductPage() {
                       <span className="review-date">{new Date(review.created_at).toLocaleDateString("pt-BR")}</span>
                     </div>
                     <div className="review-stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
-                    <p className="review-comment">{review.comment}</p>
+                    {review.comment && <p className="review-comment">{review.comment}</p>}
+                    {review.photos?.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>{review.photos.map((url) => /\\.(mp4|webm|mov)(\\?|$)/i.test(url) ? <video key={url} src={url} controls playsInline style={{ maxWidth: "100%", width: 180, borderRadius: 8 }} /> : <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt="Foto enviada na avaliação" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }} /></a>)}</div> : null}
                     <span className="verified-purchase">Compra verificada</span>
                   </article>
                 ))}
@@ -657,27 +661,37 @@ export default function ProductPage() {
 
           <div className="detail-panel review-form-panel">
             <h2 className="detail-panel-title">Avalie este produto</h2>
-            <p className="review-form-intro">Disponível somente para quem comprou, pagou e recebeu este produto.</p>
-            <label className="review-label">Número do pedido</label>
-            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} className="review-input" placeholder="Cole o código do pedido" />
-            <label className="review-label review-label-spaced">Telefone usado na compra</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="review-input" placeholder="Seu telefone" inputMode="tel" />
-            <button type="button" onClick={findMyReview} disabled={saving || !orderId || !phone} className="review-secondary-button">
-              Buscar minha avaliação anterior
-            </button>
+            <p className="review-form-intro">Compartilhe fotos ou vídeo do produto recebido e sua nota. Disponível para clientes com compra paga e entregue.</p>
+            <label className="review-label">Fotos do produto recebido</label>
+            <input
+              type="file"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
+              multiple
+              onChange={(event) => setReviewFiles(Array.from(event.target.files || []))}
+              className="review-input"
+            />
+            <p style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Você pode selecionar até 5 arquivos, com no máximo 50 MB cada.</p>
+            {reviewFiles.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(82px,1fr))", gap: 8, marginTop: 10 }}>
+                {reviewFiles.map((file, index) => (
+                  <div key={index} style={{ padding: 8, border: "1px solid #dbe3ef", borderRadius: 8, fontSize: 11, overflowWrap: "anywhere" }}>
+                    {file.type.startsWith("video/") ? "🎥 Vídeo" : "📷 Foto"}<br />{file.name}
+                  </div>
+                ))}
+              </div>
+            )}
             <label className="review-label review-label-spaced">Sua nota</label>
-            <div className="review-star-picker">
+            <div className="review-star-picker" aria-label="Selecione sua nota de 1 a 5 estrelas">
               {[1, 2, 3, 4, 5].map((value) => (
-                <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
+                <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} aria-pressed={value === rating} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
               ))}
             </div>
-            <label className="review-label review-label-spaced">Comentário</label>
-            <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="review-input review-textarea" placeholder="Conte como foi sua experiência..." />
-            <button onClick={submitReview} disabled={saving || !orderId || !phone || !comment.trim()} className="review-submit-button">
-              {saving ? "Enviando..." : reviewId ? "Salvar alterações" : "Enviar avaliação"}
+            <button onClick={submitReview} disabled={saving} className="review-submit-button">
+              {saving ? "Enviando..." : reviewId ? "Atualizar avaliação" : "ENVIAR"}
             </button>
             {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
-            {message && <p className="review-message">{message}</p>}
+            {message && <p className="review-message" role="status">{message}</p>}
+          </div>
           </div>
         </section>
       </div>
