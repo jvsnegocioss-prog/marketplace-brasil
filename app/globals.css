@@ -2321,3 +2321,13 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   font-size: 9px;
   font-weight: 700;
 }
+
+.detail-video-fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  background: linear-gradient(135deg, #263b60, #101827);
+  color: #fff;
+  font-size: 22px;
+}
