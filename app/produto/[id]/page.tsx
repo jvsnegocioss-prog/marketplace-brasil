@@ -218,9 +218,11 @@ export default function ProductPage() {
                 <video
                   key={selectedMedia.id}
                   src={selectedMedia.url}
+                  poster={product.image_url || productMedia.find((item) => item.media_type === "image")?.url || undefined}
                   controls
                   playsInline
-                  className="detail-product-photo"
+                  preload="metadata"
+                  className="detail-product-photo detail-product-video"
                 />
               ) : (
                 <button
@@ -280,7 +282,14 @@ export default function ProductPage() {
                     {media.media_type === "image" ? (
                       <img src={media.url} alt="" />
                     ) : (
-                      <span className="detail-video-thumb">▶ Vídeo</span>
+                      <span className="detail-video-thumb">
+                        <img
+                          src={product.image_url || productMedia.find((item) => item.media_type === "image")?.url || ""}
+                          alt=""
+                        />
+                        <span className="detail-video-play">▶</span>
+                        <span className="detail-video-label">Vídeo</span>
+                      </span>
                     )}
                   </button>
                 ))}
