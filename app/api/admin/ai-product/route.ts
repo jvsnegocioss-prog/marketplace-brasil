@@ -95,7 +95,7 @@ Descrição/detalhes: ${description || "Não informado"}`;
       const imageResponse = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(12000) });
       if (!imageResponse.ok) return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-      if (imageBuffer.byteLength > 4 * 1024 * 1024) {
+      if (imageBuffer.byteLength > 2.5 * 1024 * 1024) {
         return errorResponse("A foto deve ter no máximo 4 MB para análise.", 413);
       }
       mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
@@ -112,7 +112,7 @@ Descrição/detalhes: ${description || "Não informado"}`;
     if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
       return errorResponse("Formato de foto não permitido. Use JPG, PNG ou WEBP.", 400);
     }
-    if (imageData.length > 5_600_000) {
+    if (imageData.length > 3_500_000) {
       return errorResponse("A foto deve ter no máximo 4 MB.", 413);
     }
     parts.push({ inline_data: { mime_type: mimeType, data: imageData } });
