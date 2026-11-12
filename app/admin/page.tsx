@@ -599,13 +599,14 @@ export default function AdminPage() {
           style={inputStyle}
         />
 
-        <label>Descrição</label>
+        <label>Informações e características do produto</label>
 
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           style={inputStyle}
-          rows={3}
+          rows={5}
+          placeholder="Informe o que você sabe sobre o produto: funções, recursos, material, medidas, compatibilidade, modelo e diferenciais. A IA usará esses dados para criar uma descrição completa."
         />
 
         <label>Preço (R$)</label>
@@ -668,7 +669,7 @@ export default function AdminPage() {
         </button>
 
         <small style={{ color: "#555", marginBottom: 12 }}>
-          A IA usa os dados preenchidos e a foto selecionada (ou a foto já cadastrada ao editar).
+          A IA prioriza a descrição do produto, suas características e benefícios confirmados. Informe detalhes neste campo e selecione a foto para ajudar na análise.
           O resultado será colocado nos campos para sua revisão. Preço e estoque permanecem manuais.
         </small>
 
