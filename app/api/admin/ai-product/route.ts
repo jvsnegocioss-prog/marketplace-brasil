@@ -130,48 +130,68 @@ Descrição/detalhes: ${description || "Não informado"}`;
       });
     }
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          model: "gemini-3.8-flash",
-          input,
-          response_format: {
-            type: "text",
-            mime_type: "application/json",
-            schema: {
-              type: "object",
-              properties: {
-                nome_sugerido: { type: "string" },
-                descricao: { type: "string" },
-                beneficios: { type: "array", items: { type: "string" } },
-                dados_a_confirmar: { type: "array", items: { type: "string" } },
-                palavras_chave: { type: "array", items: { type: "string" } },
-              },
-              required: [
-                "nome_sugerido",
-                "descricao",
-                "beneficios",
-                "dados_a_confirmar",
-                "palavras_chave",
-              ],
-            },
-          },
-          store: false,
-        }),
-        signal: AbortSignal.timeout(45000),
-      }
-    );
+    const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    let result: any = null;
+    let lastProviderMessage = "O serviço Gemini está temporariamente indisponível.";
 
-    const result = await response.json();
-    if (!response.ok) {
-      const providerMessage = result?.error?.message || "Falha no serviço Gemini.";
-      return errorResponse(providerMessage, response.status === 429 ? 429 : 502);
+    for (const model of models) {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            model,
+            input,
+            response_format: {
+              type: "text",
+              mime_type: "application/json",
+              schema: {
+                type: "object",
+                properties: {
+                  nome_sugerido: { type: "string" },
+                  descricao: { type: "string" },
+                  beneficios: { type: "array", items: { type: "string" } },
+                  dados_a_confirmar: { type: "array", items: { type: "string" } },
+                  palavras_chave: { type: "array", items: { type: "string" } },
+                },
+                required: [
+                  "nome_sugerido",
+                  "descricao",
+                  "beneficios",
+                  "dados_a_confirmar",
+                  "palavras_chave",
+                ],
+              },
+            },
+            store: false,
+          }),
+          signal: AbortSignal.timeout(45000),
+        }
+      );
+
+      result = await response.json();
+      if (response.ok) break;
+
+      lastProviderMessage = result?.error?.message || lastProviderMessage;
+      const retryable = response.status === 429 || response.status === 503 ||
+        /high demand|overload|temporar|unavailable|resource exhausted/i.test(lastProviderMessage);
+
+      if (!retryable || model === models[models.length - 1]) {
+        return errorResponse(
+          retryable
+            ? "Os modelos gratuitos do Gemini estão temporariamente sobrecarregados. Tente novamente mais tarde."
+            : lastProviderMessage,
+          response.status === 429 ? 429 : 502
+        );
+      }
+    }
+
+    if (!result) {
+      return errorResponse("Não foi possível obter uma resposta do Gemini.", 502);
     }
 
     const outputText =
