@@ -269,8 +269,40 @@ export default function ProductPage() {
   return (
     <main className="product-detail-page">
       <div className="product-detail-container">
-        <Link href="/" className="detail-back-link">
-          <ArrowLeft size={18} /> Voltar à loja
+        <Link
+          href="/"
+          className="detail-back-link"
+          style={{
+            display: "inline-flex",
+            minHeight: "46px",
+            alignItems: "center",
+            gap: "10px",
+            margin: "0 0 22px",
+            padding: "0 20px 0 14px",
+            border: "1px solid #173b70",
+            borderRadius: "13px",
+            background: "linear-gradient(115deg, #071b43 0%, #17477f 100%)",
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: 800,
+            letterSpacing: ".01em",
+            boxShadow: "0 5px 0 #d6a91d, 0 9px 20px #071b4322",
+            transition: "transform .2s ease, box-shadow .2s ease",
+            textDecoration: "none",
+          }}
+        >
+          <span style={{
+            display: "grid",
+            width: "28px",
+            height: "28px",
+            placeItems: "center",
+            borderRadius: "9px",
+            background: "#ffc928",
+            color: "#071b43",
+          }}>
+            <ArrowLeft size={17} />
+          </span>
+          Voltar à loja
         </Link>
 
         <section className="detail-overview">
