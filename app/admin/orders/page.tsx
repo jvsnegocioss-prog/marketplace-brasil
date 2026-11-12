@@ -69,7 +69,7 @@ function whatsappLink(order: Order) {
     order.tracking_code
       ? `Código de rastreio: ${order.tracking_code}. `
       : ""
-  }Acompanhe seu pedido: https://marketplace-brasil.vercel.app/acompanhar`;
+  }Acompanhe seu pedido: https://novashoppstore.vercel.app/acompanhar`;
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
