@@ -651,7 +651,7 @@ export default function ProductPage() {
                     </div>
                     <div className="review-stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
                     {review.comment && <p className="review-comment">{review.comment}</p>}
-                    {review.photos?.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>{review.photos.map((url) => /\\.(mp4|webm|mov)(\\?|$)/i.test(url) ? <video key={url} src={url} controls playsInline style={{ maxWidth: "100%", width: 180, borderRadius: 8 }} /> : <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt="Foto enviada na avaliação" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }} /></a>)}</div> : null}
+                    {review.photos?.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>{review.photos.map((url) => /\.(mp4|webm|mov)(\?|$)/i.test(url) ? <video key={url} src={url} controls playsInline style={{ maxWidth: "100%", width: 180, borderRadius: 8 }} /> : <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt="Foto enviada na avaliação" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }} /></a>)}</div> : null}
                     <span className="verified-purchase">Compra verificada</span>
                   </article>
                 ))}
