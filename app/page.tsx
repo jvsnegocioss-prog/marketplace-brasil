@@ -484,11 +484,6 @@ export default function Home() {
 
   return (
     <main>
-      <div className="topbar">
-        <span>Mais variedade. Mais ofertas. Mais para você!</span>
-        <span>Compre fácil, receba rápido!</span>
-      </div>
-
       <header className="header">
         <button
           className="icon-btn mobile-menu"
@@ -623,95 +618,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ACOMPANHAMENTO DE PEDIDOS */}
-      <section
-        style={{
-          maxWidth: 1100,
-          margin: "30px auto",
-          padding: "24px 20px",
-          background: "#f1f5f9",
-          borderRadius: 14,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 20,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              background: "#dbeafe",
-              color: "#1d4ed8",
-              padding: 13,
-              borderRadius: 12,
-            }}
-          >
-            <Package size={30} />
-          </div>
-
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827" }}>
-              Acompanhe seu pedido
-            </h2>
-            <p style={{ fontSize: 14, color: "#4b5563", marginTop: 4 }}>
-              Consulte o pagamento e veja o andamento da sua entrega.
-            </p>
-          </div>
-        </div>
-
-        <a
-          href="/acompanhar"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 9,
-            padding: "13px 20px",
-            background: "#2563eb",
-            color: "#ffffff",
-            borderRadius: 9,
-            fontWeight: 700,
-            textDecoration: "none",
-          }}
-        >
-          Acompanhar meu pedido
-          <ArrowRight size={18} />
-        </a>
-      </section>
-
-      <section className="categories-section">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">EXPLORE A LOJA</span>
-            <h2>Compre por categoria</h2>
-          </div>
-        </div>
-
-        <div className="category-grid">
-          {categories.slice(1).map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.name}
-                className="category-card"
-                onClick={() => {
-                  setCategory(item.name);
-                  document.getElementById("produtos")?.scrollIntoView({
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                <Icon size={29} />
-                <strong>{item.name}</strong>
-                <ArrowRight size={16} />
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
@@ -721,18 +627,6 @@ export default function Home() {
           <span className="product-count">
             {filtered.length} produtos
           </span>
-        </div>
-
-        <div className="filter-row">
-          {categories.map((item) => (
-            <button
-              key={item.name}
-              className={category === item.name ? "filter-active" : ""}
-              onClick={() => setCategory(item.name)}
-            >
-              {item.name}
-            </button>
-          ))}
         </div>
 
         {loading ? (
