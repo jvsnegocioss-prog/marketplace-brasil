@@ -122,6 +122,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Selecione sua nota de 1 a 5 estrelas." }, { status: 400 });
     }
 
+    if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
     const validation = await validatePurchase(user.email, productId);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
@@ -167,6 +168,7 @@ export async function PATCH(request: Request) {
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
+    if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
     const photos = files.length ? await uploadReviewFiles(files, user.id) : undefined;
     const update: Record<string, unknown> = { rating, status: "pending", updated_at: new Date().toISOString() };
     if (photos) update.photos = photos;
