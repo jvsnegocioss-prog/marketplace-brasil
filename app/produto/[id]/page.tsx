@@ -692,7 +692,6 @@ export default function ProductPage() {
             {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
             {message && <p className="review-message" role="status">{message}</p>}
           </div>
-          </div>
         </section>
       </div>
     </main>
