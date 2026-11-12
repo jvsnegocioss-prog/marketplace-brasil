@@ -56,6 +56,64 @@ export default function ProductPage() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
+  const [cartPreview, setCartPreview] = useState<{ product: Product; qty: number }[]>([]);
+  const [cartPreviewLoading, setCartPreviewLoading] = useState(true);
+
+
+  async function loadCartPreview() {
+    setCartPreviewLoading(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      let items: { id: string; qty: number }[] = [];
+      if (authData.user?.id) {
+        const { data, error } = await supabase
+          .from("customer_carts")
+          .select("items")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+        if (error) throw error;
+        items = Array.isArray(data?.items) ? data.items : [];
+      } else {
+        const saved = localStorage.getItem("novashopp_cart");
+        const parsed = saved ? JSON.parse(saved) : [];
+        items = Array.isArray(parsed) ? parsed : [];
+      }
+
+      const validItems = items.filter((item: any) =>
+        item && typeof item.id === "string" &&
+        Number.isInteger(item.qty) && item.qty > 0
+      );
+      const ids = [...new Set(validItems.map((item) => item.id))];
+      if (!ids.length) {
+        setCartPreview([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,name,description,price,stock,category,image_url")
+        .in("id", ids)
+        .eq("active", true);
+      if (error) throw error;
+
+      const productsById = new Map((data || []).map((item) => [item.id, item as Product]));
+      setCartPreview(
+        validItems.flatMap((item) => {
+          const cartProduct = productsById.get(item.id);
+          return cartProduct ? [{ product: cartProduct, qty: item.qty }] : [];
+        })
+      );
+    } catch (error) {
+      console.error("Erro ao carregar a prévia do carrinho:", error);
+      setCartPreview([]);
+    } finally {
+      setCartPreviewLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadCartPreview();
+  }, []);
 
   async function loadReviews() {
     const response = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`);
@@ -260,6 +318,7 @@ export default function ProductPage() {
       }
 
       setCartMessage("Produto adicionado ao carrinho com sucesso!");
+      await loadCartPreview();
     } catch (error) {
       console.error("Erro ao adicionar produto ao carrinho:", error);
       setCartMessage("Não foi possível atualizar seu carrinho. Tente novamente.");
@@ -421,6 +480,60 @@ export default function ProductPage() {
                 {cartMessage}
               </p>
             )}
+            <section
+              aria-label="Meu carrinho"
+              style={{
+                marginTop: 22,
+                padding: 18,
+                border: "1px solid #dbe3ef",
+                borderRadius: 16,
+                background: "#f8fafc",
+                boxShadow: "0 8px 24px #0f27400d",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <h2 style={{ margin: 0, color: "#102a56", fontSize: 18, fontWeight: 800 }}>
+                  <ShoppingCart size={19} style={{ display: "inline", verticalAlign: "middle", marginRight: 7 }} />
+                  Meu carrinho
+                </h2>
+                <span style={{ borderRadius: 999, padding: "5px 10px", background: "#facc15", color: "#102a56", fontSize: 12, fontWeight: 800 }}>
+                  {cartPreview.reduce((sum, item) => sum + item.qty, 0)} item(ns)
+                </span>
+              </div>
+              {cartPreviewLoading ? (
+                <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>Carregando seu carrinho...</p>
+              ) : cartPreview.length === 0 ? (
+                <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>Seu carrinho está vazio. Adicione este produto para começar.</p>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {cartPreview.map(({ product: cartProduct, qty }) => (
+                      <div key={cartProduct.id} style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 10, borderBottom: "1px solid #e2e8f0" }}>
+                        <div style={{ width: 54, height: 54, flex: "0 0 54px", display: "grid", placeItems: "center", overflow: "hidden", borderRadius: 10, background: "#fff" }}>
+                          {cartProduct.image_url ? (
+                            <img src={cartProduct.image_url} alt={cartProduct.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                          ) : <Package size={25} color="#64748b" />}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong style={{ display: "block", color: "#172554", fontSize: 13, lineHeight: 1.35 }}>{cartProduct.name}</strong>
+                          <span style={{ color: "#64748b", fontSize: 12 }}>{qty} × {money(Number(cartProduct.price))}</span>
+                        </div>
+                        <strong style={{ color: "#102a56", fontSize: 13, whiteSpace: "nowrap" }}>{money(Number(cartProduct.price) * qty)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, paddingTop: 14 }}>
+                    <span style={{ color: "#475569", fontWeight: 700 }}>Subtotal</span>
+                    <strong style={{ color: "#102a56", fontSize: 18 }}>
+                      {money(cartPreview.reduce((sum, item) => sum + Number(item.product.price) * item.qty, 0))}
+                    </strong>
+                  </div>
+                  <Link href="/#produtos" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 46, marginTop: 14, padding: "10px 16px", borderRadius: 11, background: "#102a56", color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
+                    Ir ao carrinho e finalizar compra <ArrowLeft size={16} style={{ transform: "rotate(180deg)", marginLeft: 8 }} />
+                  </Link>
+                </>
+              )}
+            </section>
             <Link
               href="/#produtos"
               aria-label="Voltar à loja para continuar comprando"
