@@ -55,7 +55,7 @@ function deliveryLabel(status: string) {
   return deliverySteps.find((step) => step.value === status)?.label || "Pedido aceito";
 }
 function whatsappLink(order: Order) {
-  const digits = (order.customer_phone || "").replace(/\\D/g, "");
+  const digits = (order.customer_phone || "").replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
   const message = `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${order.tracking_code ? `Código de rastreio: ${order.tracking_code}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
