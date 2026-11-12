@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Package, X, ZoomIn } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, X, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Product = {
@@ -44,6 +44,7 @@ export default function ProductPage() {
   const [productMedia, setProductMedia] = useState<ProductMedia[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<ProductMedia | null>(null);
   const [imageExpanded, setImageExpanded] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState("");
@@ -174,6 +175,31 @@ export default function ProductPage() {
     );
   }
 
+  const galleryItems = [
+    ...(product.image_url ? [{ id: "main", media_type: "image" as const, url: product.image_url }] : []),
+    ...productMedia,
+  ];
+  const currentGalleryIndex = selectedMedia
+    ? Math.max(0, galleryItems.findIndex((item) => item.id === selectedMedia.id))
+    : 0;
+
+  function showGalleryItem(index: number) {
+    if (!galleryItems.length) return;
+    const nextIndex = (index + galleryItems.length) % galleryItems.length;
+    const next = galleryItems[nextIndex];
+    setSelectedMedia(next.id === "main" ? null : next as ProductMedia);
+    setImageExpanded(false);
+  }
+
+  function handleGalleryTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    if (touchStartX === null) return;
+    const deltaX = event.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(deltaX) > 45 && galleryItems.length > 1) {
+      showGalleryItem(currentGalleryIndex + (deltaX < 0 ? 1 : -1));
+    }
+    setTouchStartX(null);
+  }
+
   return (
     <main className="product-detail-page">
       <div className="product-detail-container">
@@ -183,7 +209,11 @@ export default function ProductPage() {
 
         <section className="detail-overview">
           <div>
-            <div className="detail-photo-frame">
+            <div
+              className="detail-photo-frame"
+              onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
+              onTouchEnd={handleGalleryTouchEnd}
+            >
               {selectedMedia?.media_type === "video" ? (
                 <video
                   key={selectedMedia.id}
@@ -210,6 +240,22 @@ export default function ProductPage() {
               {!selectedMedia && !product.image_url && (
                 <Package size={100} className="detail-placeholder" />
               )}
+              {galleryItems.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="detail-gallery-arrow detail-gallery-arrow-left"
+                    onClick={() => showGalleryItem(currentGalleryIndex - 1)}
+                    aria-label="Foto anterior"
+                  ><ChevronLeft size={25} /></button>
+                  <button
+                    type="button"
+                    className="detail-gallery-arrow detail-gallery-arrow-right"
+                    onClick={() => showGalleryItem(currentGalleryIndex + 1)}
+                    aria-label="Próxima foto"
+                  ><ChevronRight size={25} /></button>
+                </>
+              )}
             </div>
             {productMedia.length > 0 && (
               <div className="detail-media-thumbnails" aria-label="Fotos e vídeos do produto">
@@ -217,7 +263,7 @@ export default function ProductPage() {
                   <button
                     type="button"
                     className={selectedMedia === null ? "detail-media-thumb active" : "detail-media-thumb"}
-                    onClick={() => setSelectedMedia(null)}
+                    onClick={() => showGalleryItem(0)}
                     aria-label="Ver foto principal"
                   >
                     <img src={product.image_url} alt="" />
