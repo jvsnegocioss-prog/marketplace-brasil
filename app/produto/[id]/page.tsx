@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Package } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, X, ZoomIn } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Product = {
@@ -43,6 +43,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [productMedia, setProductMedia] = useState<ProductMedia[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<ProductMedia | null>(null);
+  const [imageExpanded, setImageExpanded] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState("");
@@ -189,11 +190,19 @@ export default function ProductPage() {
                   className="detail-product-photo"
                 />
               ) : (
-                <img
-                  src={selectedMedia?.url || product.image_url || ""}
-                  alt={product.name}
-                  className="detail-product-photo"
-                />
+                <button
+                  type="button"
+                  className="detail-image-open"
+                  onClick={() => setImageExpanded(true)}
+                  aria-label="Ampliar foto do produto"
+                >
+                  <img
+                    src={selectedMedia?.url || product.image_url || ""}
+                    alt={product.name}
+                    className="detail-product-photo"
+                  />
+                  <span className="detail-image-zoom"><ZoomIn size={17} /> Ampliar foto</span>
+                </button>
               )}
               {!selectedMedia && !product.image_url && (
                 <Package size={100} className="detail-placeholder" />
@@ -246,6 +255,32 @@ export default function ProductPage() {
             </Link>
           </div>
         </section>
+
+        {imageExpanded && selectedMedia?.media_type !== "video" && (
+          <div
+            className="detail-image-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Foto ampliada do produto"
+            onClick={() => setImageExpanded(false)}
+          >
+            <button
+              type="button"
+              className="detail-image-lightbox-close"
+              onClick={() => setImageExpanded(false)}
+              aria-label="Fechar foto ampliada"
+            >
+              <X size={28} />
+            </button>
+            <img
+              src={selectedMedia?.url || product.image_url || ""}
+              alt={product.name}
+              className="detail-image-lightbox-photo"
+              onClick={(event) => event.stopPropagation()}
+            />
+            <p className="detail-image-lightbox-caption">{product.name} · Toque fora da foto para fechar</p>
+          </div>
+        )}
 
         <section className="detail-review-layout">
           <div className="detail-panel">
