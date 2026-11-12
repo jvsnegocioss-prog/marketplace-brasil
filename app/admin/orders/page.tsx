@@ -166,35 +166,33 @@ export default function OrdersPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f4f7fc] text-slate-800">
-      <header className="bg-[#102a56] text-white shadow-lg">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3" aria-label="NovaShopp Store">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-xl font-black text-[#102a56] shadow-sm">N</span>
-            <span className="leading-tight">
-              <span className="block text-xl font-extrabold tracking-tight">NovaShopp<span className="text-blue-300">.</span></span>
-              <span className="block text-[10px] font-bold tracking-[0.28em] text-blue-200">STORE · ADMINISTRAÇÃO</span>
-            </span>
+    <main className="min-h-screen bg-white text-slate-800">
+      <header className="header !flex-wrap !justify-between !gap-4">
+        <Link href="/" className="logo" aria-label="NovaShopp Store">
+          <span className="logo-icon">N</span>
+          <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE · ADMIN</small></span>
+        </Link>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className="hidden sm:inline-flex items-center rounded-full bg-[#fff8dc] px-3 py-2 text-xs font-bold text-[#806000]">
+            Central de operações
+          </span>
+          <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#06183d] transition hover:border-[#ffc400] hover:bg-[#fff9e5] disabled:opacity-60">
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Atualizar
+          </button>
+          <Link href="/admin" className="inline-flex items-center gap-2 rounded-lg bg-[#ffc400] px-3 py-2.5 text-sm font-extrabold text-[#06183d] transition hover:bg-[#f2b900]">
+            <ArrowLeft size={16} /> Painel
           </Link>
-          <div className="flex items-center gap-2">
-            <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-60">
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Atualizar
-            </button>
-            <Link href="/admin" className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-bold text-[#102a56] transition hover:bg-blue-50">
-              <ArrowLeft size={16} /> Painel
-            </Link>
-          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-blue-700">Central de operações</p>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#102a56] sm:text-3xl">Gestão de pedidos</h1>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-[#a47b00]">Central de operações</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#06183d] sm:text-3xl">Gestão de pedidos</h1>
             <p className="mt-1 text-sm text-slate-500">Acompanhe vendas, pagamentos e entregas da sua loja.</p>
           </div>
-          <div className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
+          <div className="rounded-lg border border-[#f4e6ad] bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
             <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" /> Loja conectada
           </div>
         </div>
@@ -202,7 +200,7 @@ export default function OrdersPage() {
         <section className="mb-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
             { label: "Total vendido", value: money(revenue), detail: "Pedidos com pagamento confirmado", icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Pedidos pagos", value: String(paid.length), detail: "Pagamentos confirmados", icon: CheckCircle2, color: "text-blue-700", bg: "bg-blue-50" },
+            { label: "Pedidos pagos", value: String(paid.length), detail: "Pagamentos confirmados", icon: CheckCircle2, color: "text-[#a47b00]", bg: "bg-[#fff8dc]" },
             { label: "Aguardando pagamento", value: String(waiting.length), detail: "Precisam de confirmação", icon: Clock3, color: "text-amber-600", bg: "bg-amber-50" },
             { label: "Total de pedidos", value: String(orders.length), detail: `${cancelled.length} cancelado(s)`, icon: ShoppingBag, color: "text-indigo-700", bg: "bg-indigo-50" },
           ].map((card) => {
@@ -212,7 +210,7 @@ export default function OrdersPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-500 sm:text-sm">{card.label}</p>
-                    <p className="mt-2 break-words text-xl font-extrabold tracking-tight text-[#102a56] sm:text-2xl">{card.value}</p>
+                    <p className="mt-2 break-words text-xl font-extrabold tracking-tight text-[#06183d] sm:text-2xl">{card.value}</p>
                   </div>
                   <span className={`rounded-lg p-2 ${card.bg} ${card.color}`}><Icon size={20} /></span>
                 </div>
@@ -225,17 +223,17 @@ export default function OrdersPage() {
         <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-bold text-[#102a56]">Pedidos da loja</h2>
+              <h2 className="font-bold text-[#06183d]">Pedidos da loja</h2>
               <p className="mt-0.5 text-xs text-slate-500">{visibleOrders.length} pedido(s) encontrado(s)</p>
             </div>
             <div className="relative w-full sm:max-w-xs">
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[#ffc400] focus:bg-white focus:ring-2 focus:ring-[#fff0b3]" />
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {filters.map((item) => (
-              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#102a56] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-800"}`}>
+              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#06183d] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:border-[#ffc400] hover:text-[#806000]"}`}>
                 {item.label} <span className={`ml-1 ${filter === item.value ? "text-blue-200" : "text-slate-400"}`}>{item.count}</span>
               </button>
             ))}
@@ -247,7 +245,7 @@ export default function OrdersPage() {
         {!loading && !message && visibleOrders.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center">
             <PackageCheck className="mx-auto mb-3 text-slate-300" size={38} />
-            <h2 className="font-bold text-[#102a56]">Nenhum pedido encontrado</h2>
+            <h2 className="font-bold text-[#06183d]">Nenhum pedido encontrado</h2>
             <p className="mt-1 text-sm text-slate-500">Tente alterar o filtro ou a busca.</p>
           </div>
         )}
@@ -260,9 +258,9 @@ export default function OrdersPage() {
               <article key={order.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#102a56]"><ShoppingBag size={19} /></span>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#fff8dc] text-[#06183d]"><ShoppingBag size={19} /></span>
                     <div className="min-w-0">
-                      <h3 className="truncate font-extrabold text-[#102a56]">{order.customer_name}</h3>
+                      <h3 className="truncate font-extrabold text-[#06183d]">{order.customer_name}</h3>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
                         <span className="inline-flex items-center gap-1"><Hash size={11} />{order.id.slice(0, 8).toUpperCase()}</span>
                         <span>•</span>
@@ -272,7 +270,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${paidOrder ? "bg-emerald-50 text-emerald-700" : isCancelled(order.status) ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{paymentLabel(order.status)}</span>
-                    <strong className="text-lg font-extrabold text-[#102a56]">{money(order.total)}</strong>
+                    <strong className="text-lg font-extrabold text-[#06183d]">{money(order.total)}</strong>
                   </div>
                 </div>
 
@@ -280,9 +278,9 @@ export default function OrdersPage() {
                   <div>
                     <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Dados do cliente</p>
                     <div className="space-y-2 text-sm text-slate-600">
-                      <p className="flex min-w-0 items-start gap-2"><Mail size={15} className="mt-0.5 shrink-0 text-blue-600" /><span className="break-all">{order.customer_email || "E-mail não informado"}</span></p>
-                      <p className="flex items-start gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-blue-600" />{order.customer_phone || "Telefone não informado"}</p>
-                      <p className="flex items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0 text-blue-600" /><span>{order.delivery_address || "Endereço não informado"}</span></p>
+                      <p className="flex min-w-0 items-start gap-2"><Mail size={15} className="mt-0.5 shrink-0 text-[#a47b00]" /><span className="break-all">{order.customer_email || "E-mail não informado"}</span></p>
+                      <p className="flex items-start gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-[#a47b00]" />{order.customer_phone || "Telefone não informado"}</p>
+                      <p className="flex items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0 text-[#a47b00]" /><span>{order.delivery_address || "Endereço não informado"}</span></p>
                     </div>
                   </div>
                   <div>
@@ -301,10 +299,10 @@ export default function OrdersPage() {
                 <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm font-extrabold text-[#102a56]">Etapas do pedido</p>
+                      <p className="text-sm font-extrabold text-[#06183d]">Etapas do pedido</p>
                       <p className="text-xs text-slate-500">O cliente acompanha a evolução da entrega.</p>
                     </div>
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800">{deliveryLabel(order.delivery_status || "aguardando_separacao")}</span>
+                    <span className="rounded-full bg-[#fff8dc] px-3 py-1 text-xs font-bold text-[#806000]">{deliveryLabel(order.delivery_status || "aguardando_separacao")}</span>
                   </div>
 
                   {paidOrder ? (
@@ -314,8 +312,8 @@ export default function OrdersPage() {
                           const completed = currentStep >= index;
                           return (
                             <div key={step.value} className="min-w-0">
-                              <div className={`h-1.5 rounded-full ${completed ? "bg-[#1766b1]" : "bg-slate-200"}`} />
-                              <p className={`mt-1.5 text-center text-[9px] font-semibold leading-tight sm:text-[11px] ${completed ? "text-[#102a56]" : "text-slate-400"}`}>{step.label}</p>
+                              <div className={`h-1.5 rounded-full ${completed ? "bg-[#ffc400]" : "bg-slate-200"}`} />
+                              <p className={`mt-1.5 text-center text-[9px] font-semibold leading-tight sm:text-[11px] ${completed ? "text-[#06183d]" : "text-slate-400"}`}>{step.label}</p>
                             </div>
                           );
                         })}
@@ -323,7 +321,7 @@ export default function OrdersPage() {
                       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                         <div>
                           <label className="mb-1.5 block text-xs font-bold text-slate-600">Atualizar etapa</label>
-                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-[#102a56] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-[#06183d] outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]">
                             {deliverySteps.map((step) => <option key={step.value} value={step.value}>{step.label}</option>)}
                           </select>
                         </div>
@@ -334,9 +332,9 @@ export default function OrdersPage() {
                       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                         <div>
                           <label className="mb-1.5 block text-xs font-bold text-slate-600">Código de rastreio</label>
-                          <input value={trackingDrafts[order.id] ?? ""} onChange={(e) => setTrackingDrafts((current) => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                          <input value={trackingDrafts[order.id] ?? ""} onChange={(e) => setTrackingDrafts((current) => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]" />
                         </div>
-                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-lg bg-[#102a56] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#1766b1] disabled:opacity-50">Salvar rastreio</button>
+                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-lg bg-[#06183d] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#ffc400] disabled:opacity-50">Salvar rastreio</button>
                       </div>
                       {order.delivery_status === "enviado" && order.customer_phone && (
                         <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700">
