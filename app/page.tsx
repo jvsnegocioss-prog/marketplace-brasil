@@ -703,7 +703,24 @@ export default function Home() {
         ) : (
           <div className="product-grid">
             {filtered.map((product) => (
-              <article className="product-card" key={product.id}>
+              <article
+                className="product-card"
+                key={product.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`Abrir produto ${product.name}`}
+                onClick={(event) => {
+                  const target = event.target as HTMLElement;
+                  if (target.closest("button, a")) return;
+                  window.location.href = `/produto/${product.id}`;
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    window.location.href = `/produto/${product.id}`;
+                  }
+                }}
+              >
                 <div className="product-image">
                   {product.stock <= 0 && (
                     <span className="product-tag">Esgotado</span>
