@@ -23,6 +23,8 @@ type AccountUser = {
 type CustomerOrder = {
   id: string;
   total: number;
+  coupon_code: string | null;
+  discount_amount: number;
   status: string;
   delivery_status: string | null;
   tracking_code: string | null;
@@ -452,6 +454,12 @@ export default function ContaClientePage() {
                     <strong className="customer-order-total">{money(order.total)}</strong>
                   </div>
                   <p className="customer-order-date">Realizado em {dateLabel(order.created_at)}</p>
+                  {Number(order.discount_amount || 0) > 0 && (
+                    <div className="customer-order-coupon">
+                      <span>🎟️ Cupom {order.coupon_code || "aplicado"}</span>
+                      <strong>Você economizou {money(order.discount_amount)}</strong>
+                    </div>
+                  )}
                   <div className="customer-order-statuses">
                     <span><small>Pagamento</small><b>{paymentLabel(order.status)}</b></span>
                     <span><small>Entrega</small><b>{deliveryLabel(order.delivery_status)}</b></span>
