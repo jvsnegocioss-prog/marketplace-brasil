@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       customerPhone,
       deliveryAddress,
       items,
+      couponCode,
     } = body;
 
     if (
@@ -93,11 +94,12 @@ export async function POST(request: Request) {
     }
 
     const { data: orderId, error: orderError } =
-      await supabaseAdmin.rpc("create_store_order", {
+      await supabaseAdmin.rpc("create_store_order_with_coupon", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
         p_delivery_address: deliveryAddress.trim(),
+        p_coupon_code: typeof couponCode === "string" ? couponCode : null,
         p_items: items.map(
           (item: { id: string; qty: number }) => ({
             id: item.id,
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
     const { data: order, error: fetchOrderError } =
       await supabaseAdmin
         .from("orders")
-        .select("id,total")
+        .select("id,total,discount_amount,coupon_code")
         .eq("id", orderId)
         .single();
 
@@ -164,18 +166,65 @@ export async function POST(request: Request) {
       );
     }
 
+    // Distribui o desconto em centavos entre as unidades, garantindo que
+    // a soma dos itens enviados seja exatamente igual ao total do pedido.
+    const units = orderItems.flatMap((item) =>
+      Array.from({ length: Number(item.quantity) }, () => ({
+        title: item.product_name,
+        originalCents: Math.round(Number(item.unit_price) * 100),
+      }))
+    );
+
+    const originalTotalCents = units.reduce(
+      (sum, unit) => sum + unit.originalCents,
+      0
+    );
+    const finalTotalCents = Math.round(Number(order.total) * 100);
+    const discountCents = originalTotalCents - finalTotalCents;
+
+    if (
+      units.length === 0 ||
+      finalTotalCents <= 0 ||
+      discountCents < 0
+    ) {
+      throw new Error("Os valores do pedido não conferem com os itens.");
+    }
+
+    const allocations = units.map((unit) => {
+      const exactShare = originalTotalCents > 0
+        ? (discountCents * unit.originalCents) / originalTotalCents
+        : 0;
+      const cents = Math.floor(exactShare);
+      return { ...unit, discountCents: cents, remainder: exactShare - cents };
+    });
+
+    let centsLeft = discountCents - allocations.reduce(
+      (sum, item) => sum + item.discountCents,
+      0
+    );
+
+    allocations
+      .map((item, index) => ({ index, remainder: item.remainder }))
+      .sort((a, b) => b.remainder - a.remainder)
+      .slice(0, centsLeft)
+      .forEach(({ index }) => {
+        allocations[index].discountCents += 1;
+      });
+
+    const paymentItems = allocations.map((unit) => ({
+      title: unit.title,
+      quantity: 1,
+      unit_price: ((unit.originalCents - unit.discountCents) / 100).toFixed(2),
+    }));
+
     const paymentBody: Record<string, unknown> = {
       type: "online",
       processing_mode: "manual",
       capture_mode: "automatic_async",
-      total_amount: Number(order.total).toFixed(2),
+      total_amount: (finalTotalCents / 100).toFixed(2),
       external_reference: orderId,
       description: `Pedido ${orderId}`,
-      items: orderItems.map((item) => ({
-        title: item.product_name,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price).toFixed(2),
-      })),
+      items: paymentItems,
     };
 
     if (
