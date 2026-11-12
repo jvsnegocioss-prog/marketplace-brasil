@@ -270,7 +270,7 @@ export default function OrdersPage() {
     <button
       key={value}
       onClick={() => setFilter(value)}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+      className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${
         filter === value
           ? "bg-slate-900 text-white shadow-md"
           : "border border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
@@ -285,13 +285,10 @@ export default function OrdersPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 p-6 text-white shadow-xl sm:p-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Histórico financeiro
-            </h1>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-100">Painel administrativo</div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Gestão de pedidos</h1>
 
-            <p className="mt-1 text-gray-600">
-              Acompanhe vendas, pagamentos e entregas da loja.
-            </p>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Visualize compras, confira os dados dos clientes e acompanhe cada etapa da entrega.</p>
           </div>
 
           <div className="flex gap-2">
@@ -322,7 +319,7 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos pagos</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">
               {paidOrders.length}
@@ -332,7 +329,7 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Total de pedidos</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">
               {orders.length}
@@ -358,9 +355,7 @@ export default function OrdersPage() {
         </section>
 
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 font-bold text-gray-800">
-            Filtrar histórico
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-bold text-slate-900">Filtrar pedidos</h2><span className="text-xs font-medium text-slate-500">{filteredOrders.length} resultado(s)</span></div>
 
           <div className="flex flex-wrap gap-2">
             {filterButton("todos", "Todos")}
@@ -446,7 +441,7 @@ export default function OrdersPage() {
                   ))}
                 </div>
 
-                <div className="mt-4 border-t pt-4">
+                <div className="border-t border-slate-100 px-5 py-5 sm:px-6">
                   <h3 className="mb-2 font-semibold text-gray-800">
                     Situação do pagamento
                   </h3>
@@ -461,9 +456,7 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="m-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-slate-50 p-5 sm:m-6 sm:p-6">
-                  <h3 className="mb-3 font-bold text-gray-900">
-                    Controle de entrega
-                  </h3>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h3 className="font-extrabold text-slate-900">Andamento do pedido</h3><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">Gestão logística</span></div>
 
                   {!isPaid(order.status) ? (
                     <p className="text-sm text-gray-600">
