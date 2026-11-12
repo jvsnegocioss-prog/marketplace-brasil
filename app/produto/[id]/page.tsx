@@ -77,7 +77,10 @@ export default function ProductPage() {
         .order("sort_order", { ascending: true });
       const media = (mediaData || []) as ProductMedia[];
       setProductMedia(media);
-      setSelectedMedia(media[0] || null);
+      // Sempre abrir com a foto principal do cadastro. Se não existir, usar a primeira foto da galeria; vídeo nunca deve ser selecionado automaticamente quando houver imagem.
+      const firstImage = media.find((item) => item.media_type === "image") || null;
+      setSelectedMedia(data?.image_url ? null : firstImage || media[0] || null);
+      setImageExpanded(false);
       await loadReviews();
       setLoading(false);
     }
