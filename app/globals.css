@@ -2031,3 +2031,37 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     margin-left: 0;
   }
 }
+
+
+/* Foto do cliente no cabeçalho da loja */
+.customer-account-link-avatar,
+.customer-account-link-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f4c542;
+  background: #fff4cf;
+  font-size: 19px;
+  line-height: 1;
+}
+.customer-account-link-avatar {
+  object-fit: cover;
+}
+.customer-account-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .customer-account-link-avatar,
+  .customer-account-link-placeholder {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+  }
+}
