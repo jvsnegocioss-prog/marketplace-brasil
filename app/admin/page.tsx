@@ -130,6 +130,8 @@ export default function AdminPage() {
   const [category, setCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiNotes, setAiNotes] = useState<string[]>([]);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -275,6 +277,84 @@ export default function AdminPage() {
       top: 0,
       behavior: "smooth",
     });
+  }
+
+  async function generateProductContent() {
+    setAiGenerating(true);
+    setAiNotes([]);
+    setMessage("");
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error("Sua sessão expirou. Entre novamente no painel.");
+      }
+
+      let imageBase64 = "";
+      let imageMimeType = "";
+
+      if (image) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) {
+          throw new Error("Para a análise com IA, use uma foto JPG, PNG ou WEBP.");
+        }
+        if (image.size > 4 * 1024 * 1024) {
+          throw new Error("A foto deve ter no máximo 4 MB para análise.");
+        }
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = String(reader.result || "");
+            resolve(dataUrl.split(",")[1] || "");
+          };
+          reader.onerror = () => reject(new Error("Não foi possível ler a foto."));
+          reader.readAsDataURL(image);
+        });
+        imageMimeType = image.type;
+      }
+
+      const existingImageUrl = editingId
+        ? products.find((product) => product.id === editingId)?.image_url || ""
+        : "";
+
+      const response = await fetch("/api/admin/ai-product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name,
+          description,
+          category,
+          imageBase64,
+          imageMimeType,
+          imageUrl: imageBase64 ? "" : existingImageUrl,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Não foi possível gerar o conteúdo.");
+      }
+
+      if (result.nome_sugerido) setName(result.nome_sugerido);
+      if (result.descricao) setDescription(result.descricao);
+
+      const notes = [
+        ...(Array.isArray(result.beneficios) ? result.beneficios.map((item: string) => `Benefício: ${item}`) : []),
+        ...(Array.isArray(result.dados_a_confirmar) ? result.dados_a_confirmar.map((item: string) => `Confirmar: ${item}`) : []),
+        ...(Array.isArray(result.palavras_chave) && result.palavras_chave.length
+          ? [`Palavras-chave: ${result.palavras_chave.join(", ")}`]
+          : []),
+      ];
+      setAiNotes(notes);
+      setMessage("Conteúdo gerado pela IA. Revise e edite antes de salvar o produto. O preço e o estoque não foram alterados.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Erro ao gerar conteúdo com IA.");
+    } finally {
+      setAiGenerating(false);
+    }
   }
 
   async function saveProduct(
@@ -571,6 +651,35 @@ export default function AdminPage() {
           }
           style={inputStyle}
         />
+
+        <button
+          type="button"
+          onClick={generateProductContent}
+          disabled={aiGenerating || saving}
+          style={{
+            ...buttonStyle,
+            background: "#173b68",
+            opacity: aiGenerating ? 0.7 : 1,
+            padding: "14px 18px",
+            fontWeight: 700,
+          }}
+        >
+          {aiGenerating ? "Analisando produto com IA..." : "✨ Melhorar nome e descrição com IA"}
+        </button>
+
+        <small style={{ color: "#555", marginBottom: 12 }}>
+          A IA usa os dados preenchidos e a foto selecionada (ou a foto já cadastrada ao editar).
+          O resultado será colocado nos campos para sua revisão. Preço e estoque permanecem manuais.
+        </small>
+
+        {aiNotes.length > 0 && (
+          <div style={{ background: "#fff8df", border: "1px solid #f0d98a", borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <strong>Revisão sugerida pela IA</strong>
+            <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+              {aiNotes.map((note, index) => <li key={index}>{note}</li>)}
+            </ul>
+          </div>
+        )}
 
         <button
           type="submit"
