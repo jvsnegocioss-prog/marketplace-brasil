@@ -323,6 +323,19 @@ export default function ProductPage() {
             aria-modal="true"
             aria-label="Foto ampliada do produto"
             onClick={() => setImageExpanded(false)}
+            onTouchStart={(event) => {
+              if (event.touches.length === 1) setTouchStartX(event.touches[0].clientX);
+            }}
+            onTouchEnd={(event) => {
+              if (touchStartX === null || galleryItems.length < 2) return;
+              const deltaX = event.changedTouches[0].clientX - touchStartX;
+              if (Math.abs(deltaX) > 45) {
+                const nextIndex = (currentGalleryIndex + (deltaX < 0 ? 1 : -1) + galleryItems.length) % galleryItems.length;
+                const next = galleryItems[nextIndex];
+                setSelectedMedia(next.id === "main" ? null : next as ProductMedia);
+              }
+              setTouchStartX(null);
+            }}
           >
             <button
               type="button"
@@ -337,8 +350,37 @@ export default function ProductPage() {
               alt={product.name}
               className="detail-image-lightbox-photo"
               onClick={(event) => event.stopPropagation()}
+              draggable={false}
             />
-            <p className="detail-image-lightbox-caption">{product.name} · Toque fora da foto para fechar</p>
+            {galleryItems.filter((item) => item.media_type === "image").length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="detail-image-lightbox-arrow detail-image-lightbox-arrow-left"
+                  aria-label="Foto anterior"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const imageItems = galleryItems.filter((item) => item.media_type === "image");
+                    const currentImageIndex = imageItems.findIndex((item) => item.id === (selectedMedia?.id || "main"));
+                    const next = imageItems[(currentImageIndex - 1 + imageItems.length) % imageItems.length];
+                    setSelectedMedia(next.id === "main" ? null : next as ProductMedia);
+                  }}
+                ><ChevronLeft size={30} /></button>
+                <button
+                  type="button"
+                  className="detail-image-lightbox-arrow detail-image-lightbox-arrow-right"
+                  aria-label="Próxima foto"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const imageItems = galleryItems.filter((item) => item.media_type === "image");
+                    const currentImageIndex = imageItems.findIndex((item) => item.id === (selectedMedia?.id || "main"));
+                    const next = imageItems[(currentImageIndex + 1) % imageItems.length];
+                    setSelectedMedia(next.id === "main" ? null : next as ProductMedia);
+                  }}
+                ><ChevronRight size={30} /></button>
+              </>
+            )}
+            <p className="detail-image-lightbox-caption">{product.name} · Deslize para trocar a foto ou toque fora para fechar</p>
           </div>
         )}
 
