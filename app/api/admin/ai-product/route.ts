@@ -61,31 +61,36 @@ export async function POST(request: NextRequest) {
   }
 
   const parts: Array<Record<string, unknown>> = [];
-  const prompt = `Você é redatora sênior de e-commerce e especialista em conversão da NOVASHOPP STORE.
-Sua tarefa é criar um cadastro de produto de qualidade profissional, em português do Brasil, pronto para revisão humana.
+  const prompt = `Você é especialista sênior em descrição de produtos para e-commerce da NOVASHOPP STORE.
+Sua prioridade é DESCREVER O PRODUTO EM SI, não fazer uma lista da embalagem.
 
-ENTREGUE UM CONTEÚDO REALMENTE COMPLETO:
-- nome_sugerido: título comercial claro, específico e natural, com tipo de produto e características confirmadas. Evite repetição e exageros.
-- descricao: escreva entre 3 e 5 parágrafos curtos, com linguagem persuasiva e natural. Comece explicando o que é o produto e para que serve; depois apresente apenas características confirmadas; explique benefícios práticos que decorram diretamente dessas características; finalize com uma chamada comercial discreta. Não entregue uma frase genérica nem uma lista de palavras-chave.
-- beneficios: 3 a 5 benefícios concretos, somente quando sustentados pelos dados ou pela imagem.
-- dados_a_confirmar: liste informações importantes que não podem ser comprovadas, para o administrador confirmar antes de publicar.
-- palavras_chave: termos relevantes para busca, sem repetir variações inúteis.
+CRIE:
+- nome_sugerido: título claro com tipo e modelo somente se confirmados.
+- descricao: texto comercial completo, com 3 a 5 parágrafos curtos e informativos. Explique o que é o produto, sua finalidade, design e características confirmadas, como pode ser usado no dia a dia e quais vantagens reais oferece. Use linguagem natural, específica e útil para ajudar o cliente a decidir a compra. Evite frases genéricas e repetição.
+- beneficios: 3 a 5 vantagens práticas sustentadas por características confirmadas.
+- dados_a_confirmar: perguntas objetivas sobre funções, especificações e compatibilidade que não podem ser comprovadas.
+- palavras_chave: termos de busca específicos e relevantes.
 
-REGRAS DE CONFIABILIDADE:
-- A foto pode ajudar a identificar a aparência e objetos claramente visíveis, mas não prova que todos os objetos mostrados acompanham o produto.
-- Nunca diga que um acessório, cabo, pulseira extra, manual, carregador ou item acompanha o produto, a menos que o administrador tenha confirmado expressamente isso nos dados.
-- Nunca invente marca, modelo, material, medidas, compatibilidade, potência, capacidade, funções, sensores, resistência à água, certificações, autonomia, garantia ou especificações.
-- Não deduza recursos técnicos ou de saúde pela aparência. Não transforme possibilidades em fatos.
-- Se os dados forem escassos, escreva uma descrição atraente, porém honesta, e deixe os detalhes desconhecidos em dados_a_confirmar.
-- Não use superlativos vazios como "o melhor", "revolucionário" ou "imperdível".
-- Não inclua preço, desconto, frete, estoque, prazo, garantia ou promessa não fornecida.
-- O preço, estoque e decisões comerciais pertencem exclusivamente ao administrador.
-- Responda somente em JSON válido, com as chaves: nome_sugerido (string), descricao (string), beneficios (array de strings), dados_a_confirmar (array de strings), palavras_chave (array de strings).
+REGRA MUITO IMPORTANTE SOBRE A EMBALAGEM:
+- Não transforme a descrição em uma prévia ou inventário do que vem na caixa.
+- Não use a lista de acessórios como assunto principal.
+- Só mencione itens da embalagem em uma frase final curta e somente se o administrador os tiver confirmado expressamente.
+- A presença de um objeto na foto NÃO comprova que ele acompanha o produto.
+- Se a informação recebida falar principalmente da embalagem, use-a apenas como contexto secundário; concentre a descrição no produto.
+- Não invente funções para preencher espaço. Se faltarem dados técnicos, deixe isso claro em dados_a_confirmar e escreva uma descrição honesta com o que realmente se sabe.
+
+CONFIABILIDADE:
+- Não invente marca, modelo, material, dimensões, compatibilidade, potência, capacidade, funções, sensores, resistência à água, certificações, autonomia, garantia ou especificações.
+- Não deduza funções técnicas ou de saúde pela aparência da foto.
+- Não diga que o relógio recebe notificações, faz chamadas, mede saúde ou tem GPS/Bluetooth sem confirmação nos dados.
+- Não inclua preço, desconto, frete, estoque, prazo ou promessas comerciais.
+- O administrador decide preço, estoque e conteúdo final.
+- Responda somente em JSON válido com as chaves: nome_sugerido (string), descricao (string), beneficios (array de strings), dados_a_confirmar (array de strings), palavras_chave (array de strings).
 
 DADOS INFORMADOS PELO ADMINISTRADOR:
 Nome atual: ${name || "Não informado"}
 Categoria: ${category || "Não informada"}
-Descrição/detalhes: ${description || "Não informado"}`;
+Informações e características fornecidas: ${description || "Não informado"}`;
 
   parts.push({ text: prompt });
 
