@@ -1,8 +1,12 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowLeft, RefreshCw, ShoppingBag, Wallet, Clock3, PackageCheck,
+  Truck, MapPin, Phone, Mail, CalendarDays, Hash, Search, CheckCircle2,
+  CreditCard, ExternalLink
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Order = {
@@ -28,49 +32,32 @@ type Order = {
 
 type Filter = "todos" | "pagos" | "aguardando" | "cancelados";
 
+const deliverySteps = [
+  { value: "aguardando_separacao", label: "Pedido aceito" },
+  { value: "em_preparacao", label: "Em separação" },
+  { value: "enviado", label: "Enviado" },
+  { value: "entregue", label: "Entregue" },
+];
+
 function normalizedStatus(status: string) {
   return (status || "").trim().toLowerCase();
 }
-
 function isPaid(status: string) {
-  return ["pago", "aprovado", "approved", "concluido", "concluído"].includes(
-    normalizedStatus(status)
-  );
+  return ["pago", "aprovado", "approved", "concluido", "concluído"].includes(normalizedStatus(status));
 }
-
 function isWaiting(status: string) {
-  return ["aguardando", "pendente", "pending"].includes(
-    normalizedStatus(status)
-  );
+  return ["aguardando", "pendente", "pending"].includes(normalizedStatus(status));
 }
-
 function isCancelled(status: string) {
-  return ["cancelado", "cancelada", "cancelled", "canceled"].includes(
-    normalizedStatus(status)
-  );
+  return ["cancelado", "cancelada", "cancelled", "canceled"].includes(normalizedStatus(status));
 }
-
 function deliveryLabel(status: string) {
-  const labels: Record<string, string> = {
-    aguardando_separacao: "Aguardando separação",
-    em_preparacao: "Em preparação",
-    enviado: "Enviado",
-    entregue: "Entregue",
-  };
-
-  return labels[status] || "Aguardando separação";
+  return deliverySteps.find((step) => step.value === status)?.label || "Pedido aceito";
 }
-
 function whatsappLink(order: Order) {
-  const digits = (order.customer_phone || "").replace(/\D/g, "");
+  const digits = (order.customer_phone || "").replace(/\\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
-
-  const message = `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${
-    order.tracking_code
-      ? `Código de rastreio: ${order.tracking_code}. `
-      : ""
-  }Acompanhe seu pedido: https://novashoppstore.vercel.app/acompanhar`;
-
+  const message = `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${order.tracking_code ? `Código de rastreio: ${order.tracking_code}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
@@ -79,479 +66,297 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState<Filter>("todos");
-
-  const [trackingDrafts, setTrackingDrafts] = useState<
-    Record<string, string>
-  >({});
-
+  const [search, setSearch] = useState("");
+  const [trackingDrafts, setTrackingDrafts] = useState<Record<string, string>>({});
   const [savingDelivery, setSavingDelivery] = useState<string | null>(null);
 
   async function loadOrders() {
     setLoading(true);
     setMessage("");
-
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        id,
-        customer_name,
-        customer_email,
-        customer_phone,
-        delivery_address,
-        total,
-        status,
-        created_at,
-        delivery_status,
-        tracking_code,
-        shipped_at,
-        delivered_at,
-        order_items (
-          product_name,
-          quantity,
-          unit_price,
-          subtotal
-        )
-      `)
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("orders").select(`
+      id, customer_name, customer_email, customer_phone, delivery_address,
+      total, status, created_at, delivery_status, tracking_code, shipped_at,
+      delivered_at, order_items ( product_name, quantity, unit_price, subtotal )
+    `).order("created_at", { ascending: false });
 
     if (error) {
       setMessage("Erro ao carregar pedidos: " + error.message);
       setOrders([]);
     } else {
-      const loadedOrders = (data || []) as Order[];
-
-      setOrders(loadedOrders);
-
+      const loaded = (data || []) as Order[];
+      setOrders(loaded);
       const drafts: Record<string, string> = {};
-
-      loadedOrders.forEach((order) => {
-        drafts[order.id] = order.tracking_code || "";
-      });
-
+      loaded.forEach((order) => { drafts[order.id] = order.tracking_code || ""; });
       setTrackingDrafts(drafts);
     }
-
     setLoading(false);
   }
 
   async function updateDeliveryStatus(order: Order, newStatus: string) {
     if (!isPaid(order.status)) {
-      alert(
-        "O controle de entrega só está disponível após a confirmação do pagamento."
-      );
+      alert("O controle de entrega só está disponível após a confirmação do pagamento.");
       return;
     }
-
-    if (
-      newStatus === "entregue" &&
-      order.delivery_status !== "enviado" &&
-      order.delivery_status !== "entregue"
-    ) {
-      alert(
-        "Registre o pedido como enviado antes de marcar como entregue."
-      );
+    if (newStatus === "entregue" && order.delivery_status !== "enviado" && order.delivery_status !== "entregue") {
+      alert("Registre o pedido como enviado antes de marcar como entregue.");
       return;
     }
-
-    const updates: Record<string, string> = {
-      delivery_status: newStatus,
-    };
-
-    if (newStatus === "enviado" && !order.shipped_at) {
-      updates.shipped_at = new Date().toISOString();
-    }
-
-    if (newStatus === "entregue" && !order.delivered_at) {
-      updates.delivered_at = new Date().toISOString();
-    }
+    const updates: Record<string, string> = { delivery_status: newStatus };
+    if (newStatus === "enviado" && !order.shipped_at) updates.shipped_at = new Date().toISOString();
+    if (newStatus === "entregue" && !order.delivered_at) updates.delivered_at = new Date().toISOString();
 
     setSavingDelivery(order.id);
-
-    const { error } = await supabase
-      .from("orders")
-      .update(updates)
-      .eq("id", order.id);
-
+    const { error } = await supabase.from("orders").update(updates).eq("id", order.id);
     setSavingDelivery(null);
-
     if (error) {
       alert("Erro ao atualizar entrega: " + error.message);
       return;
     }
-
-    alert("Status da entrega atualizado!");
-
     await loadOrders();
   }
 
   async function saveTrackingCode(order: Order) {
     if (!isPaid(order.status)) {
-      alert(
-        "O código de rastreio só pode ser salvo após a confirmação do pagamento."
-      );
+      alert("O código de rastreio só pode ser salvo após a confirmação do pagamento.");
       return;
     }
-
-    const trackingCode = (trackingDrafts[order.id] || "").trim();
-
     setSavingDelivery(order.id);
-
-    const { error } = await supabase
-      .from("orders")
-      .update({ tracking_code: trackingCode || null })
+    const { error } = await supabase.from("orders")
+      .update({ tracking_code: (trackingDrafts[order.id] || "").trim() || null })
       .eq("id", order.id);
-
     setSavingDelivery(null);
-
     if (error) {
       alert("Erro ao salvar rastreio: " + error.message);
       return;
     }
-
-    alert("Código de rastreio salvo com sucesso!");
-
     await loadOrders();
   }
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  useEffect(() => { void loadOrders(); }, []);
 
-  function formatMoney(value: number) {
-    return Number(value || 0).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  }
-
-  function formatDate(value: string | null) {
-    if (!value) return "Ainda não registrado";
-    return new Date(value).toLocaleString("pt-BR");
-  }
-
-  function statusLabel(status: string) {
-    const normalized = normalizedStatus(status);
-
+  const money = (value: number) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const date = (value: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não registrado";
+  const paymentLabel = (status: string) => {
     const labels: Record<string, string> = {
-      aguardando: "Aguardando pagamento",
-      pendente: "Aguardando pagamento",
-      pending: "Aguardando pagamento",
-      pago: "Pago",
-      aprovado: "Aprovado",
-      approved: "Aprovado",
-      concluido: "Concluído",
-      "concluído": "Concluído",
-      cancelado: "Cancelado",
-      cancelada: "Cancelado",
-      canceled: "Cancelado",
-      cancelled: "Cancelado",
+      aguardando: "Aguardando pagamento", pendente: "Aguardando pagamento", pending: "Aguardando pagamento",
+      pago: "Pago", aprovado: "Aprovado", approved: "Aprovado", concluido: "Concluído", "concluído": "Concluído",
+      cancelado: "Cancelado", cancelada: "Cancelado", canceled: "Cancelado", cancelled: "Cancelado"
     };
+    return labels[normalizedStatus(status)] || status;
+  };
 
-    return labels[normalized] || status;
-  }
-
-  const paidOrders = orders.filter((order) => isPaid(order.status));
-  const waitingOrders = orders.filter((order) => isWaiting(order.status));
-  const cancelledOrders = orders.filter((order) => isCancelled(order.status));
-
-  const totalPaid = paidOrders.reduce(
-    (sum, order) => sum + Number(order.total || 0),
-    0
-  );
-
-  const filteredOrders = orders.filter((order) => {
-    if (filter === "pagos") return isPaid(order.status);
-    if (filter === "aguardando") return isWaiting(order.status);
-    if (filter === "cancelados") return isCancelled(order.status);
-    return true;
+  const paid = orders.filter((o) => isPaid(o.status));
+  const waiting = orders.filter((o) => isWaiting(o.status));
+  const cancelled = orders.filter((o) => isCancelled(o.status));
+  const revenue = paid.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const visibleOrders = orders.filter((order) => {
+    const matchesFilter = filter === "todos" || (filter === "pagos" && isPaid(order.status)) ||
+      (filter === "aguardando" && isWaiting(order.status)) || (filter === "cancelados" && isCancelled(order.status));
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || order.customer_name.toLowerCase().includes(term) ||
+      order.id.toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
+    return matchesFilter && matchesSearch;
   });
 
-  const filterButton = (value: Filter, label: string) => (
-    <button
-      key={value}
-      onClick={() => setFilter(value)}
-      className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${
-        filter === value
-          ? "bg-slate-900 text-white shadow-md"
-          : "border border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-      }`}
-    >
-      {label}
-    </button>
-  );
+  const filters: { value: Filter; label: string; count: number }[] = [
+    { value: "todos", label: "Todos", count: orders.length },
+    { value: "pagos", label: "Pagos", count: paid.length },
+    { value: "aguardando", label: "Aguardando", count: waiting.length },
+    { value: "cancelados", label: "Cancelados", count: cancelled.length },
+  ];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 p-6 text-white shadow-xl sm:p-8">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-100">Painel administrativo</div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Gestão de pedidos</h1>
-
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Visualize compras, confira os dados dos clientes e acompanhe cada etapa da entrega.</p>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={loadOrders}
-              className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-blue-50 disabled:opacity-50"
-            >
-              Atualizar
+    <main className="min-h-screen bg-[#f4f7fc] text-slate-800">
+      <header className="bg-[#102a56] text-white shadow-lg">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-3" aria-label="NovaShopp Store">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-xl font-black text-[#102a56] shadow-sm">N</span>
+            <span className="leading-tight">
+              <span className="block text-xl font-extrabold tracking-tight">NovaShopp<span className="text-blue-300">.</span></span>
+              <span className="block text-[10px] font-bold tracking-[0.28em] text-blue-200">STORE · ADMINISTRAÇÃO</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-60">
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Atualizar
             </button>
-
-            <Link
-              href="/admin"
-              className="rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
-            >
-              Voltar
+            <Link href="/admin" className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-bold text-[#102a56] transition hover:bg-blue-50">
+              <ArrowLeft size={16} /> Painel
             </Link>
           </div>
         </div>
+      </header>
 
-        <section className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Total vendido</p>
-            <p className="mt-2 text-2xl font-bold text-green-700">
-              {formatMoney(totalPaid)}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Somente pedidos pagos
-            </p>
+      <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-blue-700">Central de operações</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#102a56] sm:text-3xl">Gestão de pedidos</h1>
+            <p className="mt-1 text-sm text-slate-500">Acompanhe vendas, pagamentos e entregas da sua loja.</p>
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos pagos</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">
-              {paidOrders.length}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Pagamentos confirmados
-            </p>
+          <div className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
+            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" /> Loja conectada
           </div>
+        </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Total de pedidos</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">
-              {orders.length}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Todos os pedidos registrados
-            </p>
+        <section className="mb-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[
+            { label: "Total vendido", value: money(revenue), detail: "Pedidos com pagamento confirmado", icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Pedidos pagos", value: String(paid.length), detail: "Pagamentos confirmados", icon: CheckCircle2, color: "text-blue-700", bg: "bg-blue-50" },
+            { label: "Aguardando pagamento", value: String(waiting.length), detail: "Precisam de confirmação", icon: Clock3, color: "text-amber-600", bg: "bg-amber-50" },
+            { label: "Total de pedidos", value: String(orders.length), detail: `${cancelled.length} cancelado(s)`, icon: ShoppingBag, color: "text-indigo-700", bg: "bg-indigo-50" },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-500 sm:text-sm">{card.label}</p>
+                    <p className="mt-2 break-words text-xl font-extrabold tracking-tight text-[#102a56] sm:text-2xl">{card.value}</p>
+                  </div>
+                  <span className={`rounded-lg p-2 ${card.bg} ${card.color}`}><Icon size={20} /></span>
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400 sm:text-xs">{card.detail}</p>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-[#102a56]">Pedidos da loja</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{visibleOrders.length} pedido(s) encontrado(s)</p>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+            </div>
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Aguardando pagamento</p>
-            <p className="mt-2 text-2xl font-bold text-orange-600">
-              {waitingOrders.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos cancelados</p>
-            <p className="mt-2 text-2xl font-bold text-red-600">
-              {cancelledOrders.length}
-            </p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filters.map((item) => (
+              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#102a56] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-800"}`}>
+                {item.label} <span className={`ml-1 ${filter === item.value ? "text-blue-200" : "text-slate-400"}`}>{item.count}</span>
+              </button>
+            ))}
           </div>
         </section>
 
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-bold text-slate-900">Filtrar pedidos</h2><span className="text-xs font-medium text-slate-500">{filteredOrders.length} resultado(s)</span></div>
-
-          <div className="flex flex-wrap gap-2">
-            {filterButton("todos", "Todos")}
-            {filterButton("pagos", "Pagos")}
-            {filterButton("aguardando", "Aguardando")}
-            {filterButton("cancelados", "Cancelados")}
-          </div>
-        </section>
-
-        {loading && (
-          <p className="py-8 text-center text-gray-600">
-            Carregando pedidos...
-          </p>
-        )}
-
-        {!loading && message && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-            {message}
+        {loading && <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Carregando pedidos...</div>}
+        {!loading && message && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{message}</div>}
+        {!loading && !message && visibleOrders.length === 0 && (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center">
+            <PackageCheck className="mx-auto mb-3 text-slate-300" size={38} />
+            <h2 className="font-bold text-[#102a56]">Nenhum pedido encontrado</h2>
+            <p className="mt-1 text-sm text-slate-500">Tente alterar o filtro ou a busca.</p>
           </div>
         )}
 
-        {!loading && !message && filteredOrders.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Nenhum pedido encontrado
-            </h2>
+        <div className="space-y-4">
+          {!loading && visibleOrders.map((order) => {
+            const paidOrder = isPaid(order.status);
+            const currentStep = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
+            return (
+              <article key={order.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#102a56]"><ShoppingBag size={19} /></span>
+                    <div className="min-w-0">
+                      <h3 className="truncate font-extrabold text-[#102a56]">{order.customer_name}</h3>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
+                        <span className="inline-flex items-center gap-1"><Hash size={11} />{order.id.slice(0, 8).toUpperCase()}</span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1"><CalendarDays size={11} />{new Date(order.created_at).toLocaleString("pt-BR")}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${paidOrder ? "bg-emerald-50 text-emerald-700" : isCancelled(order.status) ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{paymentLabel(order.status)}</span>
+                    <strong className="text-lg font-extrabold text-[#102a56]">{money(order.total)}</strong>
+                  </div>
+                </div>
 
-            <p className="mt-2 text-gray-500">
-              Não existem pedidos nesta categoria.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-5">
-          {!loading &&
-            filteredOrders.map((order) => (
-              <section
-                key={order.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/80 p-5 sm:p-6">
+                <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5">
                   <div>
-                    <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-                      {order.customer_name}
-                    </h2>
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Dados do cliente</p>
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <p className="flex min-w-0 items-start gap-2"><Mail size={15} className="mt-0.5 shrink-0 text-blue-600" /><span className="break-all">{order.customer_email || "E-mail não informado"}</span></p>
+                      <p className="flex items-start gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-blue-600" />{order.customer_phone || "Telefone não informado"}</p>
+                      <p className="flex items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0 text-blue-600" /><span>{order.delivery_address || "Endereço não informado"}</span></p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Resumo da compra</p>
+                    <div className="space-y-2">
+                      {order.order_items?.map((item, index) => (
+                        <div key={index} className="flex items-start justify-between gap-3 text-sm">
+                          <span className="min-w-0 text-slate-600">{item.product_name} <span className="text-slate-400">× {item.quantity}</span></span>
+                          <strong className="shrink-0 text-slate-700">{money(item.subtotal)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                    <p className="mt-1 text-sm text-gray-500">
-                      Data: {new Date(order.created_at).toLocaleString("pt-BR")}
-                    </p>
-
-                    <p className="mt-1 break-all text-[11px] font-medium text-slate-400">
-                      Pedido: {order.id}
-                    </p>
+                <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-extrabold text-[#102a56]">Etapas do pedido</p>
+                      <p className="text-xs text-slate-500">O cliente acompanha a evolução da entrega.</p>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800">{deliveryLabel(order.delivery_status || "aguardando_separacao")}</span>
                   </div>
 
-                  <strong className="rounded-xl bg-emerald-50 px-4 py-2 text-xl font-extrabold text-emerald-700">
-                    {formatMoney(order.total)}
-                  </strong>
-                </div>
-
-                <div className="grid gap-2 bg-white px-5 py-4 text-sm text-slate-600 sm:grid-cols-2 sm:px-6">
-                  <p>Email: {order.customer_email || "Não informado"}</p>
-                  <p>Telefone: {order.customer_phone || "Não informado"}</p>
-                  <p>Endereço: {order.delivery_address || "Não informado"}</p>
-                </div>
-
-                <div className="border-t border-slate-100 px-5 py-5 sm:px-6">
-                  <h3 className="mb-2 font-semibold text-gray-800">
-                    Produtos comprados
-                  </h3>
-
-                  {order.order_items?.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-wrap justify-between gap-2 py-2 text-sm"
-                    >
-                      <span>
-                        {item.product_name} — {item.quantity} unidade(s)
-                      </span>
-
-                      <span>{formatMoney(item.subtotal)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-slate-100 px-5 py-5 sm:px-6">
-                  <h3 className="mb-2 font-semibold text-gray-800">
-                    Situação do pagamento
-                  </h3>
-
-                  <p className="text-sm font-semibold text-gray-700">
-                    {statusLabel(order.status)}
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                    A confirmação do pagamento é feita automaticamente pelo Mercado Pago.
-                  </p>
-                </div>
-
-                <div className="m-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-slate-50 p-5 sm:m-6 sm:p-6">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h3 className="font-extrabold text-slate-900">Andamento do pedido</h3><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">Gestão logística</span></div>
-
-                  {!isPaid(order.status) ? (
-                    <p className="text-sm text-gray-600">
-                      O controle de entrega será liberado após a confirmação do pagamento.
-                    </p>
-                  ) : (
+                  {paidOrder ? (
                     <>
-                      <label className="mb-2 block text-sm font-semibold text-gray-700">
-                        Status da entrega
-                      </label>
-
-                      <select
-                        value={order.delivery_status || "aguardando_separacao"}
-                        disabled={savingDelivery === order.id}
-                        onChange={(e) =>
-                          updateDeliveryStatus(order, e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm font-semibold text-slate-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      >
-                        <option value="aguardando_separacao">
-                          Aguardando separação
-                        </option>
-
-                        <option value="em_preparacao">
-                          Em preparação
-                        </option>
-
-                        <option value="enviado">Enviado</option>
-                        <option value="entregue">Entregue</option>
-                      </select>
-
-                      <p className="mt-2 text-sm font-semibold text-blue-800">
-                        Situação atual:{" "}
-                        {deliveryLabel(
-                          order.delivery_status || "aguardando_separacao"
-                        )}
-                      </p>
-
-                      <div className="mt-4">
-                        <label className="mb-2 block text-sm font-semibold text-gray-700">
-                          Código de rastreio
-                        </label>
-
-                        <input
-                          type="text"
-                          value={trackingDrafts[order.id] ?? ""}
-                          onChange={(e) =>
-                            setTrackingDrafts((current) => ({
-                              ...current,
-                              [order.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="Digite o código de rastreio"
-                          className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm text-slate-800 shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-
-                        <button
-                          type="button"
-                          disabled={savingDelivery === order.id}
-                          onClick={() => saveTrackingCode(order)}
-                          className="mt-3 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-50"
-                        >
-                          {savingDelivery === order.id
-                            ? "Salvando..."
-                            : "Salvar código de rastreio"}
-                        </button>
-
-                        {order.delivery_status === "enviado" &&
-                          order.customer_phone && (
-                            <a
-                              href={whatsappLink(order)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-3 inline-flex rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
-                            >
-                              Avisar cliente pelo WhatsApp
-                            </a>
-                          )}
+                      <div className="mb-4 grid grid-cols-4 gap-1">
+                        {deliverySteps.map((step, index) => {
+                          const completed = currentStep >= index;
+                          return (
+                            <div key={step.value} className="min-w-0">
+                              <div className={`h-1.5 rounded-full ${completed ? "bg-[#1766b1]" : "bg-slate-200"}`} />
+                              <p className={`mt-1.5 text-center text-[9px] font-semibold leading-tight sm:text-[11px] ${completed ? "text-[#102a56]" : "text-slate-400"}`}>{step.label}</p>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      <div className="mt-5 grid gap-2 border-t border-blue-100 pt-4 text-xs font-medium text-slate-500 sm:grid-cols-2">
-                        <p>
-                          Enviado em: {formatDate(order.shipped_at)}
-                        </p>
-
-                        <p>
-                          Entregue em: {formatDate(order.delivered_at)}
-                        </p>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-slate-600">Atualizar etapa</label>
+                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-[#102a56] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                            {deliverySteps.map((step) => <option key={step.value} value={step.value}>{step.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="text-xs text-slate-400">{savingDelivery === order.id ? "Salvando alteração..." : "Alterações salvas no pedido"}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-slate-600">Código de rastreio</label>
+                          <input value={trackingDrafts[order.id] ?? ""} onChange={(e) => setTrackingDrafts((current) => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                        </div>
+                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-lg bg-[#102a56] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#1766b1] disabled:opacity-50">Salvar rastreio</button>
+                      </div>
+                      {order.delivery_status === "enviado" && order.customer_phone && (
+                        <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700">
+                          Avisar cliente pelo WhatsApp <ExternalLink size={14} />
+                        </a>
+                      )}
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-200 pt-3 text-[11px] text-slate-400">
+                        <span><Truck className="mr-1 inline" size={12} />Enviado: {date(order.shipped_at)}</span>
+                        <span><CheckCircle2 className="mr-1 inline" size={12} />Entregue: {date(order.delivered_at)}</span>
                       </div>
                     </>
+                  ) : (
+                    <p className="flex items-center gap-2 text-sm text-slate-500"><CreditCard size={16} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
                   )}
                 </div>
-              </section>
-            ))}
+              </article>
+            );
+          })}
         </div>
+        <footer className="mt-8 border-t border-slate-200 py-5 text-center text-xs text-slate-400">NovaShopp Store · Painel administrativo</footer>
       </div>
     </main>
   );
