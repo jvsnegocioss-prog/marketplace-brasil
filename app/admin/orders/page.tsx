@@ -339,14 +339,14 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Aguardando pagamento</p>
             <p className="mt-2 text-2xl font-bold text-orange-600">
               {waitingOrders.length}
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos cancelados</p>
             <p className="mt-2 text-2xl font-bold text-red-600">
               {cancelledOrders.length}
@@ -394,7 +394,7 @@ export default function OrdersPage() {
             filteredOrders.map((order) => (
               <section
                 key={order.id}
-                className="rounded-xl bg-white p-5 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/80 p-5 sm:p-6">
                   <div>
