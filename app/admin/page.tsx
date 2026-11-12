@@ -75,6 +75,32 @@ const dashboardCardStyle: React.CSSProperties = {
   background: "#ffffff",
 };
 
+async function createVideoPoster(file: File): Promise<Blob> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const video = document.createElement("video");
+    video.preload = "metadata"; video.muted = true; video.playsInline = true; video.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error("Não foi possível ler o vídeo para criar a capa."));
+    });
+    if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error("O vídeo não possui duração válida para gerar a capa.");
+    video.currentTime = Math.min(0.2, video.duration / 2);
+    await new Promise<void>((resolve, reject) => {
+      video.onseeked = () => resolve();
+      video.onerror = () => reject(new Error("Não foi possível capturar um quadro do vídeo."));
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 360;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Não foi possível preparar a capa do vídeo.");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao gerar a imagem de capa do vídeo.")), "image/jpeg", 0.82);
+    });
+  } finally { URL.revokeObjectURL(objectUrl); }
+}
+
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", {
     style: "currency",
@@ -496,11 +522,24 @@ export default function AdminPage() {
           const { data: publicData } = supabase.storage
             .from("products-media")
             .getPublicUrl(storagePath);
+
+          let posterUrl: string | null = null;
+          if (isVideo) {
+            const posterBlob = await createVideoPoster(file);
+            const posterPath = savedProductId + "/posters/" + crypto.randomUUID() + ".jpg";
+            const { error: posterUploadError } = await supabase.storage
+              .from("products-media")
+              .upload(posterPath, posterBlob, { upsert: false, contentType: "image/jpeg" });
+            if (posterUploadError) throw posterUploadError;
+            posterUrl = supabase.storage.from("products-media").getPublicUrl(posterPath).data.publicUrl;
+          }
+
           const { error: mediaError } = await supabase.from("product_media").insert({
             product_id: savedProductId,
             media_type: isImage ? "image" : "video",
             url: publicData.publicUrl,
             storage_path: storagePath,
+            poster_url: posterUrl,
             sort_order: existingMedia.length + index,
           });
           if (mediaError) throw mediaError;
