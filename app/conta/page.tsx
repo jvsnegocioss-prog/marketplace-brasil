@@ -325,7 +325,7 @@ export default function ContaClientePage() {
   return (
     <main className="customer-account-page">
       <section className="customer-account-card">
-        <a className="customer-account-back" href="/">← Voltar para a NOVASHOPP STORE</a>
+        <a className="detail-back-link" href="/">← Voltar para a NOVASHOPP STORE</a>
         <div className="customer-account-brand">N</div>
         <p className="customer-account-eyebrow">ÁREA DO CLIENTE</p>
         {user ? (
