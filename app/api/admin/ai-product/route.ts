@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -96,7 +95,7 @@ Descrição/detalhes: ${description || "Não informado"}`;
       if (!imageResponse.ok) return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       if (imageBuffer.byteLength > 2.5 * 1024 * 1024) {
-        return errorResponse("A foto deve ter no máximo 4 MB para análise.", 413);
+        return errorResponse("A foto deve ter no máximo 2,5 MB para análise.", 413);
       }
       mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
       if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
@@ -113,14 +112,26 @@ Descrição/detalhes: ${description || "Não informado"}`;
       return errorResponse("Formato de foto não permitido. Use JPG, PNG ou WEBP.", 400);
     }
     if (imageData.length > 3_500_000) {
-      return errorResponse("A foto deve ter no máximo 4 MB.", 413);
+      return errorResponse("A foto deve ter no máximo 2,5 MB.", 413);
     }
     parts.push({ inline_data: { mime_type: mimeType, data: imageData } });
   }
 
   try {
+    const input: Array<Record<string, unknown>> = [
+      { type: "text", text: prompt },
+    ];
+
+    if (imageData) {
+      input.push({
+        type: "image",
+        data: imageData,
+        mime_type: mimeType,
+      });
+    }
+
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -128,12 +139,30 @@ Descrição/detalhes: ${description || "Não informado"}`;
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.4,
-            maxOutputTokens: 1800,
+          model: "gemini-3.8-flash",
+          input,
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+            schema: {
+              type: "object",
+              properties: {
+                nome_sugerido: { type: "string" },
+                descricao: { type: "string" },
+                beneficios: { type: "array", items: { type: "string" } },
+                dados_a_confirmar: { type: "array", items: { type: "string" } },
+                palavras_chave: { type: "array", items: { type: "string" } },
+              },
+              required: [
+                "nome_sugerido",
+                "descricao",
+                "beneficios",
+                "dados_a_confirmar",
+                "palavras_chave",
+              ],
+            },
           },
+          store: false,
         }),
         signal: AbortSignal.timeout(45000),
       }
@@ -145,11 +174,16 @@ Descrição/detalhes: ${description || "Não informado"}`;
       return errorResponse(providerMessage, response.status === 429 ? 429 : 502);
     }
 
-    const text = result?.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text || "")
-      .join("")
-      .trim();
+    const outputText =
+      result?.output_text ||
+      result?.steps
+        ?.filter((step: { type?: string }) => step.type === "model_output")
+        ?.flatMap((step: { content?: Array<{ type?: string; text?: string }> }) => step.content || [])
+        ?.filter((item: { type?: string }) => item.type === "text")
+        ?.map((item: { text?: string }) => item.text || "")
+        ?.join("");
 
+    const text = String(outputText || "").trim();
     if (!text) return errorResponse("A IA não retornou uma descrição. Tente novamente.", 502);
 
     let generated;
