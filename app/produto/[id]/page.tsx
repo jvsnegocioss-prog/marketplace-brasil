@@ -351,11 +351,30 @@ export default function ProductPage() {
             <Link
               href="/#produtos"
               aria-label="Voltar à loja para continuar comprando"
-              className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-blue-800 bg-white px-5 py-3 text-sm font-bold text-blue-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto"
+              style={{
+                display: "flex",
+                width: "100%",
+                minHeight: "54px",
+                marginTop: "16px",
+                padding: "14px 22px",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                border: "2px solid #14264d",
+                borderRadius: "14px",
+                background: "#facc15",
+                color: "#14264d",
+                fontSize: "16px",
+                fontWeight: 800,
+                lineHeight: 1.2,
+                textDecoration: "none",
+                boxShadow: "0 4px 0 #14264d",
+                cursor: "pointer",
+              }}
             >
-              <ShoppingCart size={18} />
+              <ShoppingCart size={20} />
               Continuar comprando
-              <ArrowLeft size={16} className="rotate-180" />
+              <ArrowLeft size={18} style={{ transform: "rotate(180deg)" }} />
             </Link>
           </div>
         </section>
