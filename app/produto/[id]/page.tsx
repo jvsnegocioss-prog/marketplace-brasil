@@ -202,26 +202,67 @@ export default function ProductPage() {
     setTouchStartX(null);
   }
 
-  function addProductToCart() {
+  async function addProductToCart() {
     if (!product || product.stock <= 0) return;
     try {
-      const saved = localStorage.getItem("novashopp_cart");
-      const cart = saved ? JSON.parse(saved) : [];
-      const items: { id: string; qty: number }[] = Array.isArray(cart) ? cart : [];
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id || null;
+      let items: { id: string; qty: number }[] = [];
+
+      if (userId) {
+        const { data: cloudCart, error: readError } = await supabase
+          .from("customer_carts")
+          .select("items")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (readError) throw readError;
+        const cloudItems = Array.isArray(cloudCart?.items) ? cloudCart.items : [];
+        items = cloudItems.filter((item: any) =>
+          item && typeof item.id === "string" &&
+          Number.isInteger(item.qty) && item.qty > 0
+        );
+      } else {
+        const saved = localStorage.getItem("novashopp_cart");
+        const parsed = saved ? JSON.parse(saved) : [];
+        items = Array.isArray(parsed)
+          ? parsed.filter((item: any) =>
+              item && typeof item.id === "string" &&
+              Number.isInteger(item.qty) && item.qty > 0
+            )
+          : [];
+      }
+
       const existing = items.find((item) => item.id === product.id);
       if (existing && existing.qty >= product.stock) {
         setCartMessage("Você já adicionou todo o estoque disponível deste produto.");
         return;
       }
+
       const updated = existing
         ? items.map((item) =>
             item.id === product.id ? { ...item, qty: item.qty + 1 } : item
           )
         : [...items, { id: product.id, qty: 1 }];
+
       localStorage.setItem("novashopp_cart", JSON.stringify(updated));
+
+      if (userId) {
+        const { error: saveError } = await supabase
+          .from("customer_carts")
+          .upsert({
+            user_id: userId,
+            items: updated,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+
+        if (saveError) throw saveError;
+      }
+
       setCartMessage("Produto adicionado ao carrinho com sucesso!");
-    } catch {
-      setCartMessage("Não foi possível adicionar o produto. Tente novamente.");
+    } catch (error) {
+      console.error("Erro ao adicionar produto ao carrinho:", error);
+      setCartMessage("Não foi possível atualizar seu carrinho. Tente novamente.");
     }
   }
 
