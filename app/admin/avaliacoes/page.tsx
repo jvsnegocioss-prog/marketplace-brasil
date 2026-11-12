@@ -171,7 +171,9 @@ export default function AdminReviewsPage() {
           <small style={{ color: "#666" }}>Enviada em {new Date(review.created_at).toLocaleString("pt-BR")}</small>
           {review.photos?.length ? (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-              {review.photos.map((photo) => <a key={photo} href={photo} target="_blank" rel="noreferrer"><img src={photo} alt="Foto enviada pelo cliente" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8 }} /></a>)}
+              {review.photos.map((media) => /\.(mp4|webm|mov)(\?|$)/i.test(media)
+                ? <video key={media} src={media} controls playsInline style={{ width: 180, maxHeight: 140, borderRadius: 8 }} />
+                : <a key={media} href={media} target="_blank" rel="noreferrer"><img src={media} alt="Foto enviada pelo cliente" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8 }} /></a>)}
             </div>
           ) : null}
 
