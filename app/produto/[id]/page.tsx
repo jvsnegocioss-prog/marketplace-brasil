@@ -172,7 +172,7 @@ export default function ProductPage() {
     return (
       <main className="mx-auto max-w-5xl p-6">
         <p>Produto não encontrado ou indisponível.</p>
-        <Link className="mt-4 inline-block text-blue-700 underline" href="/">Voltar à loja</Link>
+        <Link className="detail-back-link" href="/"><span aria-hidden="true">←</span> Voltar à loja</Link>
       </main>
     );
   }
