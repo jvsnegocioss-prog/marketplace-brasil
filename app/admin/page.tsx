@@ -668,7 +668,8 @@ export default function AdminPage() {
       >
         <div>
           <h1>Painel administrativo</h1>
-          <p>Gerencie os produtos da sua loja.</p>\n          <button onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Moderar avaliações</button>
+          <p>Gerencie os produtos da sua loja.</p>
+          <button onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Moderar avaliações</button>
           <button onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
         </div>
 
