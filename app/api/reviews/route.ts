@@ -179,7 +179,6 @@ export async function PATCH(request: Request) {
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("order_id", validation.order.id)
-      .eq("customer_phone_hash", user.id)
       .select("id,status")
       .maybeSingle();
 
@@ -207,7 +206,6 @@ export async function DELETE(request: Request) {
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("order_id", validation.order.id)
-      .eq("customer_phone_hash", user.id)
       .select("id")
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Não foi possível excluir a avaliação." }, { status: 500 });
