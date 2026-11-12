@@ -33,6 +33,8 @@ export async function GET(request: Request) {
       .select(`
         id,
         total,
+        coupon_code,
+        discount_amount,
         status,
         delivery_status,
         tracking_code,
