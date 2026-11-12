@@ -1,75 +1,79 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }
+  { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
+const mediaBucket = "products-media";
 
-function digits(value: string) {
-  return value.replace(/\D/g, "");
+async function getAccount(request: Request) {
+  const authorization = request.headers.get("authorization") || "";
+  if (!authorization.startsWith("Bearer ")) return null;
+  const token = authorization.slice(7);
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data.user?.email) return null;
+  return data.user;
 }
 
-function phoneHash(phone: string) {
-  const secret =
-    process.env.REVIEWS_PHONE_HASH_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "";
-  return createHash("sha256")
-    .update(secret + ":" + digits(phone))
-    .digest("hex");
-}
-
-async function validatePurchase(orderId: string, productId: string, phone: string) {
-  const { data: order, error } = await supabaseAdmin
+async function validatePurchase(email: string, productId: string) {
+  const { data: orders, error } = await supabaseAdmin
     .from("orders")
-    .select("id,customer_name,customer_phone,status,delivery_status")
-    .eq("id", orderId)
-    .maybeSingle();
+    .select("id,customer_name,status,delivery_status,customer_email")
+    .ilike("customer_email", email)
+    .order("created_at", { ascending: false });
 
-  if (error) throw new Error("Não foi possível validar o pedido.");
-  if (!order) return { error: "Pedido não encontrado.", status: 404 as const };
+  if (error) throw new Error("Não foi possível localizar suas compras.");
+  const eligibleOrders = (orders || []).filter((order) =>
+    paidStatuses.includes(String(order.status || "").trim().toLowerCase()) &&
+    String(order.delivery_status || "").trim().toLowerCase() === "entregue"
+  );
 
-  if (digits(order.customer_phone || "") !== digits(phone)) {
-    return { error: "Telefone não corresponde ao pedido.", status: 403 as const };
+  for (const order of eligibleOrders) {
+    const { data: item, error: itemError } = await supabaseAdmin
+      .from("order_items")
+      .select("product_id")
+      .eq("order_id", order.id)
+      .eq("product_id", productId)
+      .maybeSingle();
+
+    if (itemError) throw new Error("Não foi possível confirmar o produto comprado.");
+    if (item) return { order };
   }
 
-  if (!paidStatuses.includes(String(order.status || "").trim().toLowerCase())) {
-    return { error: "A avaliação só é liberada após a confirmação do pagamento.", status: 403 as const };
+  return { error: "A avaliação será liberada quando este produto de uma compra da sua conta estiver pago e entregue.", status: 403 as const };
+}
+
+async function uploadReviewFiles(files: File[], userId: string) {
+  const urls: string[] = [];
+  for (const file of files) {
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    if (!isImage && !isVideo) throw new Error("Envie somente fotos ou vídeos.");
+    if (file.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
+    const extension = file.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
+    const path = `reviews/${userId}/${randomUUID()}.${extension}`;
+    const { error } = await supabaseAdmin.storage.from(mediaBucket).upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (error) throw new Error("Não foi possível enviar as mídias. Tente novamente.");
+    const { data } = supabaseAdmin.storage.from(mediaBucket).getPublicUrl(path);
+    urls.push(data.publicUrl);
   }
-
-  if (String(order.delivery_status || "").trim().toLowerCase() !== "entregue") {
-    return { error: "A avaliação só é liberada após a entrega do pedido.", status: 403 as const };
-  }
-
-  const { data: item, error: itemError } = await supabaseAdmin
-    .from("order_items")
-    .select("product_id")
-    .eq("order_id", orderId)
-    .eq("product_id", productId)
-    .maybeSingle();
-
-  if (itemError) throw new Error("Não foi possível confirmar o produto do pedido.");
-  if (!item) return { error: "Este produto não consta no pedido informado.", status: 403 as const };
-
-  return { order };
+  return urls;
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
-
-  if (!productId) {
-    return NextResponse.json({ error: "Informe o produto." }, { status: 400 });
-  }
+  if (!productId) return NextResponse.json({ error: "Informe o produto." }, { status: 400 });
 
   const { data, error } = await supabaseAdmin
     .from("product_reviews")
@@ -78,22 +82,27 @@ export async function GET(request: Request) {
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: "Não foi possível carregar as avaliações." }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: "Não foi possível carregar as avaliações." }, { status: 500 });
 
+  const user = await getAccount(request);
   let ownReview = null;
-  const orderId = searchParams.get("orderId");
-  const phone = searchParams.get("phone");
-  if (orderId && phone) {
-    const { data: owned } = await supabaseAdmin
-      .from("product_reviews")
-      .select("id,rating,comment,status")
-      .eq("product_id", productId)
-      .eq("order_id", orderId)
-      .eq("customer_phone_hash", phoneHash(phone))
-      .maybeSingle();
-    ownReview = owned || null;
+  if (user?.email) {
+    const { data: orders } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .ilike("customer_email", user.email);
+    const orderIds = (orders || []).map((order) => order.id);
+    if (orderIds.length) {
+      const { data: owned } = await supabaseAdmin
+        .from("product_reviews")
+        .select("id,rating,comment,photos,status,order_id")
+        .eq("product_id", productId)
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      ownReview = owned || null;
+    }
   }
 
   return NextResponse.json({ reviews: data || [], ownReview });
@@ -101,118 +110,106 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
-    const productId = typeof body.productId === "string" ? body.productId.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-    const rating = Number(body.rating);
-    const comment = typeof body.comment === "string" ? body.comment.trim() : "";
+    const user = await getAccount(request);
+    if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para avaliar este produto." }, { status: 401 });
 
-    if (!orderId || !productId || !phone || !Number.isInteger(rating) || rating < 1 || rating > 5 || !comment) {
-      return NextResponse.json({ error: "Preencha pedido, telefone, nota e comentário." }, { status: 400 });
+    const form = await request.formData();
+    const productId = String(form.get("productId") || "").trim();
+    const rating = Number(form.get("rating"));
+    const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
+
+    if (!productId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return NextResponse.json({ error: "Selecione sua nota de 1 a 5 estrelas." }, { status: 400 });
     }
 
-    const validation = await validatePurchase(orderId, productId, phone);
-    if ("error" in validation) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
-    }
+    const validation = await validatePurchase(user.email, productId);
+    if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
+    const photos = await uploadReviewFiles(files, user.id);
     const { data, error } = await supabaseAdmin
       .from("product_reviews")
       .insert({
         product_id: productId,
-        order_id: orderId,
-        reviewer_name: validation.order.customer_name || "Cliente",
-        customer_phone_hash: phoneHash(phone),
+        order_id: validation.order.id,
+        reviewer_name: user.user_metadata?.full_name || user.email.split("@")[0] || "Cliente",
+        customer_phone_hash: user.id,
         rating,
-        comment,
-        photos: [],
+        comment: "",
+        photos,
         status: "pending",
       })
       .select("id,status")
       .single();
 
     if (error) {
-      if (error.code === "23505") {
-        return NextResponse.json({ error: "Você já avaliou este produto. Use a opção de editar sua avaliação." }, { status: 409 });
-      }
+      if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto nesta compra." }, { status: 409 });
       return NextResponse.json({ error: "Não foi possível salvar a avaliação." }, { status: 500 });
     }
-
     return NextResponse.json({ success: true, review: data, message: "Avaliação enviada para aprovação." }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Não foi possível processar a avaliação." }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a avaliação." }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const reviewId = typeof body.reviewId === "string" ? body.reviewId.trim() : "";
-    const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
-    const productId = typeof body.productId === "string" ? body.productId.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-    const rating = Number(body.rating);
-    const comment = typeof body.comment === "string" ? body.comment.trim() : "";
-
-    if (!reviewId || !orderId || !productId || !phone || !Number.isInteger(rating) || rating < 1 || rating > 5 || !comment) {
-      return NextResponse.json({ error: "Confira os dados da avaliação." }, { status: 400 });
+    const user = await getAccount(request);
+    if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para editar a avaliação." }, { status: 401 });
+    const form = await request.formData();
+    const reviewId = String(form.get("reviewId") || "").trim();
+    const productId = String(form.get("productId") || "").trim();
+    const rating = Number(form.get("rating"));
+    if (!reviewId || !productId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return NextResponse.json({ error: "Selecione sua nota de 1 a 5 estrelas." }, { status: 400 });
     }
 
-    const validation = await validatePurchase(orderId, productId, phone);
-    if ("error" in validation) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
-    }
+    const validation = await validatePurchase(user.email, productId);
+    if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
+
+    const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
+    const photos = files.length ? await uploadReviewFiles(files, user.id) : undefined;
+    const update: Record<string, unknown> = { rating, status: "pending", updated_at: new Date().toISOString() };
+    if (photos) update.photos = photos;
 
     const { data, error } = await supabaseAdmin
       .from("product_reviews")
-      .update({ rating, comment, status: "pending", updated_at: new Date().toISOString() })
+      .update(update)
       .eq("id", reviewId)
       .eq("product_id", productId)
-      .eq("order_id", orderId)
-      .eq("customer_phone_hash", phoneHash(phone))
+      .eq("order_id", validation.order.id)
+      .eq("customer_phone_hash", user.id)
       .select("id,status")
       .maybeSingle();
 
     if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
-    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para este comprador." }, { status: 404 });
-
+    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
     return NextResponse.json({ success: true, review: data, message: "Alteração enviada para nova aprovação." });
-  } catch {
-    return NextResponse.json({ error: "Não foi possível processar a alteração." }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a alteração." }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    const user = await getAccount(request);
+    if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para excluir a avaliação." }, { status: 401 });
     const body = await request.json();
     const reviewId = typeof body.reviewId === "string" ? body.reviewId.trim() : "";
-    const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-
-    if (!reviewId || !orderId || !productId || !phone) {
-      return NextResponse.json({ error: "Informe os dados para excluir a avaliação." }, { status: 400 });
-    }
-
-    const validation = await validatePurchase(orderId, productId, phone);
-    if ("error" in validation) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
-    }
+    const validation = await validatePurchase(user.email, productId);
+    if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const { data, error } = await supabaseAdmin
       .from("product_reviews")
       .delete()
       .eq("id", reviewId)
       .eq("product_id", productId)
-      .eq("order_id", orderId)
-      .eq("customer_phone_hash", phoneHash(phone))
+      .eq("order_id", validation.order.id)
+      .eq("customer_phone_hash", user.id)
       .select("id")
       .maybeSingle();
-
     if (error) return NextResponse.json({ error: "Não foi possível excluir a avaliação." }, { status: 500 });
-    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para este comprador." }, { status: 404 });
-
+    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
     return NextResponse.json({ success: true, message: "Avaliação excluída." });
   } catch {
     return NextResponse.json({ error: "Não foi possível processar a exclusão." }, { status: 500 });
