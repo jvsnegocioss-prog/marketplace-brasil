@@ -55,6 +55,7 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [favoritesReady, setFavoritesReady] = useState(false);
+  const [favoritesCloudReadyFor, setFavoritesCloudReadyFor] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [customerAvatarUrl, setCustomerAvatarUrl] = useState("");
 
@@ -231,11 +232,72 @@ export default function Home() {
     }
   }, []);
 
+  // Ao entrar na conta, recupera os favoritos salvos para este cliente.
   useEffect(() => {
-    if (favoritesReady) {
+    if (!favoritesReady) return;
+    if (!cartUserId) {
+      setFavoritesCloudReadyFor(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAccountFavorites() {
+      const { data, error } = await supabase
+        .from("customer_favorites")
+        .select("product_ids")
+        .eq("user_id", cartUserId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.error("Não foi possível carregar os favoritos da conta:", error);
+        return;
+      }
+
+      if (data && Array.isArray(data.product_ids)) {
+        setFavoriteIds(data.product_ids.filter((id: unknown): id is string => typeof id === "string"));
+      }
+      // Se ainda não existir registro, os favoritos locais serão enviados à conta.
+      setFavoritesCloudReadyFor(cartUserId);
+    }
+
+    void loadAccountFavorites();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [favoritesReady, cartUserId]);
+
+  // Mantém os favoritos no aparelho e sincroniza com a conta autenticada.
+  useEffect(() => {
+    if (!favoritesReady) return;
+    try {
       localStorage.setItem("novashopp_favorites", JSON.stringify(favoriteIds));
+    } catch (error) {
+      console.error("Não foi possível salvar favoritos:", error);
     }
   }, [favoriteIds, favoritesReady]);
+
+  useEffect(() => {
+    if (!cartUserId || favoritesCloudReadyFor !== cartUserId) return;
+
+    const saveAccountFavorites = async () => {
+      const { error } = await supabase
+        .from("customer_favorites")
+        .upsert({
+          user_id: cartUserId,
+          product_ids: favoriteIds,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (error) {
+        console.error("Não foi possível sincronizar os favoritos:", error);
+      }
+    };
+
+    void saveAccountFavorites();
+  }, [favoriteIds, cartUserId, favoritesCloudReadyFor]);
 
   const categories = [
     ...baseCategories,
