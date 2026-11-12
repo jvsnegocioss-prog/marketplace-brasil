@@ -20,6 +20,7 @@ type ProductMedia = {
   id: string;
   media_type: "image" | "video";
   url: string;
+  poster_url?: string | null;
   sort_order: number;
 };
 
@@ -73,7 +74,7 @@ export default function ProductPage() {
       setProduct(data as Product | null);
       const { data: mediaData } = await supabase
         .from("product_media")
-        .select("id,media_type,url,sort_order")
+        .select("id,media_type,url,poster_url,sort_order")
         .eq("product_id", productId)
         .order("sort_order", { ascending: true });
       const media = (mediaData || []) as ProductMedia[];
@@ -218,7 +219,7 @@ export default function ProductPage() {
                 <video
                   key={selectedMedia.id}
                   src={selectedMedia.url}
-                  poster={product.image_url || productMedia.find((item) => item.media_type === "image")?.url || undefined}
+                  poster={selectedMedia.poster_url || undefined}
                   controls
                   playsInline
                   preload="metadata"
@@ -283,10 +284,11 @@ export default function ProductPage() {
                       <img src={media.url} alt="" />
                     ) : (
                       <span className="detail-video-thumb">
-                        <img
-                          src={product.image_url || productMedia.find((item) => item.media_type === "image")?.url || ""}
-                          alt=""
-                        />
+                        {media.poster_url ? (
+                          <img src={media.poster_url} alt="Prévia do vídeo" />
+                        ) : (
+                          <span className="detail-video-fallback">▶</span>
+                        )}
                         <span className="detail-video-play">▶</span>
                         <span className="detail-video-label">Vídeo</span>
                       </span>
