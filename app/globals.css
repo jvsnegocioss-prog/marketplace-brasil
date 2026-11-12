@@ -2247,3 +2247,35 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   text-align: center;
   font-size: 13px;
 }
+
+
+/* Navegação lateral da galeria de produtos */
+.detail-photo-frame {
+  position: relative;
+  touch-action: pan-y;
+}
+.detail-gallery-arrow {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255,255,255,.85);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .68);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+.detail-gallery-arrow-left { left: 12px; }
+.detail-gallery-arrow-right { right: 12px; }
+.detail-gallery-arrow:active { transform: translateY(-50%) scale(.94); }
+@media (max-width: 640px) {
+  .detail-gallery-arrow { width: 36px; height: 36px; }
+  .detail-gallery-arrow-left { left: 8px; }
+  .detail-gallery-arrow-right { right: 8px; }
+}
