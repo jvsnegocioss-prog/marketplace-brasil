@@ -2131,3 +2131,43 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     object-position: center;
   }
 }
+
+
+/* Galeria de fotos e vídeos dos produtos */
+.detail-media-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.detail-media-thumb {
+  display: flex;
+  width: 76px;
+  height: 76px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px;
+  border: 2px solid #e5eaf2;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+.detail-media-thumb.active {
+  border-color: #d8a91b;
+  box-shadow: 0 0 0 2px #d8a91b22;
+}
+.detail-media-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.detail-video-thumb {
+  color: #14264d;
+  font-size: 12px;
+  font-weight: 800;
+}
+@media (max-width: 760px) {
+  .detail-media-thumbnails { gap: 8px; }
+  .detail-media-thumb { width: 66px; height: 66px; }
+}
