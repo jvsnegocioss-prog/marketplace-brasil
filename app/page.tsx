@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Search, ShoppingCart, Menu, X, Heart, Star,
+  Search, ShoppingCart, Menu, X, Heart, Star, Trash2,
   Truck, ShieldCheck, CreditCard, Plus, Minus,
   ArrowRight, Smartphone, Watch, Headphones,
   Gamepad2, House, Shirt, Package
@@ -48,6 +48,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todos");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartReady, setCartReady] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -123,6 +124,34 @@ export default function Home() {
 
   useEffect(() => {
     try {
+      const savedCart = localStorage.getItem("novashopp_cart");
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) {
+          setCart(parsed.filter((item): item is CartItem =>
+            item && typeof item.id === "string" &&
+            Number.isInteger(item.qty) && item.qty > 0
+          ));
+        }
+      }
+    } catch (error) {
+      console.error("Não foi possível recuperar o carrinho:", error);
+    } finally {
+      setCartReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!cartReady) return;
+    try {
+      localStorage.setItem("novashopp_cart", JSON.stringify(cart));
+    } catch (error) {
+      console.error("Não foi possível salvar o carrinho:", error);
+    }
+  }, [cart, cartReady]);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem("novashopp_favorites");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -186,6 +215,10 @@ export default function Home() {
     });
 
     setCartOpen(true);
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart((old) => old.filter((item) => item.id !== id));
   };
 
   const changeQty = (id: string, amount: number) => {
@@ -751,9 +784,21 @@ export default function Home() {
                               </div>
                             </div>
 
-                            <strong>
-                              {money(Number(product.price) * item.qty)}
-                            </strong>
+                            <div className="cart-item-actions">
+                              <strong>
+                                {money(Number(product.price) * item.qty)}
+                              </strong>
+                              <button
+                                type="button"
+                                className="cart-remove-button"
+                                onClick={() => removeFromCart(item.id)}
+                                aria-label={`Excluir ${product.name} do carrinho`}
+                                title="Excluir do carrinho"
+                              >
+                                <Trash2 size={17} />
+                                <span>Excluir</span>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
