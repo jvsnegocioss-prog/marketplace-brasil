@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -121,6 +121,8 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [message, setMessage] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const touchStartY = useRef<number | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -481,12 +483,35 @@ export default function AdminPage() {
   }
 
   async function refreshDashboard() {
+    if (refreshing) return;
+    setRefreshing(true);
     setMessage("");
 
-    await Promise.all([
-      loadProducts(),
-      loadOrders(),
-    ]);
+    try {
+      await Promise.all([
+        loadProducts(),
+        loadOrders(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function handleAdminTouchStart(event: React.TouchEvent<HTMLElement>) {
+    if (window.scrollY <= 2 && event.touches.length === 1) {
+      touchStartY.current = event.touches[0].clientY;
+    } else {
+      touchStartY.current = null;
+    }
+  }
+
+  function handleAdminTouchEnd(event: React.TouchEvent<HTMLElement>) {
+    if (touchStartY.current === null) return;
+    const distance = event.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (distance > 90 && window.scrollY <= 2) {
+      void refreshDashboard();
+    }
   }
 
   async function logout() {
@@ -507,7 +532,10 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="admin-dashboard"
+    <main
+      className="admin-dashboard"
+      onTouchStart={handleAdminTouchStart}
+      onTouchEnd={handleAdminTouchEnd}
       style={{
         maxWidth: 1100,
         margin: "auto",
@@ -533,6 +561,12 @@ export default function AdminPage() {
           Sair
         </button>
       </header>
+
+      {refreshing && (
+        <p role="status" style={{ color: "#173b68", fontWeight: 700, textAlign: "center" }}>
+          Atualizando painel...
+        </p>
+      )}
 
       <hr />
 
@@ -580,7 +614,7 @@ export default function AdminPage() {
         onClick={refreshDashboard}
         style={buttonStyle}
       >
-        Atualizar painel
+        {refreshing ? "Atualizando..." : "Atualizar painel"}
       </button>
 
       <hr />
