@@ -53,6 +53,7 @@ export default function Home() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [favoritesReady, setFavoritesReady] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [customerAvatarUrl, setCustomerAvatarUrl] = useState("");
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -88,6 +89,7 @@ export default function Home() {
     // Se o cliente já estiver autenticado, aproveita os dados da conta no checkout.
     supabase.auth.getSession().then(({ data }) => {
       const accountUser = data.session?.user;
+      setCustomerAvatarUrl(typeof accountUser?.user_metadata?.avatar_url === "string" ? accountUser.user_metadata.avatar_url : "");
       if (!accountUser) return;
 
       const accountName =
@@ -111,6 +113,12 @@ export default function Home() {
       setCustomerPhone((current) => current || (typeof metadata.phone === "string" ? metadata.phone : ""));
       setDeliveryAddress((current) => current || savedAddress);
     });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const metadata = session?.user?.user_metadata;
+      setCustomerAvatarUrl(typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "");
+    });
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -297,7 +305,11 @@ export default function Home() {
 
         <div className="header-actions">
           <a className="customer-account-link" href="/conta" aria-label="Minha conta">
-            <span aria-hidden="true">👤</span>
+            {customerAvatarUrl ? (
+              <img className="customer-account-link-avatar" src={customerAvatarUrl} alt="" />
+            ) : (
+              <span className="customer-account-link-placeholder" aria-hidden="true">👤</span>
+            )}
             <span>Minha conta</span>
           </a>
           <button
