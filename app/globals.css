@@ -2331,3 +2331,30 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   color: #fff;
   font-size: 22px;
 }
+
+
+/* Navegação de fotos dentro da visualização ampliada */
+.detail-image-lightbox { touch-action: pan-y; }
+.detail-image-lightbox-arrow {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  display: flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 50%;
+  background: rgba(15,23,42,.62);
+  color: #fff;
+  cursor: pointer;
+}
+.detail-image-lightbox-arrow-left { left: 14px; }
+.detail-image-lightbox-arrow-right { right: 14px; }
+@media (max-width: 640px) {
+  .detail-image-lightbox-arrow { width: 40px; height: 40px; }
+  .detail-image-lightbox-arrow-left { left: 8px; }
+  .detail-image-lightbox-arrow-right { right: 8px; }
+}
