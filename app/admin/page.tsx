@@ -15,6 +15,15 @@ type Product = {
   active: boolean;
 };
 
+type ProductMedia = {
+  id: string;
+  product_id: string;
+  media_type: "image" | "video";
+  url: string;
+  storage_path: string;
+  sort_order: number;
+};
+
 type Order = {
   id: string;
   total: number | string;
@@ -132,6 +141,8 @@ export default function AdminPage() {
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [existingMedia, setExistingMedia] = useState<ProductMedia[]>([]);
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiNotes, setAiNotes] = useState<string[]>([]);
@@ -258,6 +269,11 @@ export default function AdminPage() {
     setCategory("");
     setCustomCategory("");
     setImage(null);
+    setMediaFiles([]);
+    setExistingMedia([]);
+
+    const mediaInput = document.getElementById("product-media") as HTMLInputElement | null;
+    if (mediaInput) mediaInput.value = "";
 
     const fileInput = document.getElementById(
       "product-image"
@@ -277,11 +293,44 @@ export default function AdminPage() {
     setCategory(product.category || "");
     setCustomCategory("");
     setImage(null);
+    setMediaFiles([]);
+    void loadProductMedia(product.id);
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+  }
+
+  async function loadProductMedia(productId: string) {
+    const { data, error } = await supabase
+      .from("product_media")
+      .select("id,product_id,media_type,url,storage_path,sort_order")
+      .eq("product_id", productId)
+      .order("sort_order", { ascending: true });
+    if (error) {
+      setMessage("Não foi possível carregar as mídias deste produto: " + error.message);
+      return;
+    }
+    setExistingMedia((data || []) as ProductMedia[]);
+  }
+
+  async function removeProductMedia(media: ProductMedia) {
+    if (!window.confirm("Remover esta foto ou vídeo do produto?")) return;
+    const { error: storageError } = await supabase.storage
+      .from("products-media")
+      .remove([media.storage_path]);
+    if (storageError) {
+      setMessage("Erro ao remover arquivo: " + storageError.message);
+      return;
+    }
+    const { error } = await supabase.from("product_media").delete().eq("id", media.id);
+    if (error) {
+      setMessage("Arquivo removido, mas não foi possível atualizar o cadastro: " + error.message);
+      return;
+    }
+    setExistingMedia((current) => current.filter((item) => item.id !== media.id));
+    setMessage("Mídia removida.");
   }
 
   async function generateProductContent() {
@@ -409,30 +458,53 @@ export default function AdminPage() {
         updated_at: new Date().toISOString(),
       };
 
+      let savedProductId = editingId;
+
       if (editingId) {
         const { error } = await supabase
           .from("products")
           .update(productData)
           .eq("id", editingId);
-
-        if (error) {
-          throw error;
-        }
-
+        if (error) throw error;
         setMessage("Produto atualizado com sucesso!");
       } else {
-        const { error } = await supabase
+        const { data: insertedProduct, error } = await supabase
           .from("products")
-          .insert({
-            ...productData,
-            active: true,
-          });
-
-        if (error) {
-          throw error;
-        }
-
+          .insert({ ...productData, active: true })
+          .select("id")
+          .single();
+        if (error) throw error;
+        savedProductId = insertedProduct.id;
         setMessage("Produto cadastrado com sucesso!");
+      }
+
+      if (savedProductId && mediaFiles.length) {
+        for (let index = 0; index < mediaFiles.length; index++) {
+          const file = mediaFiles[index];
+          const isImage = file.type.startsWith("image/");
+          const isVideo = file.type.startsWith("video/");
+          if (!isImage && !isVideo) throw new Error(`Formato não permitido: ${file.name}`);
+          if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name}: o limite é 50 MB por arquivo.`);
+
+          const extension = file.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
+          const storagePath = `${savedProductId}/${crypto.randomUUID()}.${extension}`;
+          const { error: uploadError } = await supabase.storage
+            .from("products-media")
+            .upload(storagePath, file, { upsert: false, contentType: file.type });
+          if (uploadError) throw uploadError;
+
+          const { data: publicData } = supabase.storage
+            .from("products-media")
+            .getPublicUrl(storagePath);
+          const { error: mediaError } = await supabase.from("product_media").insert({
+            product_id: savedProductId,
+            media_type: isImage ? "image" : "video",
+            url: publicData.publicUrl,
+            storage_path: storagePath,
+            sort_order: existingMedia.length + index,
+          });
+          if (mediaError) throw mediaError;
+        }
       }
 
       clearForm();
@@ -705,7 +777,7 @@ export default function AdminPage() {
           />
         )}
 
-        <label>Foto do produto</label>
+        <label>Foto principal do produto</label>
 
         <input
           id="product-image"
@@ -716,6 +788,42 @@ export default function AdminPage() {
           }
           style={inputStyle}
         />
+
+        <label>Fotos adicionais e vídeos</label>
+        <input
+          id="product-media"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+          multiple
+          onChange={(e) => setMediaFiles(Array.from(e.target.files || []))}
+          style={inputStyle}
+        />
+        <small style={{ display: "block", marginTop: -10, marginBottom: 14, color: "#64748b" }}>
+          Selecione várias fotos e vídeos de uma vez. Até 50 MB por arquivo.
+        </small>
+
+        {mediaFiles.length > 0 && (
+          <p style={{ color: "#173b68", fontWeight: 700 }}>
+            {mediaFiles.length} arquivo(s) selecionado(s) para adicionar.
+          </p>
+        )}
+
+        {existingMedia.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 10, marginBottom: 16 }}>
+            {existingMedia.map((media) => (
+              <div key={media.id} style={{ border: "1px solid #dbe3ef", borderRadius: 10, padding: 6 }}>
+                {media.media_type === "image" ? (
+                  <img src={media.url} alt="Mídia do produto" style={{ width: "100%", height: 90, objectFit: "contain" }} />
+                ) : (
+                  <video src={media.url} controls playsInline style={{ width: "100%", height: 90, objectFit: "contain" }} />
+                )}
+                <button type="button" onClick={() => removeProductMedia(media)} style={{ ...buttonStyle, width: "100%", background: "#9f2525", padding: 7, fontSize: 12 }}>
+                  Remover
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"
