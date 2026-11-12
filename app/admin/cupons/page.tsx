@@ -160,8 +160,8 @@ export default function CouponsPage() {
 
           <h3 style={{ fontSize: 14, color: "#173b68", margin: "8px 0 10px" }}>PERÍODO E LIMITE DE USO</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: "0 14px" }}>
-            <div><label style={{ fontSize: 13, fontWeight: 700 }}>Início · opcional</label><input type="datetime-local" value={starts} onChange={e => setStarts(e.target.value)} style={inputStyle} /></div>
-            <div><label style={{ fontSize: 13, fontWeight: 700 }}>Validade · opcional</label><input type="datetime-local" value={expires} onChange={e => setExpires(e.target.value)} style={inputStyle} /></div>
+            <div><label style={{ fontSize: 13, fontWeight: 700 }}>Início · opcional</label><input type="datetime-local" value={starts} onChange={e => setStarts(e.target.value)} style={inputStyle} /><button type="button" onClick={() => setStarts("")} disabled={!starts} style={{ ...buttonStyle, background: "#64748b", marginTop: -8, marginBottom: 12, padding: "7px 11px", fontSize: 12 }}>Limpar data</button></div>
+            <div><label style={{ fontSize: 13, fontWeight: 700 }}>Validade · opcional</label><input type="datetime-local" value={expires} onChange={e => setExpires(e.target.value)} style={inputStyle} /><button type="button" onClick={() => setExpires("")} disabled={!expires} style={{ ...buttonStyle, background: "#64748b", marginTop: -8, marginBottom: 12, padding: "7px 11px", fontSize: 12 }}>Limpar data</button></div>
             <div><label style={{ fontSize: 13, fontWeight: 700 }}>Limite total de usos · opcional</label><input type="number" min="1" step="1" value={limit} onChange={e => setLimit(e.target.value)} placeholder="Ilimitado" style={inputStyle} /></div>
           </div>
 
