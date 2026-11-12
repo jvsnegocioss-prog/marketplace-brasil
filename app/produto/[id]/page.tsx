@@ -348,8 +348,14 @@ export default function ProductPage() {
                 {cartMessage}
               </p>
             )}
-            <Link href="/#produtos" className="mt-3 inline-block text-sm font-semibold text-blue-700 underline">
+            <Link
+              href="/#produtos"
+              aria-label="Voltar à loja para continuar comprando"
+              className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-blue-800 bg-white px-5 py-3 text-sm font-bold text-blue-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto"
+            >
+              <ShoppingCart size={18} />
               Continuar comprando
+              <ArrowLeft size={16} className="rotate-180" />
             </Link>
           </div>
         </section>
