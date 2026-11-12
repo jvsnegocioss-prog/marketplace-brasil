@@ -49,6 +49,8 @@ export default function Home() {
   const [category, setCategory] = useState("Todos");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartReady, setCartReady] = useState(false);
+  const [cartUserId, setCartUserId] = useState<string | null>(null);
+  const [cartCloudReadyFor, setCartCloudReadyFor] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -90,6 +92,7 @@ export default function Home() {
     // Se o cliente já estiver autenticado, aproveita os dados da conta no checkout.
     supabase.auth.getSession().then(({ data }) => {
       const accountUser = data.session?.user;
+      setCartUserId(accountUser?.id || null);
       setCustomerAvatarUrl(typeof accountUser?.user_metadata?.avatar_url === "string" ? accountUser.user_metadata.avatar_url : "");
       if (!accountUser) return;
 
@@ -116,6 +119,7 @@ export default function Home() {
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCartUserId(session?.user?.id || null);
       const metadata = session?.user?.user_metadata;
       setCustomerAvatarUrl(typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "");
     });
@@ -140,6 +144,69 @@ export default function Home() {
       setCartReady(true);
     }
   }, []);
+
+  // Ao entrar na conta, recupera o carrinho salvo na nuvem para este usuário.
+  useEffect(() => {
+    if (!cartReady) return;
+    if (!cartUserId) {
+      setCartCloudReadyFor(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAccountCart() {
+      const { data, error } = await supabase
+        .from("customer_carts")
+        .select("items")
+        .eq("user_id", cartUserId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.error("Não foi possível carregar o carrinho da conta:", error);
+        return;
+      }
+
+      const cloudItems = Array.isArray(data?.items)
+        ? data.items.filter((item: any) =>
+            item && typeof item.id === "string" &&
+            Number.isInteger(item.qty) && item.qty > 0
+          ) as CartItem[]
+        : [];
+
+      // A nuvem é a fonte principal quando o cliente está autenticado.
+      setCart(cloudItems);
+      setCartCloudReadyFor(cartUserId);
+    }
+
+    void loadAccountCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cartReady, cartUserId]);
+
+  // Cada alteração é sincronizada com a conta autenticada.
+  useEffect(() => {
+    if (!cartUserId || cartCloudReadyFor !== cartUserId) return;
+
+    const saveAccountCart = async () => {
+      const { error } = await supabase
+        .from("customer_carts")
+        .upsert({
+          user_id: cartUserId,
+          items: cart,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (error) {
+        console.error("Não foi possível sincronizar o carrinho:", error);
+      }
+    };
+
+    void saveAccountCart();
+  }, [cart, cartUserId, cartCloudReadyFor]);
 
   useEffect(() => {
     if (!cartReady) return;
