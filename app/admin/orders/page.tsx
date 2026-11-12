@@ -166,21 +166,21 @@ export default function OrdersPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-white text-slate-800">
-      <header className="header !flex-wrap !justify-between !gap-4">
+    <main className="min-h-screen bg-[#f5f7fb] text-[#17243b]">
+      <div className="bg-[#06183d] px-[5%] py-2 text-center text-[11px] font-semibold tracking-wide text-white sm:flex sm:justify-between sm:text-left"><span>NOVASHOPP STORE · COMPRE FÁCIL, RECEBA RÁPIDO</span><span className="hidden text-[#ffc400] sm:inline">PAINEL DE OPERAÇÕES</span></div>\n      <header className="header !flex-wrap !justify-between !gap-4 !bg-white !px-[5%] !py-4">
         <Link href="/" className="logo" aria-label="NovaShopp Store">
           <span className="logo-icon">N</span>
           <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE · ADMIN</small></span>
         </Link>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span className="hidden sm:inline-flex items-center rounded-full bg-[#fff8dc] px-3 py-2 text-xs font-bold text-[#806000]">
-            Central de operações
+            Gestão da loja
           </span>
-          <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#06183d] transition hover:border-[#ffc400] hover:bg-[#fff9e5] disabled:opacity-60">
+          <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-4 py-2.5 text-sm font-bold text-[#06183d] transition hover:border-[#ffc400] hover:bg-[#fff9e5] disabled:opacity-60">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Atualizar
           </button>
-          <Link href="/admin" className="inline-flex items-center gap-2 rounded-lg bg-[#ffc400] px-3 py-2.5 text-sm font-extrabold text-[#06183d] transition hover:bg-[#f2b900]">
-            <ArrowLeft size={16} /> Painel
+          <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl bg-[#ffc400] px-4 py-2.5 text-sm font-extrabold text-[#06183d] shadow-sm transition hover:bg-[#f2b900]">
+            <ArrowLeft size={16} /> Voltar ao painel
           </Link>
         </div>
       </header>
@@ -188,12 +188,12 @@ export default function OrdersPage() {
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-[#a47b00]">Central de operações</p>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-[#a47b00]">NOVASHOPP STORE · ADMINISTRAÇÃO</p>
             <h1 className="text-2xl font-extrabold tracking-tight text-[#06183d] sm:text-3xl">Gestão de pedidos</h1>
-            <p className="mt-1 text-sm text-slate-500">Acompanhe vendas, pagamentos e entregas da sua loja.</p>
+            <p className="mt-1 text-sm text-slate-500">Gerencie pedidos, confirme etapas e acompanhe cada entrega.</p>
           </div>
           <div className="rounded-lg border border-[#f4e6ad] bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" /> Loja conectada
+            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" /> Sistema de pedidos
           </div>
         </div>
 
@@ -202,11 +202,11 @@ export default function OrdersPage() {
             { label: "Total vendido", value: money(revenue), detail: "Pedidos com pagamento confirmado", icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
             { label: "Pedidos pagos", value: String(paid.length), detail: "Pagamentos confirmados", icon: CheckCircle2, color: "text-[#a47b00]", bg: "bg-[#fff8dc]" },
             { label: "Aguardando pagamento", value: String(waiting.length), detail: "Precisam de confirmação", icon: Clock3, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "Total de pedidos", value: String(orders.length), detail: `${cancelled.length} cancelado(s)`, icon: ShoppingBag, color: "text-indigo-700", bg: "bg-indigo-50" },
+            { label: "Total de pedidos", value: String(orders.length), detail: `${cancelled.length} cancelado(s)`, icon: ShoppingBag, color: "text-[#06183d]", bg: "bg-[#eef3fc]" },
           ].map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div key={card.label} className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-[0_5px_20px_rgba(7,27,67,0.05)] sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-500 sm:text-sm">{card.label}</p>
@@ -228,19 +228,19 @@ export default function OrdersPage() {
             </div>
             <div className="relative w-full sm:max-w-xs">
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[#ffc400] focus:bg-white focus:ring-2 focus:ring-[#fff0b3]" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8faff] py-3 pl-9 pr-3 text-sm outline-none transition focus:border-[#ffc400] focus:bg-white focus:ring-2 focus:ring-[#fff0b3]" />
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {filters.map((item) => (
-              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#06183d] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:border-[#ffc400] hover:text-[#806000]"}`}>
-                {item.label} <span className={`ml-1 ${filter === item.value ? "text-blue-200" : "text-slate-400"}`}>{item.count}</span>
+              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-full px-4 py-2.5 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#06183d] text-white shadow-sm" : "border border-[#e8edf4] bg-white text-slate-600 hover:border-[#ffc400] hover:bg-[#fff9e5] hover:text-[#806000]"}`}>
+                {item.label} <span className={`ml-1 ${filter === item.value ? "text-[#ffc400]" : "text-slate-400"}`}>{item.count}</span>
               </button>
             ))}
           </div>
         </section>
 
-        {loading && <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Carregando pedidos...</div>}
+        {loading && <div className="rounded-2xl border border-[#e8edf4] bg-white p-10 text-center text-sm text-slate-500">Carregando pedidos...</div>}
         {!loading && message && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{message}</div>}
         {!loading && !message && visibleOrders.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center">
@@ -255,7 +255,7 @@ export default function OrdersPage() {
             const paidOrder = isPaid(order.status);
             const currentStep = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
             return (
-              <article key={order.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <article key={order.id} className="overflow-hidden rounded-2xl border border-[#e8edf4] bg-white shadow-[0_8px_28px_rgba(7,27,67,0.06)]">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#fff8dc] text-[#06183d]"><ShoppingBag size={19} /></span>
@@ -269,7 +269,7 @@ export default function OrdersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${paidOrder ? "bg-emerald-50 text-emerald-700" : isCancelled(order.status) ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{paymentLabel(order.status)}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${paidOrder ? "bg-emerald-50 text-emerald-700" : isCancelled(order.status) ? "bg-red-50 text-red-700" : "bg-[#fff6d8] text-[#806000]"}`}>{paymentLabel(order.status)}</span>
                     <strong className="text-lg font-extrabold text-[#06183d]">{money(order.total)}</strong>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
+                <div className="border-t border-slate-100 bg-[#f8faff] px-4 py-4 sm:px-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-extrabold text-[#06183d]">Etapas do pedido</p>
@@ -321,7 +321,7 @@ export default function OrdersPage() {
                       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                         <div>
                           <label className="mb-1.5 block text-xs font-bold text-slate-600">Atualizar etapa</label>
-                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-[#06183d] outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]">
+                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-3 text-sm font-semibold text-[#06183d] outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]">
                             {deliverySteps.map((step) => <option key={step.value} value={step.value}>{step.label}</option>)}
                           </select>
                         </div>
@@ -334,10 +334,10 @@ export default function OrdersPage() {
                           <label className="mb-1.5 block text-xs font-bold text-slate-600">Código de rastreio</label>
                           <input value={trackingDrafts[order.id] ?? ""} onChange={(e) => setTrackingDrafts((current) => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]" />
                         </div>
-                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-lg bg-[#06183d] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#ffc400] disabled:opacity-50">Salvar rastreio</button>
+                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-xl bg-[#06183d] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#123b78] disabled:opacity-50">Salvar rastreio</button>
                       </div>
                       {order.delivery_status === "enviado" && order.customer_phone && (
-                        <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700">
+                        <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#12805c] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0d684a]">
                           Avisar cliente pelo WhatsApp <ExternalLink size={14} />
                         </a>
                       )}
@@ -354,7 +354,7 @@ export default function OrdersPage() {
             );
           })}
         </div>
-        <footer className="mt-8 border-t border-slate-200 py-5 text-center text-xs text-slate-400">NovaShopp Store · Painel administrativo</footer>
+        <footer className="mt-8 border-t border-slate-200 py-5 text-center text-xs text-slate-400">NovaShopp Store · Gestão de pedidos e entregas</footer>
       </div>
     </main>
   );
