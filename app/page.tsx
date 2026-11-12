@@ -66,6 +66,12 @@ export default function Home() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string; discount: number; total: number;
+  } | null>(null);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -347,12 +353,16 @@ export default function Home() {
   };
 
   const removeFromCart = (id: string) => {
+    setAppliedCoupon(null);
+    setCouponMessage("");
     setCart((old) => old.filter((item) => item.id !== id));
   };
 
   const changeQty = (id: string, amount: number) => {
     const product = products.find((p) => p.id === id);
     if (!product) return;
+    setAppliedCoupon(null);
+    setCouponMessage("");
 
     setCart((old) =>
       old
@@ -366,6 +376,40 @@ export default function Home() {
         )
         .filter((item) => item.qty > 0)
     );
+  };
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim() || couponLoading || cart.length === 0) return;
+    setCouponLoading(true);
+    setCouponMessage("");
+    try {
+      const response = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponInput,
+          items: cart.map((item) => ({ id: item.id, qty: item.qty })),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.valid) {
+        setAppliedCoupon(null);
+        setCouponMessage(result.error || "Não foi possível aplicar este cupom.");
+        return;
+      }
+      setAppliedCoupon({
+        code: result.code,
+        discount: Number(result.discount),
+        total: Number(result.total),
+      });
+      setCouponInput(result.code);
+      setCouponMessage(result.message || "Cupom aplicado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao validar cupom:", error);
+      setCouponMessage("Não foi possível validar o cupom. Tente novamente.");
+    } finally {
+      setCouponLoading(false);
+    }
   };
 
   const submitOrder = async () => {
@@ -389,6 +433,7 @@ export default function Home() {
           customerEmail,
           customerPhone,
           deliveryAddress,
+          couponCode: appliedCoupon?.code || null,
           items: cart.map((item) => ({
             id: item.id,
             qty: item.qty,
@@ -433,6 +478,7 @@ export default function Home() {
     const product = products.find((p) => p.id === item.id);
     return sum + (product ? Number(product.price) * item.qty : 0);
   }, 0);
+  const displayTotal = appliedCoupon ? appliedCoupon.total : total;
 
   return (
     <main>
@@ -950,9 +996,55 @@ export default function Home() {
                       })}
                     </div>
 
-                    <div className="cart-total">
-                      <span>Total</span>
-                      <strong>{money(total)}</strong>
+                    <div style={{ padding: "14px 0", borderBottom: "1px solid #e5e7eb" }}>
+                      <label style={{ display: "block", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+                        Cupom de desconto
+                      </label>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          value={couponInput}
+                          onChange={(e) => {
+                            setCouponInput(e.target.value.toUpperCase());
+                            setAppliedCoupon(null);
+                            setCouponMessage("");
+                          }}
+                          placeholder="Digite seu cupom"
+                          disabled={couponLoading}
+                          style={{ minWidth: 0, flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, textTransform: "uppercase" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void applyCoupon()}
+                          disabled={couponLoading || !couponInput.trim()}
+                          style={{ padding: "10px 14px", border: 0, borderRadius: 8, background: "#102a56", color: "#fff", fontWeight: 700, opacity: couponLoading || !couponInput.trim() ? 0.6 : 1 }}
+                        >
+                          {couponLoading ? "Verificando..." : "Aplicar"}
+                        </button>
+                      </div>
+                      {couponMessage && (
+                        <p role="status" style={{ marginTop: 8, fontSize: 13, color: appliedCoupon ? "#15803d" : "#b42318" }}>
+                          {couponMessage}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="cart-total" style={{ flexDirection: "column", alignItems: "stretch", gap: 7 }}>
+                      {appliedCoupon && (
+                        <>
+                          <div style={{ display: "flex", justifyContent: "space-between", color: "#15803d", fontSize: 14 }}>
+                            <span>Desconto ({appliedCoupon.code})</span>
+                            <strong>- {money(appliedCoupon.discount)}</strong>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#64748b" }}>
+                            <span>Subtotal</span>
+                            <span>{money(total)}</span>
+                          </div>
+                        </>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Total</span>
+                        <strong>{money(displayTotal)}</strong>
+                      </div>
                     </div>
 
                     <button
@@ -1070,9 +1162,17 @@ export default function Home() {
                       />
                     </label>
 
-                    <div className="cart-total">
-                      <span>Total do pedido</span>
-                      <strong>{money(total)}</strong>
+                    <div className="cart-total" style={{ flexDirection: "column", alignItems: "stretch", gap: 7 }}>
+                      {appliedCoupon && (
+                        <div style={{ display: "flex", justifyContent: "space-between", color: "#15803d", fontSize: 14 }}>
+                          <span>Desconto ({appliedCoupon.code})</span>
+                          <strong>- {money(appliedCoupon.discount)}</strong>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Total do pedido</span>
+                        <strong>{money(displayTotal)}</strong>
+                      </div>
                     </div>
 
                     {checkoutMessage && (
