@@ -93,6 +93,17 @@ export default function Home() {
     setLoading(false);
   }
 
+  // Remove do carrinho referências a produtos que não existem mais no catálogo ativo.
+  // Aguarda o carregamento para não limpar o carrinho antes de receber os produtos.
+  useEffect(() => {
+    if (loading || error) return;
+
+    const activeProductIds = new Set(products.map((product) => product.id));
+    setCart((current) =>
+      current.filter((item) => activeProductIds.has(item.id))
+    );
+  }, [loading, error, products]);
+
   useEffect(() => {
     loadProducts();
 
