@@ -2065,3 +2065,42 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     min-width: 30px;
   }
 }
+
+
+/* Ações dos produtos no carrinho */
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 88px;
+}
+.cart-remove-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid #f0c9c9;
+  border-radius: 9px;
+  color: #a52b35;
+  background: #fff7f7;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.cart-remove-button:hover {
+  background: #ffe9e9;
+  border-color: #e7aeb2;
+}
+@media (max-width: 420px) {
+  .cart-item-actions {
+    min-width: 74px;
+  }
+  .cart-remove-button {
+    padding: 6px 7px;
+    font-size: 11px;
+  }
+}
