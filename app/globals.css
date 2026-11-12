@@ -2104,3 +2104,8 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     font-size: 11px;
   }
 }
+
+
+/* Cartão inteiro funciona como atalho para os detalhes do produto */
+.product-card[role="link"] { cursor: pointer; }
+.product-card[role="link"]:focus-visible { outline: 3px solid #e5b323; outline-offset: 3px; }
