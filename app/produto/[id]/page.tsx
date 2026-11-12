@@ -55,6 +55,7 @@ export default function ProductPage() {
   const [reviewId, setReviewId] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
 
   async function loadReviews() {
     const response = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`);
@@ -201,6 +202,29 @@ export default function ProductPage() {
     setTouchStartX(null);
   }
 
+  function addProductToCart() {
+    if (!product || product.stock <= 0) return;
+    try {
+      const saved = localStorage.getItem("novashopp_cart");
+      const cart = saved ? JSON.parse(saved) : [];
+      const items: { id: string; qty: number }[] = Array.isArray(cart) ? cart : [];
+      const existing = items.find((item) => item.id === product.id);
+      if (existing && existing.qty >= product.stock) {
+        setCartMessage("Você já adicionou todo o estoque disponível deste produto.");
+        return;
+      }
+      const updated = existing
+        ? items.map((item) =>
+            item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+          )
+        : [...items, { id: product.id, qty: 1 }];
+      localStorage.setItem("novashopp_cart", JSON.stringify(updated));
+      setCartMessage("Produto adicionado ao carrinho com sucesso!");
+    } catch {
+      setCartMessage("Não foi possível adicionar o produto. Tente novamente.");
+    }
+  }
+
   return (
     <main className="product-detail-page">
       <div className="product-detail-container">
@@ -310,8 +334,22 @@ export default function ProductPage() {
             <p className="detail-price">{money(product.price)}</p>
             <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Produto indisponível"}</p>
             {product.description && <p className="detail-description">{product.description}</p>}
-            <Link href="/#produtos" className="detail-buy-link">
-              <ShoppingCart size={18} /> Voltar e comprar
+            <button
+              type="button"
+              className="detail-buy-link"
+              onClick={addProductToCart}
+              disabled={product.stock <= 0}
+              aria-label="Adicionar produto ao carrinho"
+            >
+              <ShoppingCart size={18} /> {product.stock > 0 ? "Adicionar ao carrinho" : "Produto indisponível"}
+            </button>
+            {cartMessage && (
+              <p role="status" aria-live="polite" className="mt-3 text-sm font-semibold text-green-700">
+                {cartMessage}
+              </p>
+            )}
+            <Link href="/#produtos" className="mt-3 inline-block text-sm font-semibold text-blue-700 underline">
+              Continuar comprando
             </Link>
           </div>
         </section>
