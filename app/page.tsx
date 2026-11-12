@@ -332,6 +332,8 @@ export default function Home() {
   };
 
   const addToCart = (id: string) => {
+    setAppliedCoupon(null);
+    setCouponMessage("");
     const product = products.find((p) => p.id === id);
     if (!product || product.stock <= 0) return;
 
