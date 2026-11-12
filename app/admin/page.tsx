@@ -130,6 +130,7 @@ export default function AdminPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
   const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -255,6 +256,7 @@ export default function AdminPage() {
     setPrice("");
     setStock("0");
     setCategory("");
+    setCustomCategory("");
     setImage(null);
 
     const fileInput = document.getElementById(
@@ -273,6 +275,7 @@ export default function AdminPage() {
     setPrice(String(product.price));
     setStock(String(product.stock));
     setCategory(product.category || "");
+    setCustomCategory("");
     setImage(null);
 
     window.scrollTo({
@@ -401,7 +404,7 @@ export default function AdminPage() {
         description,
         price: Number(price),
         stock: Number(stock),
-        category,
+        category: category === "__custom__" ? customCategory.trim() : category,
         image_url: imageUrl,
         updated_at: new Date().toISOString(),
       };
@@ -669,11 +672,38 @@ export default function AdminPage() {
 
         <label>Categoria</label>
 
-        <input
+        <select
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            if (e.target.value !== "__custom__") setCustomCategory("");
+          }}
           style={inputStyle}
-        />
+        >
+          <option value="">Selecione uma categoria</option>
+          {[...new Set([
+            "Eletrônicos",
+            "Acessórios",
+            "Casa",
+            "Moda",
+            "Games",
+            "Segurança eletrônica",
+            ...products.map((item) => item.category?.trim()).filter(Boolean) as string[],
+          ])].sort((a, b) => a.localeCompare(b, "pt-BR")).map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+          <option value="__custom__">＋ Adicionar nova categoria</option>
+        </select>
+
+        {category === "__custom__" && (
+          <input
+            value={customCategory}
+            onChange={(e) => setCustomCategory(e.target.value)}
+            placeholder="Digite o nome da nova categoria"
+            required
+            style={inputStyle}
+          />
+        )}
 
         <label>Foto do produto</label>
 
