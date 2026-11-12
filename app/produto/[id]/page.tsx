@@ -16,6 +16,13 @@ type Product = {
   image_url: string | null;
 };
 
+type ProductMedia = {
+  id: string;
+  media_type: "image" | "video";
+  url: string;
+  sort_order: number;
+};
+
 type Review = {
   id: string;
   reviewer_name: string;
@@ -34,6 +41,8 @@ export default function ProductPage() {
   const params = useParams<{ id: string }>();
   const productId = params.id;
   const [product, setProduct] = useState<Product | null>(null);
+  const [productMedia, setProductMedia] = useState<ProductMedia[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<ProductMedia | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState("");
@@ -60,6 +69,14 @@ export default function ProductPage() {
         .maybeSingle();
 
       setProduct(data as Product | null);
+      const { data: mediaData } = await supabase
+        .from("product_media")
+        .select("id,media_type,url,sort_order")
+        .eq("product_id", productId)
+        .order("sort_order", { ascending: true });
+      const media = (mediaData || []) as ProductMedia[];
+      setProductMedia(media);
+      setSelectedMedia(media[0] || null);
       await loadReviews();
       setLoading(false);
     }
@@ -161,11 +178,55 @@ export default function ProductPage() {
         </Link>
 
         <section className="detail-overview">
-          <div className="detail-photo-frame">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="detail-product-photo" />
-            ) : (
-              <Package size={100} className="detail-placeholder" />
+          <div>
+            <div className="detail-photo-frame">
+              {selectedMedia?.media_type === "video" ? (
+                <video
+                  key={selectedMedia.id}
+                  src={selectedMedia.url}
+                  controls
+                  playsInline
+                  className="detail-product-photo"
+                />
+              ) : (
+                <img
+                  src={selectedMedia?.url || product.image_url || ""}
+                  alt={product.name}
+                  className="detail-product-photo"
+                />
+              )}
+              {!selectedMedia && !product.image_url && (
+                <Package size={100} className="detail-placeholder" />
+              )}
+            </div>
+            {productMedia.length > 0 && (
+              <div className="detail-media-thumbnails" aria-label="Fotos e vídeos do produto">
+                {product.image_url && (
+                  <button
+                    type="button"
+                    className={selectedMedia === null ? "detail-media-thumb active" : "detail-media-thumb"}
+                    onClick={() => setSelectedMedia(null)}
+                    aria-label="Ver foto principal"
+                  >
+                    <img src={product.image_url} alt="" />
+                  </button>
+                )}
+                {productMedia.map((media) => (
+                  <button
+                    key={media.id}
+                    type="button"
+                    className={selectedMedia?.id === media.id ? "detail-media-thumb active" : "detail-media-thumb"}
+                    onClick={() => setSelectedMedia(media)}
+                    aria-label={media.media_type === "video" ? "Reproduzir vídeo do produto" : "Ver foto do produto"}
+                  >
+                    {media.media_type === "image" ? (
+                      <img src={media.url} alt="" />
+                    ) : (
+                      <span className="detail-video-thumb">▶ Vídeo</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <div>
