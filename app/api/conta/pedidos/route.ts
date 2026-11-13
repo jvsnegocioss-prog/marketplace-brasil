@@ -41,6 +41,8 @@ export async function GET(request: Request) {
         created_at,
         shipped_at,
         delivered_at,
+        delivery_method,
+        estimated_delivery_at,
         order_items (
           product_name,
           quantity,
