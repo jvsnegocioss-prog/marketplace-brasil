@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 type Order = {
   id: string;
+  order_number: string;
   customer_name: string;
   customer_email: string | null;
   customer_phone: string | null;
@@ -75,7 +76,7 @@ export default function OrdersPage() {
     setLoading(true);
     setMessage("");
     const { data, error } = await supabase.from("orders").select(`
-      id, customer_name, customer_email, customer_phone, delivery_address,
+      id, order_number, customer_name, customer_email, customer_phone, delivery_address,
       total, status, created_at, delivery_status, tracking_code, delivery_method,
       estimated_delivery_at, shipped_at, delivered_at,
       order_items ( product_name, quantity, unit_price, subtotal )
@@ -210,7 +211,7 @@ export default function OrdersPage() {
   const visibleOrders = orders.filter((order) => {
     const term = search.trim().toLowerCase();
     return !term || order.customer_name.toLowerCase().includes(term) ||
-      order.id.toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
+      order.id.toLowerCase().includes(term) || order.order_number.toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
   });
 
   return (
@@ -276,7 +277,7 @@ export default function OrdersPage() {
               <article key={order.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 15, padding: 18, boxShadow: "0 5px 16px rgba(15,23,42,.045)", overflow: "hidden" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid #edf1f5", paddingBottom: 13 }}>
                   <div style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>PEDIDO #{order.id.slice(0, 8).toUpperCase()}</span>
+                    <span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>PEDIDO #{order.order_number}</span>
                     <h3 style={{ margin: "5px 0 3px", color: "#173b68", fontSize: 18, overflowWrap: "anywhere" }}>{order.customer_name}</h3>
                     <span style={{ color: "#8492a6", fontSize: 12 }}>{new Date(order.created_at).toLocaleString("pt-BR")}</span>
                   </div>
