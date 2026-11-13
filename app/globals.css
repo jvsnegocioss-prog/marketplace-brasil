@@ -3206,3 +3206,167 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 .admin-dashboard .admin-product-form > ul {
   grid-column: 1 / -1 !important;
 }
+
+ 
+/* NOVASHOPP STORE — padrão global de botões e ações */
+:root {
+  --ns-navy: #0b2853;
+  --ns-navy-light: #1c4f83;
+  --ns-gold: #e8be37;
+  --ns-gold-soft: #fff7df;
+  --ns-text: #18375f;
+  --ns-border: #dce5ef;
+}
+
+/* Base consistente sem apagar as cores específicas já definidas por cada seção */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  min-height: 42px;
+  border-radius: 11px;
+  font-family: inherit;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  transition: background .18s ease, color .18s ease, border-color .18s ease,
+    box-shadow .18s ease, transform .18s ease, filter .18s ease;
+}
+
+button:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled) {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible,
+input[type="reset"]:focus-visible,
+a[class*="button"]:focus-visible,
+a[class*="btn"]:focus-visible,
+a[class*="link"]:focus-visible {
+  outline: 3px solid rgba(232, 190, 55, .72);
+  outline-offset: 3px;
+}
+
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
+  opacity: .62;
+  filter: saturate(.65);
+}
+
+/* Ações principais: enviar, salvar, confirmar e continuar */
+button[type="submit"],
+input[type="submit"],
+.customer-account-submit,
+.checkout-button,
+.add-button,
+.hero-button,
+.newsletter-button,
+.campaign-bottom-button,
+.admin-dashboard > button,
+.admin-dashboard .admin-product-form button[type="submit"] {
+  border: 1px solid transparent;
+  background: linear-gradient(115deg, var(--ns-navy), var(--ns-navy-light));
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(11, 40, 83, .16);
+}
+
+/* Ações secundárias: voltar, cancelar, filtros e opções */
+.customer-account-secondary,
+.review-secondary-button,
+.detail-back-link,
+.admin-dashboard .admin-product-form button[type="button"] {
+  border: 1px solid var(--ns-border);
+  background: #f5f8fc;
+  color: var(--ns-text);
+}
+
+/* Links que funcionam visualmente como botões */
+a.hero-button,
+a.add-button,
+a.checkout-button,
+a.detail-buy-link,
+a.detail-back-link,
+a.customer-account-link,
+a.customer-order-track-link,
+a.footer-track-link,
+a.hero-campaign-button,
+a.campaign-bottom-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .18s ease, color .18s ease, border-color .18s ease,
+    box-shadow .18s ease, transform .18s ease;
+}
+
+@media (hover: hover) {
+  button:not(:disabled):hover,
+  input[type="button"]:not(:disabled):hover,
+  input[type="submit"]:not(:disabled):hover,
+  input[type="reset"]:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.035);
+  }
+  a.hero-button:hover,
+  a.add-button:hover,
+  a.checkout-button:hover,
+  a.detail-buy-link:hover,
+  a.detail-back-link:hover,
+  a.customer-account-link:hover,
+  a.customer-order-track-link:hover,
+  a.footer-track-link:hover,
+  a.hero-campaign-button:hover,
+  a.campaign-bottom-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 16px rgba(11, 40, 83, .12);
+  }
+}
+
+button:active:not(:disabled),
+input[type="button"]:active:not(:disabled),
+input[type="submit"]:active:not(:disabled),
+input[type="reset"]:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a.hero-button,
+  a.add-button,
+  a.checkout-button,
+  a.detail-buy-link,
+  a.detail-back-link,
+  a.customer-account-link,
+  a.customer-order-track-link,
+  a.footer-track-link,
+  a.hero-campaign-button,
+  a.campaign-bottom-button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a[class*="button"],
+  a[class*="btn"],
+  a[class*="link"] {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
