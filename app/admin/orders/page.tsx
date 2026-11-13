@@ -57,8 +57,8 @@ function whatsappLink(order: Order) {
   const digits = (order.customer_phone || "").replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
   const message = order.delivery_status === "entregue"
-    ? `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi marcado como entregue. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
-    : `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi enviado para entrega por motoboy. ${order.estimated_delivery_at ? `Previsão de entrega: ${new Date(order.estimated_delivery_at).toLocaleString("pt-BR")}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
+    ? `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi marcado como entregue. Código de rastreio: ${order.tracking_code || "consulte pelo número do pedido"}. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
+    : `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi enviado para entrega por motoboy. Código de rastreio: ${order.tracking_code || "consulte pelo número do pedido"}. ${order.estimated_delivery_at ? `Previsão de entrega: ${new Date(order.estimated_delivery_at).toLocaleString("pt-BR")}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
@@ -211,7 +211,7 @@ export default function OrdersPage() {
   const visibleOrders = orders.filter((order) => {
     const term = search.trim().toLowerCase();
     return !term || order.customer_name.toLowerCase().includes(term) ||
-      order.id.toLowerCase().includes(term) || order.order_number.toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
+      order.id.toLowerCase().includes(term) || order.order_number.toLowerCase().includes(term) || (order.tracking_code || "").toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
   });
 
   return (
@@ -342,6 +342,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                       <p style={{ margin: "10px 0 0", color: "#526176", fontSize: 12 }}><Truck size={14} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />Modalidade de entrega: <strong>Motoboy / entrega própria</strong></p>
+                      <div style={{ marginTop: 10, padding: "11px 13px", borderRadius: 9, background: "#fff", border: "1px solid #e2e8f0" }}><span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 800, marginBottom: 4 }}>CÓDIGO DE RASTREIO AUTOMÁTICO</span><strong style={{ color: "#173b68", fontSize: 16, letterSpacing: ".06em" }}>{order.tracking_code || "Código será gerado automaticamente"}</strong></div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 11 }}>
                         <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveEstimatedDelivery(order)} style={{ padding: "10px 15px", border: 0, borderRadius: 8, background: "#173b68", color: "#fff", cursor: "pointer", fontWeight: 700, opacity: savingDelivery === order.id ? .6 : 1 }}>{savingDelivery === order.id ? "Salvando..." : "Salvar previsão"}</button>
                         {(order.delivery_status === "enviado" || order.delivery_status === "entregue") && order.customer_phone && (
