@@ -3370,3 +3370,145 @@ input[type="reset"]:active:not(:disabled) {
     animation-duration: .01ms !important;
   }
 }
+
+
+/* NOVASHOPP — padrão visual unificado dos botões (exceção: Continuar comprando) */
+:root {
+  --ns-button-navy: #103665;
+  --ns-button-navy-deep: #0b2853;
+  --ns-button-gold: #ffc928;
+}
+
+/* Botões de ação: azul-marinho, seta em bloco dourado e friso inferior */
+button:not(.empty-cart button),
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+a.hero-button,
+a.add-button,
+a.checkout-button,
+a.detail-buy-link,
+a.detail-back-link,
+a.customer-account-link,
+a.customer-order-track-link,
+a.footer-track-link,
+a.hero-campaign-button,
+a.campaign-bottom-button,
+a.newsletter-button,
+.admin-dashboard a[class*="button"],
+.admin-dashboard a[class*="link"] {
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-bottom: 4px solid var(--ns-button-gold) !important;
+  border-radius: 13px !important;
+  background: linear-gradient(115deg, var(--ns-button-navy-deep), var(--ns-button-navy)) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 16px rgba(11,40,83,.16) !important;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* A seta amarela fica à esquerda em botões com texto; não interfere em botões com ícones próprios */
+button:not(.empty-cart button):not(:has(svg)):not([aria-label]):not([title]):not(.campaign-carousel-control):not(.campaign-carousel-indicator):not(.quantity button)::before,
+a.hero-button:not(:has(svg))::before,
+a.add-button:not(:has(svg))::before,
+a.checkout-button:not(:has(svg))::before,
+a.detail-buy-link:not(:has(svg))::before,
+a.detail-back-link:not(:has(svg))::before,
+a.customer-account-link:not(:has(svg))::before,
+a.customer-order-track-link:not(:has(svg))::before,
+a.footer-track-link:not(:has(svg))::before,
+a.hero-campaign-button:not(:has(svg))::before,
+a.campaign-bottom-button:not(:has(svg))::before,
+a.newsletter-button:not(:has(svg))::before {
+  content: "←";
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  margin-right: 9px;
+  border-radius: 8px;
+  background: var(--ns-button-gold);
+  color: var(--ns-button-navy-deep);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+button:not(.empty-cart button):hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+a.hero-button:hover,
+a.add-button:hover,
+a.checkout-button:hover,
+a.detail-buy-link:hover,
+a.detail-back-link:hover,
+a.customer-account-link:hover,
+a.customer-order-track-link:hover,
+a.footer-track-link:hover,
+a.hero-campaign-button:hover,
+a.campaign-bottom-button:hover,
+a.newsletter-button:hover {
+  background: linear-gradient(115deg, #174779, #245b91) !important;
+  color: #fff !important;
+  border-bottom-color: #ffda58 !important;
+  box-shadow: 0 9px 20px rgba(11,40,83,.22) !important;
+  transform: translateY(-1px);
+}
+
+button:not(.empty-cart button):active,
+input[type="button"]:active,
+input[type="submit"]:active,
+input[type="reset"]:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(11,40,83,.14) !important;
+}
+
+/* Controles compactos e indicadores mantêm dimensões adequadas à sua função */
+button.icon-btn,
+button.favorite-btn,
+button.heart-button,
+button.campaign-carousel-control,
+button.campaign-carousel-indicator,
+.quantity button {
+  min-height: 0;
+  border-bottom-width: 1px !important;
+  border-radius: 50% !important;
+}
+button.icon-btn,
+button.favorite-btn,
+button.heart-button,
+button.campaign-carousel-control,
+button.campaign-carousel-indicator,
+.quantity button {
+  background: #fff !important;
+  color: var(--ns-button-navy) !important;
+  box-shadow: 0 3px 12px rgba(16,43,80,.12) !important;
+}
+.empty-cart button {
+  /* Exceção solicitada: preservar integralmente o botão "Continuar comprando". */
+  min-height: initial;
+}
+@media (max-width: 760px) {
+  button:not(.empty-cart button),
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a.hero-button,
+  a.add-button,
+  a.checkout-button,
+  a.detail-buy-link,
+  a.detail-back-link,
+  a.customer-account-link,
+  a.customer-order-track-link,
+  a.footer-track-link,
+  a.hero-campaign-button,
+  a.campaign-bottom-button,
+  a.newsletter-button {
+    min-height: 46px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+}
