@@ -96,6 +96,12 @@ export default function OrdersPage() {
       alert("O controle de entrega só está disponível após a confirmação do pagamento.");
       return;
     }
+    const currentIndex = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
+    const nextIndex = deliverySteps.findIndex((step) => step.value === newStatus);
+    if (nextIndex < 0 || nextIndex < currentIndex) {
+      alert("Não é possível voltar para uma etapa anterior. O pedido só pode avançar.");
+      return;
+    }
     if (newStatus === "entregue" && order.delivery_status !== "enviado" && order.delivery_status !== "entregue") {
       alert("Registre o pedido como enviado antes de marcar como entregue.");
       return;
@@ -308,7 +314,7 @@ export default function OrdersPage() {
                         <div>
                           <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Atualizar etapa</label>
                           <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={e => void updateDeliveryStatus(order, e.target.value)} style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", boxSizing: "border-box" }}>
-                            {deliverySteps.map(step => <option key={step.value} value={step.value}>{step.label}</option>)}
+                            {deliverySteps.map((step, index) => <option key={step.value} value={step.value} disabled={index < currentStep}>{step.label}</option>)}
                           </select>
                         </div>
                         <div>
