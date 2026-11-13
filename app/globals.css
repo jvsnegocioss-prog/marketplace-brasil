@@ -3308,3 +3308,35 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Correção de contraste: botão Voltar da área do cliente */
+.customer-account-card a.detail-back-link,
+.customer-account-card a.detail-back-link:link,
+.customer-account-card a.detail-back-link:visited,
+.customer-account-card a.detail-back-link:hover,
+.customer-account-card a.detail-back-link:focus,
+.customer-account-card a.detail-back-link:focus-visible,
+.customer-account-card a.detail-back-link:active {
+  background: linear-gradient(115deg, #071b43 0%, #17477f 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #173b70 !important;
+  border-bottom: 4px solid #d6a91d !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-decoration: none !important;
+  text-shadow: none !important;
+}
+.customer-account-card a.detail-back-link:hover,
+.customer-account-card a.detail-back-link:focus-visible {
+  background: linear-gradient(115deg, #123b78 0%, #20558e 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 6px 0 #d6a91d, 0 12px 22px #071b4328 !important;
+  transform: translateY(-2px);
+}
+.customer-account-card a.detail-back-link:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #d6a91d, 0 4px 10px #071b4318 !important;
+}
