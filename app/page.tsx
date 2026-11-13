@@ -596,30 +596,92 @@ export default function Home() {
       </nav>
 
       {campaigns.some((campaign) => campaign.placement === "hero") ? (
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", alignItems: "center", gap: 24, padding: "clamp(28px,5vw,64px)", borderRadius: 18, margin: "18px auto", maxWidth: 1240, background: campaigns.find((campaign) => campaign.placement === "hero")?.background_color || "#071b43", color: campaigns.find((campaign) => campaign.placement === "hero")?.text_color || "#fff" }}>
-          {campaigns.filter((campaign) => campaign.placement === "hero").map((campaign) => (
+        <section
+          aria-label="Campanha em destaque"
+          style={{
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+            alignItems: "center",
+            gap: "clamp(22px, 4vw, 48px)",
+            padding: "clamp(26px, 5vw, 64px)",
+            borderRadius: 24,
+            margin: "22px auto",
+            maxWidth: 1240,
+            width: "calc(100% - 32px)",
+            overflow: "hidden",
+            background: `linear-gradient(125deg, ${campaigns.find((campaign) => campaign.placement === "hero")?.background_color || "#071b43"} 0%, #102e60 100%)`,
+            color: campaigns.find((campaign) => campaign.placement === "hero")?.text_color || "#fff",
+            boxShadow: "0 18px 48px rgba(7, 27, 67, .18)",
+          }}
+        >
+          {campaigns.filter((campaign) => campaign.placement === "hero").slice(0, 1).map((campaign) => (
             <div key={campaign.id} style={{ display: "contents" }}>
-              <div>
-                <span style={{ fontWeight: 800, letterSpacing: 1, opacity: .85 }}>NOVASHOPP STORE • OFERTA ESPECIAL</span>
-                <h1 style={{ fontSize: "clamp(30px,5vw,54px)", lineHeight: 1.08, margin: "14px 0" }}>{campaign.title}</h1>
-                {campaign.subtitle && <h2 style={{ fontSize: "clamp(18px,2.5vw,25px)", margin: "0 0 10px" }}>{campaign.subtitle}</h2>}
-                {campaign.description && <p style={{ lineHeight: 1.7, maxWidth: 620 }}>{campaign.description}</p>}
-                <a href={campaign.button_url || "/"} style={{ display: "inline-flex", padding: "13px 20px", marginTop: 12, borderRadius: 9, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"} <ArrowRight size={18} style={{ marginLeft: 8 }} /></a>
+              <div style={{ position: "relative", zIndex: 1, minWidth: 0 }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "7px 12px", borderRadius: 999,
+                  background: "rgba(255, 201, 40, .16)", color: "#ffc928",
+                  fontSize: 11, fontWeight: 900, letterSpacing: 1.2,
+                }}>
+                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: "#ffc928" }} />
+                  DESTAQUE NOVASHOPP
+                </span>
+                <h1 style={{
+                  fontSize: "clamp(32px, 5vw, 58px)", lineHeight: 1.04,
+                  letterSpacing: "-.035em", fontWeight: 900,
+                  margin: "20px 0 12px", maxWidth: 650,
+                }}>{campaign.title}</h1>
+                {campaign.subtitle && <h2 style={{
+                  fontSize: "clamp(18px, 2.4vw, 25px)", lineHeight: 1.3,
+                  fontWeight: 700, margin: "0 0 12px", opacity: .96,
+                }}>{campaign.subtitle}</h2>}
+                {campaign.description && <p style={{
+                  lineHeight: 1.75, fontSize: 15, opacity: .88,
+                  maxWidth: 560, margin: 0,
+                }}>{campaign.description}</p>}
+                <a href={campaign.button_url || "#produtos"} style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  padding: "14px 22px", marginTop: 24, borderRadius: 10,
+                  background: "#ffc928", color: "#071b43", fontWeight: 900,
+                  fontSize: 14, textDecoration: "none",
+                  boxShadow: "0 8px 22px rgba(255, 201, 40, .2)",
+                }}>
+                  {campaign.button_text || "Conheça a loja"} <ArrowRight size={18} style={{ marginLeft: 10 }} />
+                </a>
               </div>
-              {campaign.media_url && (campaign.media_type === "video"
-                ? <video src={campaign.media_url} autoPlay muted loop playsInline controls style={{ width: "100%", maxHeight: 380, objectFit: "contain", borderRadius: 14 }} />
-                : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 380, objectFit: "contain", borderRadius: 14 }} />)}
+              <div style={{
+                position: "relative", minWidth: 0, minHeight: 240,
+                borderRadius: 18, overflow: "hidden",
+                background: "rgba(255,255,255,.08)",
+                border: "1px solid rgba(255,255,255,.14)",
+                boxShadow: "0 18px 38px rgba(0,0,0,.18)",
+              }}>
+                {campaign.media_url ? (campaign.media_type === "video"
+                  ? <video src={campaign.media_url} autoPlay muted loop playsInline controls
+                      aria-label={campaign.title}
+                      style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />
+                  : <img src={campaign.media_url} alt={campaign.title}
+                      style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />)
+                  : <div style={{
+                      display: "grid", placeItems: "center", minHeight: 280,
+                      background: "radial-gradient(circle at 50% 45%, rgba(255,201,40,.22), transparent 55%)",
+                      color: "#ffc928", textAlign: "center", padding: 24,
+                    }}>
+                      <div><Package size={76} strokeWidth={1.2} /><strong style={{ display: "block", marginTop: 12, color: "#fff", fontSize: 17 }}>Novidades para descobrir</strong></div>
+                    </div>}
+              </div>
             </div>
           ))}
         </section>
       ) : (
       <section className="hero">
         <div className="hero-content">
-          <span className="hero-label">NOVASHOPP STORE • COMPRE FÁCIL, RECEBA RÁPIDO</span>
+          <span className="hero-label">NOVASHOPP STORE • CONHEÇA NOSSA LOJA</span>
           <h1>Tudo o que você precisa, <em>em um só lugar!</em></h1>
           <p>
-            Mais variedade, mais ofertas e praticidade para suas compras.
-            Encontre tecnologia, casa, moda e muito mais.
+            Descubra tecnologia, casa, moda, acessórios e muitas novidades.
+            Explore nosso catálogo e conheça a NOVASHOPP STORE.
           </p>
           <button
             className="hero-button"
@@ -629,16 +691,16 @@ export default function Home() {
               })
             }
           >
-            Comprar agora <ArrowRight size={18} />
+            Explorar produtos <ArrowRight size={18} />
           </button>
         </div>
 
         <div className="hero-art">
           <div className="hero-circle">
             <ShoppingCart size={110} strokeWidth={1.2} />
-            <span>OFERTAS</span>
+            <span>NOVIDADES</span>
           </div>
-          <div className="floating-card">Confira nossos produtos</div>
+          <div className="floating-card">Descubra nosso catálogo</div>
         </div>
       </section>
       )}
