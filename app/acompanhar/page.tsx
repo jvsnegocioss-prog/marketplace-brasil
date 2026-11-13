@@ -33,9 +33,9 @@ function paymentLabel(status: string) {
 
 function deliveryLabel(status: string | null) {
   const labels: Record<string, string> = {
-    aguardando_separacao: "Aguardando separação",
-    em_preparacao: "Em preparação",
-    enviado: "Pedido enviado",
+    aguardando_separacao: "Pedido aceito",
+    em_preparacao: "Em separação",
+    enviado: "Enviado",
     entregue: "Entregue",
   };
   return status ? labels[status] || status.replaceAll("_", " ") : "Ainda não atualizado";
@@ -103,10 +103,10 @@ export default function AcompanharPedidoPage() {
 
   const currentStep = order ? deliveryStepIndex(order.delivery_status) : 0;
   const steps = [
-    { title: "Pedido recebido", description: "Seu pedido foi registrado", date: order?.created_at },
-    { title: "Em preparação", description: "Estamos preparando seus produtos", date: null },
-    { title: "Saiu para entrega", description: "Seu pedido está a caminho", date: order?.shipped_at },
-    { title: "Pedido entregue", description: "Entrega concluída com sucesso", date: order?.delivered_at },
+    { title: "Pedido aceito", description: "Seu pedido foi confirmado pela loja", date: order?.created_at },
+    { title: "Em separação", description: "Estamos separando seus produtos", date: null },
+    { title: "Enviado", description: "Seu pedido foi despachado", date: order?.shipped_at },
+    { title: "Entregue", description: "Entrega concluída com sucesso", date: order?.delivered_at },
   ];
 
   return (
@@ -217,15 +217,15 @@ export default function AcompanharPedidoPage() {
             <div className="tracking-extra-grid">
               <div className="tracking-extra-card">
                 <CalendarDays size={18} />
-                <div><small>Data do pedido</small><strong>{formatDate(order.created_at)}</strong></div>
+                <div><small>Pedido aceito em</small><strong>{formatDate(order.created_at)}</strong></div>
               </div>
               <div className="tracking-extra-card">
                 <Truck size={18} />
-                <div><small>Data do envio</small><strong>{formatDate(order.shipped_at)}</strong></div>
+                <div><small>Enviado em</small><strong>{formatDate(order.shipped_at)}</strong></div>
               </div>
               <div className="tracking-extra-card">
                 <PackageCheck size={18} />
-                <div><small>Data da entrega</small><strong>{formatDate(order.delivered_at)}</strong></div>
+                <div><small>Entregue em</small><strong>{formatDate(order.delivered_at)}</strong></div>
               </div>
             </div>
 
