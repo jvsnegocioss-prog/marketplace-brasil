@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, ShoppingCart, Package, X, Trash2, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+const SALES_ENABLED = process.env.NEXT_PUBLIC_STORE_SALES_ENABLED === "true";
+
 type Product = {
   id: string;
   name: string;
@@ -515,10 +517,10 @@ export default function ProductPage() {
               type="button"
               className="detail-buy-link"
               onClick={addProductToCart}
-              disabled={product.stock <= 0}
+              disabled={!SALES_ENABLED || product.stock <= 0}
               aria-label="Adicionar produto ao carrinho"
             >
-              <ShoppingCart size={18} /> {product.stock > 0 ? "Adicionar ao carrinho" : "Produto indisponível"}
+              <ShoppingCart size={18} /> {!SALES_ENABLED ? "Vendas em breve" : product.stock > 0 ? "Adicionar ao carrinho" : "Produto indisponível"}
             </button>
             {cartMessage && (
               <p role="status" aria-live="polite" className="mt-3 text-sm font-semibold text-green-700">
@@ -585,7 +587,7 @@ export default function ProductPage() {
                     </strong>
                   </div>
                   <Link href="/#produtos" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 46, marginTop: 14, padding: "10px 16px", borderRadius: 11, background: "#102a56", color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
-                    Ir ao carrinho e finalizar compra <ArrowLeft size={16} style={{ transform: "rotate(180deg)", marginLeft: 8 }} />
+                    {SALES_ENABLED ? "Ir ao carrinho e finalizar compra" : "Ver carrinho"} <ArrowLeft size={16} style={{ transform: "rotate(180deg)", marginLeft: 8 }} />
                   </Link>
                 </>
               )}
