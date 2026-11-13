@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
   const objective = String(body.objective || "").trim().slice(0, 500);
   const product = String(body.product || "").trim().slice(0, 300);
   const offer = String(body.offer || "").trim().slice(0, 500);
-  const audience = String(body.audience || "").trim().slice(0, 300);
-  const tone = String(body.tone || "Persuasivo e profissional").trim().slice(0, 100);
+  const audience: string = body.audience ? String(body.audience).trim().slice(0, 300) : "";
+  const tone: string = body.tone ? String(body.tone).trim().slice(0, 100) : "Persuasivo e profissional";
 
-  const imageBase64 = String(body.imageBase64 || "");
+  const imageBase64: string = body.imageBase64 ? String(body.imageBase64) : "";
   const imageMimeType = String(body.imageMimeType || "");
   const hasImage = Boolean(imageBase64);
   const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
