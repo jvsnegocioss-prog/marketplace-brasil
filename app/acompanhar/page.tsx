@@ -11,6 +11,7 @@ import {
   Clock3,
   CalendarDays,
   PackageCheck,
+  ArrowLeft,
 } from "lucide-react";
 
 type TrackingResult = {
@@ -222,6 +223,28 @@ export default function AcompanharPedidoPage() {
 
         {order && (
           <section className="tracking-result">
+            <a
+              href="/conta"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+                minHeight: 46,
+                padding: "0 18px",
+                marginBottom: 22,
+                borderRadius: 12,
+                background: "#071b43",
+                color: "#ffffff",
+                fontSize: 14,
+                fontWeight: 800,
+                letterSpacing: ".02em",
+                textDecoration: "none",
+                boxShadow: "0 5px 14px rgba(7,27,67,.18)",
+              }}
+            >
+              <ArrowLeft size={18} /> VOLTAR PARA MINHA CONTA
+            </a>
             <div className="tracking-result-top">
               <div>
                 <span className="tracking-eyebrow">RESULTADO DA CONSULTA</span>
