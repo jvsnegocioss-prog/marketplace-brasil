@@ -52,6 +52,16 @@ export default function AdminCampaignsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"manual" | "ai">("manual");
+  const [aiObjective, setAiObjective] = useState("");
+  const [aiProduct, setAiProduct] = useState("");
+  const [aiOffer, setAiOffer] = useState("");
+  const [aiAudience, setAiAudience] = useState("");
+  const [aiTone, setAiTone] = useState("Persuasivo e profissional");
+  const [generating, setGenerating] = useState(false);
+  const [aiProposal, setAiProposal] = useState<{
+    title: string; subtitle: string; description: string; button_text: string;
+    placement: "hero" | "middle" | "bottom"; visual_idea: string;
+  } | null>(null);
 
   async function loadCampaigns() {
     const { data, error } = await supabase.from("homepage_campaigns")
@@ -93,6 +103,55 @@ export default function AdminCampaignsPage() {
     setDraft(blankCampaign());
     setEditingId(null);
     setMediaFile(null);
+  }
+
+  async function generateCampaign() {
+    if (generating) return;
+    setGenerating(true);
+    setMessage("");
+    setAiProposal(null);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente no painel.");
+
+      const response = await fetch("/api/admin/ai-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          objective: aiObjective,
+          product: aiProduct,
+          offer: aiOffer,
+          audience: aiAudience,
+          tone: aiTone,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível gerar a proposta.");
+      setAiProposal(result);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Erro ao gerar proposta com IA.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function useAiProposal() {
+    if (!aiProposal) return;
+    setDraft((current) => ({
+      ...current,
+      title: aiProposal.title,
+      subtitle: aiProposal.subtitle,
+      description: aiProposal.description,
+      button_text: aiProposal.button_text,
+      placement: aiProposal.placement,
+      button_url: current.button_url || "/",
+      active: false,
+    }));
+    setEditingId(null);
+    setMediaFile(null);
+    setMode("manual");
+    setMessage("Proposta aplicada ao editor manual como rascunho. Revise, adicione uma foto ou vídeo e salve quando estiver pronto.");
   }
 
   async function saveCampaign(event: React.FormEvent<HTMLFormElement>) {
@@ -201,8 +260,30 @@ export default function AdminCampaignsPage() {
       {mode === "ai" ? (
         <section style={{ border: "1px solid #f0d98a", background: "#fff9e7", borderRadius: 14, padding: 18, marginBottom: 22 }}>
           <h2 style={{ marginTop: 0 }}>Assistente de criação com IA</h2>
-          <p>O modo manual já permite criar e publicar campanhas. A integração de IA para gerar artes e textos será adicionada como ferramenta opcional, com revisão obrigatória pelo administrador.</p>
-          <p style={{ marginBottom: 0, fontWeight: 700 }}>Nenhuma campanha é criada ou publicada pela IA sem sua aprovação.</p>
+          <p style={{ color: "#64748b" }}>Informe o que deseja divulgar. A IA preparará uma sugestão de texto e conceito visual; você poderá revisar e continuar editando manualmente.</p>
+          <label>Objetivo da campanha<input value={aiObjective} onChange={(e) => setAiObjective(e.target.value)} placeholder="Ex.: divulgar uma promoção de fim de semana" style={field} /></label>
+          <label>Produto ou categoria<input value={aiProduct} onChange={(e) => setAiProduct(e.target.value)} placeholder="Ex.: acessórios para celular" style={field} /></label>
+          <label>Oferta e condições confirmadas<input value={aiOffer} onChange={(e) => setAiOffer(e.target.value)} placeholder="Ex.: 10% de desconto até domingo (se confirmado)" style={field} /></label>
+          <label>Público que deseja alcançar<input value={aiAudience} onChange={(e) => setAiAudience(e.target.value)} placeholder="Ex.: pessoas que procuram tecnologia" style={field} /></label>
+          <label>Estilo da comunicação<select value={aiTone} onChange={(e) => setAiTone(e.target.value)} style={field}>
+            <option>Persuasivo e profissional</option><option>Moderno e descontraído</option><option>Elegante e sofisticado</option><option>Direto e promocional</option><option>Amigável e próximo</option>
+          </select></label>
+          <button type="button" disabled={generating} onClick={generateCampaign} style={{ ...button, background: "#ffc928", color: "#071b43", opacity: generating ? 0.65 : 1 }}>
+            <Sparkles size={16} style={{ verticalAlign: "middle" }} /> {generating ? "Criando sugestão..." : "Gerar sugestão com IA"}
+          </button>
+          {aiProposal && (
+            <div style={{ marginTop: 18, padding: 16, border: "1px solid #dce3ed", borderRadius: 12, background: "#fff" }}>
+              <p style={{ color: "#b18400", fontWeight: 800, marginTop: 0 }}>PROPOSTA GERADA — NÃO PUBLICADA</p>
+              <h3 style={{ marginBottom: 6 }}>{aiProposal.title}</h3>
+              <p style={{ fontWeight: 700 }}>{aiProposal.subtitle}</p>
+              <p style={{ whiteSpace: "pre-wrap" }}>{aiProposal.description}</p>
+              <p><strong>Botão sugerido:</strong> {aiProposal.button_text}</p>
+              <p><strong>Posição sugerida:</strong> {aiProposal.placement === "hero" ? "Banner principal" : aiProposal.placement === "middle" ? "Entre as seções" : "Próximo ao final"}</p>
+              <p><strong>Ideia visual:</strong> {aiProposal.visual_idea}</p>
+              <button type="button" onClick={useAiProposal} style={{ ...button, background: "#ffc928", color: "#071b43" }}>Usar proposta no editor manual</button>
+            </div>
+          )}
+          <p style={{ marginBottom: 0, fontWeight: 700 }}>A IA não cria, salva nem publica campanhas sozinha. A proposta só vai para o editor se você escolher usá-la.</p>
         </section>
       ) : (
         <form onSubmit={saveCampaign} style={{ border: "1px solid #dce3ed", borderRadius: 14, padding: 18, background: "#fff", marginBottom: 28 }}>
