@@ -704,11 +704,13 @@ export default function AdminPage() {
         <div>
           <h1>Painel administrativo</h1>
           <p>Gerencie os produtos da sua loja.</p>
-          <button onClick={() => router.push("/admin/orders")} style={{ ...buttonStyle, background: "#ffc928", color: "#06183d", fontWeight: 800 }}>Pedidos e entregas</button>
-          <button onClick={() => router.push("/admin/estoque")} style={{ ...buttonStyle, background: "#173b68", color: "#ffffff", fontWeight: 800 }}>Estoque</button>
-          <button onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Gestão de avaliações</button>
-          <button onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
-          <button onClick={() => router.push("/admin/publicidade")} style={buttonStyle}>Publicidade e Promoções</button>
+          <nav className="admin-nav" aria-label="Navegação administrativa">
+            <button className="admin-nav-button" onClick={() => router.push("/admin/orders")} style={buttonStyle}>Pedidos e entregas</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/estoque")} style={buttonStyle}>Estoque</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Gestão de avaliações</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/publicidade")} style={buttonStyle}>Publicidade e Promoções</button>
+          </nav>
         </div>
 
         <button onClick={logout} style={buttonStyle}>
