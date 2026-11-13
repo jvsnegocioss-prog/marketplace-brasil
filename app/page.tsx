@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+const SALES_ENABLED = process.env.NEXT_PUBLIC_STORE_SALES_ENABLED === "true";
+
 type Product = {
   id: string;
   name: string;
@@ -862,13 +864,15 @@ export default function Home() {
 
                   <button
                     className="add-button"
-                    disabled={product.stock <= 0}
+                    disabled={!SALES_ENABLED || product.stock <= 0}
                     onClick={() => addToCart(product.id)}
                   >
                     <ShoppingCart size={17} />
-                    {product.stock > 0
-                      ? "Adicionar ao carrinho"
-                      : "Esgotado"}
+                    {!SALES_ENABLED
+                      ? "Vendas em breve"
+                      : product.stock > 0
+                        ? "Adicionar ao carrinho"
+                        : "Esgotado"}
                   </button>
                 </div>
               </article>
@@ -1086,16 +1090,17 @@ export default function Home() {
 
                     <button
                       className="checkout-button"
+                      disabled={!SALES_ENABLED}
                       onClick={() => {
                         setCheckoutMessage("");
                         setCheckoutOpen(true);
                       }}
                     >
-                      Finalizar compra
+                      {SALES_ENABLED ? "Finalizar compra" : "Vendas temporariamente suspensas"}
                     </button>
 
                     <p className="cart-note">
-                      Você será encaminhado ao ambiente seguro de pagamento.
+                      {SALES_ENABLED ? "Você será encaminhado ao ambiente seguro de pagamento." : "Estamos preparando nossa loja para a inauguração. Em breve você poderá comprar!"}
                     </p>
                   </>
                 ) : (
