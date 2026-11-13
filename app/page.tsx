@@ -673,15 +673,28 @@ export default function Home() {
                     lineHeight: 1.75, fontSize: 15, opacity: .88,
                     maxWidth: 560, margin: 0,
                   }}>{campaign.description}</p>}
-                  <a href={campaign.button_url || "#produtos"} style={{
+                  <button type="button" onClick={() => {
+                    const target = (campaign.button_url || "").trim();
+                    const label = (campaign.button_text || "").toLowerCase();
+                    const isCatalogTarget = !target || target === "/" || target === "#produtos" || target === "/#produtos";
+                    if (isCatalogTarget || label.includes("explorar")) {
+                      document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      return;
+                    }
+                    const destination = /^https?:\/\//i.test(target)
+                      ? target
+                      : target.startsWith("/") ? target : `/${target}`;
+                    window.location.assign(destination);
+                  }} style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     padding: "14px 22px", marginTop: 24, borderRadius: 10,
+                    border: 0, cursor: "pointer",
                     background: "#ffc928", color: "#071b43", fontWeight: 900,
-                    fontSize: 14, textDecoration: "none",
+                    fontSize: 14,
                     boxShadow: "0 8px 22px rgba(255, 201, 40, .2)",
                   }}>
                     {campaign.button_text || "Conheça a loja"} <ArrowRight size={18} style={{ marginLeft: 10 }} />
-                  </a>
+                  </button>
                 </div>
                 <div className="hero-campaign-media" style={{
                   position: "relative", minWidth: 0, minHeight: 240,
