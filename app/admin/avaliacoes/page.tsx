@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -19,18 +18,6 @@ type Review = {
 };
 
 type Filter = "all" | "pending" | "approved" | "hidden";
-
-const button = (background: string): React.CSSProperties => ({
-  border: 0,
-  borderRadius: 8,
-  padding: "10px 14px",
-  background,
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-  marginRight: 8,
-  marginTop: 8,
-});
 
 const statusLabels: Record<string, string> = {
   pending: "Aguardando aprovação",
