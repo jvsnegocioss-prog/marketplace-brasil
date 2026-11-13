@@ -51,6 +51,8 @@ export default function AdminCampaignsPage() {
   const [draft, setDraft] = useState<Partial<Campaign>>(blankCampaign());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewMediaUrl, setPreviewMediaUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<"manual" | "ai">("manual");
   const [aiObjective, setAiObjective] = useState("");
   const [aiProduct, setAiProduct] = useState("");
@@ -62,6 +64,13 @@ export default function AdminCampaignsPage() {
     title: string; subtitle: string; description: string; button_text: string;
     placement: "hero" | "middle" | "bottom"; visual_idea: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!mediaFile) { setPreviewMediaUrl(null); return; }
+    const url = URL.createObjectURL(mediaFile);
+    setPreviewMediaUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [mediaFile]);
 
   async function loadCampaigns() {
     const { data, error } = await supabase.from("homepage_campaigns")
@@ -248,6 +257,32 @@ export default function AdminCampaignsPage() {
         <p style={{ color: "#64748b" }}>Crie campanhas manualmente. A IA será uma assistente opcional, nunca publica sozinha.</p>
       </header>
 
+      {previewOpen && (
+        <div role="dialog" aria-modal="true" aria-label="Prévia da campanha" onClick={() => setPreviewOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(4,12,28,.78)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={(event) => event.stopPropagation()} style={{ width: "100%", maxWidth: 850, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 18, padding: 18, boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <div><strong style={{ color: "#071b43" }}>Prévia da campanha</strong><p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>Simulação — nada será publicado nesta etapa.</p></div>
+              <button type="button" onClick={() => setPreviewOpen(false)} style={{ ...button, margin: 0 }}>Fechar</button>
+            </div>
+            <div style={{ borderRadius: 14, overflow: "hidden", background: draft.background_color || "#071b43", color: draft.text_color || "#ffffff", display: "grid", gridTemplateColumns: (previewMediaUrl || draft.media_url) ? "repeat(auto-fit,minmax(240px,1fr))" : "1fr", minHeight: 230 }}>
+              {(previewMediaUrl || draft.media_url) && (
+                <div style={{ minHeight: 220, background: "#071b43", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {(mediaFile ? mediaFile.type.startsWith("video/") : draft.media_type === "video") ? <video src={previewMediaUrl || draft.media_url || undefined} controls playsInline style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} /> : <img src={previewMediaUrl || draft.media_url || undefined} alt="Prévia da campanha" style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} />}
+                </div>
+              )}
+              <div style={{ padding: "clamp(22px,5vw,42px)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start" }}>
+                <small style={{ opacity: .8, fontWeight: 800, letterSpacing: 1 }}>NOVASHOPP STORE</small>
+                <h2 style={{ fontSize: "clamp(25px,4vw,38px)", lineHeight: 1.1, margin: "12px 0 8px" }}>{draft.title || "Título da sua campanha"}</h2>
+                {draft.subtitle && <h3 style={{ margin: "0 0 10px", fontSize: 19 }}>{draft.subtitle}</h3>}
+                {draft.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{draft.description}</p>}
+                <span style={{ display: "inline-block", marginTop: 12, padding: "12px 20px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800 }}>{draft.button_text || "Confira"}</span>
+              </div>
+            </div>
+            <p style={{ color: "#64748b", fontSize: 13, marginBottom: 0 }}>Posição escolhida: {draft.placement === "hero" ? "Banner principal (topo)" : draft.placement === "middle" ? "Entre as seções" : "Próximo ao final"}. A aparência pode variar um pouco conforme o dispositivo.</p>
+          </div>
+        </div>
+      )}
+
       <section style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
         <button type="button" onClick={() => setMode("manual")} style={{ ...button, background: mode === "manual" ? "#071b43" : "#e8edf5", color: mode === "manual" ? "#fff" : "#071b43" }}>
           <ImagePlus size={16} style={{ verticalAlign: "middle" }} /> Criar manualmente
@@ -313,6 +348,7 @@ export default function AdminCampaignsPage() {
             <label>Fim (opcional)<input type="datetime-local" value={draft.end_at ? new Date(draft.end_at).toISOString().slice(0,16) : ""} onChange={(e) => update("end_at", e.target.value ? new Date(e.target.value).toISOString() : null)} style={field} /></label>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16 }}><input type="checkbox" checked={Boolean(draft.active)} onChange={(e) => update("active", e.target.checked)} /> Publicar campanha (sujeita às datas)</label>
+          <button type="button" onClick={() => setPreviewOpen(true)} style={{ ...button, background: "#e8edf5", color: "#071b43" }}><Eye size={16} style={{ verticalAlign: "middle" }} /> Visualizar antes de publicar</button>
           <button type="submit" disabled={saving} style={{ ...button, background: "#ffc928", color: "#071b43" }}>{saving ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar campanha"}</button>
           {editingId && <button type="button" onClick={resetForm} style={{ ...button, background: "#e8edf5", color: "#071b43" }}>Cancelar edição</button>}
         </form>
