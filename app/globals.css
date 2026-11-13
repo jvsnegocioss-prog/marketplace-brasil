@@ -3951,3 +3951,61 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Ajuste fino — botões do estoque no mesmo padrão de Pedidos e Entregas */
+.admin-stock > div > header button {
+  min-height: 46px !important;
+  padding: 10px 17px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.18) !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+  filter: none !important;
+}
+.admin-stock > div > header button:last-child {
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+.admin-stock > div > header button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.25) !important;
+  filter: none !important;
+}
+.admin-stock > div > section:last-of-type article button {
+  min-height: 43px !important;
+  padding: 10px 16px !important;
+  border: 1px solid #244d7b !important;
+  border-bottom: 4px solid #e5b51f !important;
+  border-radius: 11px !important;
+  background: linear-gradient(115deg, #0a2852, #1e5688) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 5px 13px rgba(9,39,79,.14) !important;
+  filter: none !important;
+}
+.admin-stock > div > section:last-of-type article button:hover:not(:disabled) {
+  background: linear-gradient(115deg, #123b70, #28689a) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  transform: translateY(-1px) !important;
+  filter: none !important;
+}
+.admin-stock > div > section:last-of-type article button:disabled {
+  background: #e7edf4 !important;
+  color: #708096 !important;
+  -webkit-text-fill-color: #708096 !important;
+  border-color: #d7e0eb !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
