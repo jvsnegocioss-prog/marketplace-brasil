@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     offer?: string;
     audience?: string;
     tone?: string;
+    imageBase64?: string;
+    imageMimeType?: string;
   };
 
   try {
@@ -57,8 +59,15 @@ export async function POST(request: NextRequest) {
   const audience = String(body.audience || "").trim().slice(0, 300);
   const tone = String(body.tone || "Persuasivo e profissional").trim().slice(0, 100);
 
-  if (!objective && !product && !offer) {
-    return errorResponse("Informe o objetivo, o produto ou a oferta da campanha.", 400);
+  const imageBase64 = String(body.imageBase64 || "").replace(/^data:image\\/[a-zA-Z0-9.+-]+;base64,/, "");
+  const imageMimeType = String(body.imageMimeType || "");
+  const hasImage = Boolean(imageBase64);
+  const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!objective && !product && !offer && !hasImage) {
+    return errorResponse("Preencha os detalhes da campanha ou envie uma imagem para a IA analisar.", 400);
+  }
+  if (hasImage && (!allowedImageTypes.includes(imageMimeType) || imageBase64.length > 11_200_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64))) {
+    return errorResponse("Imagem inválida ou muito grande. Envie JPG, PNG, WEBP ou GIF de até 8 MB.", 400);
   }
 
   const prompt = `Você é o assistente de marketing da NOVASHOPP STORE, uma loja virtual brasileira.
@@ -81,9 +90,43 @@ Objetivo: ${objective || "Não informado"}
 Produto ou categoria: ${product || "Não informado"}
 Oferta/condições confirmadas: ${offer || "Não informado"}
 Público: ${audience || "Público geral"}
-Tom: ${tone}`;
+Tom: ${tone}
+
+${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produto, cores, estilo, textos e informações que estejam realmente legíveis. Use a imagem como referência para criar a campanha mesmo que os demais campos estejam vazios. Não presuma preço, desconto, marca, especificações ou condições que não estejam claramente visíveis ou informadas. Se houver texto ilegível, não o invente." : ""}`;
 
   try {
+    if (hasImage) {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: prompt },
+            { inline_data: { mime_type: imageMimeType, data: imageBase64 } },
+          ] }],
+          generationConfig: { response_mime_type: "application/json" },
+        }),
+        signal: AbortSignal.timeout(60000),
+      });
+      const imageResult = await response.json();
+      if (!response.ok) {
+        return errorResponse(imageResult?.error?.message || "O Gemini não conseguiu analisar essa imagem. Tente outra imagem.", response.status === 429 ? 429 : 502);
+      }
+      const imageText = imageResult?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
+      if (!imageText) return errorResponse("A IA não conseguiu extrair uma proposta dessa imagem. Tente outra.", 502);
+      let imageGenerated: any;
+      try { imageGenerated = JSON.parse(imageText); }
+      catch { return errorResponse("A resposta da IA veio em formato inesperado. Tente novamente.", 502); }
+      const imagePlacement = ["hero", "middle", "bottom"].includes(imageGenerated.placement) ? imageGenerated.placement : "hero";
+      return NextResponse.json({
+        title: String(imageGenerated.title || "").slice(0, 100),
+        subtitle: String(imageGenerated.subtitle || "").slice(0, 180),
+        description: String(imageGenerated.description || "").slice(0, 1200),
+        button_text: String(imageGenerated.button_text || "Confira").slice(0, 40),
+        placement: imagePlacement,
+        visual_idea: String(imageGenerated.visual_idea || "").slice(0, 1000),
+      });
+    }
     const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
     let result: any = null;
     let lastProviderMessage = "O serviço Gemini está temporariamente indisponível.";
