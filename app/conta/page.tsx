@@ -384,7 +384,7 @@ export default function ContaClientePage() {
             {!editingProfile ? (
               <button
                 type="button"
-                className="customer-account-submit"
+                className="customer-account-submit customer-account-edit"
                 style={{ marginTop: 12, marginBottom: 18 }}
                 onClick={() => {
                   setProfileName(user.user_metadata?.full_name || "");
@@ -501,7 +501,7 @@ export default function ContaClientePage() {
               </div>
             </div>
 
-            <button className="customer-account-submit" type="button" onClick={handleLogout}>Sair da conta</button>
+            <button className="customer-account-submit customer-account-logout" type="button" onClick={handleLogout}>Sair da conta</button>
             {message && <p className="customer-account-success">{message}</p>}
             {error && <p className="customer-account-error">{error}</p>}
           </>
