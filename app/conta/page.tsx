@@ -346,6 +346,8 @@ export default function ContaClientePage() {
           <>
             <h1>Bem-vindo à sua conta!</h1>
             <p className="customer-account-intro">Acesse seus pedidos e acompanhe suas compras na NOVASHOPP STORE.</p>
+            <div className="customer-account-layout">
+              <div className="customer-account-details">
             <div className="customer-account-profile">
               {avatarUrl ? (
                 <img
@@ -439,6 +441,8 @@ export default function ContaClientePage() {
               </form>
             )}
 
+              </div>
+              <div className="customer-account-orders-panel">
             <div className="customer-orders-heading">
               <div>
                 <span className="customer-account-eyebrow">SUAS COMPRAS</span>
@@ -493,6 +497,8 @@ export default function ContaClientePage() {
                   <a className="customer-order-track-link" href={`/acompanhar?pedido=${encodeURIComponent(order.id)}`}>Ver detalhes e acompanhar</a>
                 </article>
               ))}
+            </div>
+              </div>
             </div>
 
             <button className="customer-account-submit" type="button" onClick={handleLogout}>Sair da conta</button>
