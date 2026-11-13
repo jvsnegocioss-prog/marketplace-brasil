@@ -691,7 +691,7 @@ export default function Home() {
                     lineHeight: 1.75, fontSize: 15, opacity: .88,
                     maxWidth: 560, margin: 0,
                   }}>{campaign.description}</p>}
-                  <button type="button" onClick={() => {
+                  <button className="hero-campaign-button" type="button" onClick={() => {
                     const target = (campaign.button_url || "").trim();
                     const label = (campaign.button_text || "").toLowerCase();
                     const isCatalogTarget = !target || target === "/" || target === "#produtos" || target === "/#produtos";
@@ -745,17 +745,17 @@ export default function Home() {
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
                 zIndex: 3,
               }}>
-                <button type="button" aria-label="Campanha anterior"
+                <button className="campaign-carousel-control" type="button" aria-label="Campanha anterior"
                   onClick={() => setHeroIndex((current) => (current - 1 + heroCampaigns.length) % heroCampaigns.length)}
                   style={{ width: 34, height: 34, borderRadius: 999, border: "1px solid rgba(255,255,255,.55)", background: "rgba(255,255,255,.14)", color: "#fff", cursor: "pointer", fontSize: 20 }}>‹</button>
                 {heroCampaigns.map((campaign, index) => (
-                  <button key={campaign.id} type="button"
+                  <button className="campaign-carousel-indicator" key={campaign.id} type="button"
                     aria-label={`Mostrar campanha ${index + 1}`}
                     aria-current={heroIndex === index ? "true" : undefined}
                     onClick={() => setHeroIndex(index)}
                     style={{ width: heroIndex === index ? 24 : 9, height: 9, padding: 0, border: 0, borderRadius: 99, background: heroIndex === index ? "#ffc928" : "rgba(255,255,255,.65)", cursor: "pointer", transition: "all 250ms ease" }} />
                 ))}
-                <button type="button" aria-label="Próxima campanha"
+                <button className="campaign-carousel-control" type="button" aria-label="Próxima campanha"
                   onClick={() => setHeroIndex((current) => (current + 1) % heroCampaigns.length)}
                   style={{ width: 34, height: 34, borderRadius: 999, border: "1px solid rgba(255,255,255,.55)", background: "rgba(255,255,255,.14)", color: "#fff", cursor: "pointer", fontSize: 20 }}>›</button>
               </div>
@@ -919,6 +919,7 @@ export default function Home() {
         </div>
 
         <button
+          className="newsletter-button"
           onClick={() =>
             document.getElementById("produtos")?.scrollIntoView({
               behavior: "smooth",
@@ -934,7 +935,7 @@ export default function Home() {
         <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, textAlign: "center" }}>
           <h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p>
           {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} />)}
-          <a href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a>
+          <a className="campaign-bottom-button" href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a>
         </section>
       ))}
       <footer className="footer">
@@ -947,6 +948,7 @@ export default function Home() {
         {/* LINK DE ACOMPANHAMENTO NO RODAPÉ */}
         <div style={{ margin: "18px 0" }}>
           <a
+            className="footer-track-link"
             href="/acompanhar"
             style={{
               color: "#ffffff",
@@ -1304,3 +1306,4 @@ export default function Home() {
     </main>
   );
 }
+
