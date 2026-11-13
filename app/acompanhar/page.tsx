@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   PackageSearch,
@@ -67,6 +67,52 @@ export default function AcompanharPedidoPage() {
   const [order, setOrder] = useState<TrackingResult | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const selectedOrderId = params.get("pedido");
+    if (!selectedOrderId) return;
+
+    let active = true;
+    async function loadLoggedOrder() {
+      setOrderId(selectedOrderId);
+      setLoading(true);
+      setError("");
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          setError("Entre na sua conta para abrir os detalhes deste pedido.");
+          return;
+        }
+        const response = await fetch("/api/conta/pedidos", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Não foi possível carregar o pedido.");
+        const selected = (result.orders || []).find((item: any) => item.id === selectedOrderId);
+        if (!selected) throw new Error("Este pedido não foi encontrado no histórico da sua conta.");
+        if (active) setOrder({
+          order_id: selected.id,
+          payment_status: selected.status,
+          delivery_status: selected.delivery_status,
+          tracking_code: selected.tracking_code,
+          delivery_method: selected.delivery_method,
+          estimated_delivery_at: selected.estimated_delivery_at,
+          created_at: selected.created_at,
+          shipped_at: selected.shipped_at,
+          delivered_at: selected.delivered_at,
+        });
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Não foi possível abrir os detalhes do pedido.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadLoggedOrder();
+    return () => { active = false; };
+  }, []);
 
   async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,11 +184,11 @@ export default function AcompanharPedidoPage() {
             <div className="tracking-panel-icon"><Search size={20} /></div>
             <div>
               <h2>Localizar meu pedido</h2>
-              <p>Informe os mesmos dados utilizados na compra.</p>
+              <p>Informe os mesmos dados utilizados na compra ou abra um pedido diretamente pelo seu histórico quando estiver logado.</p>
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="tracking-form">
+          {!order && <form onSubmit={handleSearch} className="tracking-form">
             <label>
               <span>Número do pedido</span>
               <input
@@ -169,7 +215,8 @@ export default function AcompanharPedidoPage() {
             <button type="submit" disabled={loading} className="tracking-submit">
               <Search size={18} /> {loading ? "Consultando pedido..." : "Consultar pedido"}
             </button>
-          </form>
+          </form>}
+          {loading && <p className="tracking-privacy">Carregando os detalhes do pedido...</p>}
           <p className="tracking-privacy"><ShieldCheck size={14} /> Seus dados são utilizados somente para localizar sua compra.</p>
         </section>
 
@@ -248,7 +295,7 @@ export default function AcompanharPedidoPage() {
 
         <footer className="tracking-footer">
           <p>Precisa de ajuda? Estamos aqui para ajudar você.</p>
-          <a href="/">← Voltar para a NOVASHOPP STORE</a>
+          <a href="/conta">← Voltar para minha conta</a>
           <span>© NOVASHOPP STORE · Sua compra acompanhada com cuidado.</span>
         </footer>
       </div>
