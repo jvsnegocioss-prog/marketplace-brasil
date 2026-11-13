@@ -278,7 +278,7 @@ export default function AdminCampaignsPage() {
 
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: 20, color: "#10213e" }}>
-      <button type="button" onClick={() => router.push("/admin")} style={{ ...button, background: "#e8edf5", color: "#071b43" }}>
+      <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}>
         <ArrowLeft size={16} style={{ verticalAlign: "middle" }} /> Voltar ao painel
       </button>
       <header style={{ margin: "14px 0 22px" }}>
