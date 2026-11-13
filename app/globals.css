@@ -3189,3 +3189,20 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Mantém os campos do cadastro em fluxo vertical para preservar a associação entre rótulos e controles */
+.admin-dashboard .admin-product-form {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.admin-dashboard .admin-product-form > label,
+.admin-dashboard .admin-product-form > input,
+.admin-dashboard .admin-product-form > textarea,
+.admin-dashboard .admin-product-form > select,
+.admin-dashboard .admin-product-form > small,
+.admin-dashboard .admin-product-form > button,
+.admin-dashboard .admin-product-form > div,
+.admin-dashboard .admin-product-form > p,
+.admin-dashboard .admin-product-form > ul {
+  grid-column: 1 / -1 !important;
+}
