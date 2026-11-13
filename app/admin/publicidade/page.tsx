@@ -55,6 +55,7 @@ export default function AdminCampaignsPage() {
   const [previewAiProposal, setPreviewAiProposal] = useState(false);
   const [previewMediaUrl, setPreviewMediaUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<"manual" | "ai">("manual");
+  const [aiPrompt, setAiPrompt] = useState("");
   const [aiObjective, setAiObjective] = useState("");
   const [aiProduct, setAiProduct] = useState("");
   const [aiOffer, setAiOffer] = useState("");
@@ -142,6 +143,7 @@ export default function AdminCampaignsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
+          prompt: aiPrompt,
           objective: aiObjective,
           product: aiProduct,
           offer: aiOffer,
@@ -323,7 +325,9 @@ export default function AdminCampaignsPage() {
       {mode === "ai" ? (
         <section style={{ border: "1px solid #f0d98a", background: "#fff9e7", borderRadius: 14, padding: 18, marginBottom: 22 }}>
           <h2 style={{ marginTop: 0 }}>Assistente de criação com IA</h2>
-          <p style={{ color: "#64748b" }}>Informe o que deseja divulgar. A IA preparará uma sugestão de texto e conceito visual; você poderá revisar e continuar editando manualmente.</p>
+          <p style={{ color: "#64748b" }}>Informe o que deseja divulgar e, se quiser, escreva um prompt próprio para orientar a IA. Ela preparará uma sugestão que você poderá revisar e editar manualmente.</p>
+          <label style={{ display: "block", fontWeight: 700 }}>Prompt personalizado para a IA ler (opcional)<textarea rows={6} maxLength={4000} value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder={"Escreva aqui suas instruções, ideias, briefing ou texto de referência. Ex.: crie um banner com foco em tecnologia, destaque a identidade visual azul-marinho e amarelo e use uma linguagem moderna..."} style={{ ...field, resize: "vertical", lineHeight: 1.5 }} /></label>
+          <small style={{ display: "block", color: "#64748b", marginTop: -10, marginBottom: 14 }}>{aiPrompt.length}/4000 caracteres. A IA usará este texto como orientação adicional, respeitando as regras da loja.</small>
           <label>Objetivo da campanha<input value={aiObjective} onChange={(e) => setAiObjective(e.target.value)} placeholder="Ex.: divulgar uma promoção de fim de semana" style={field} /></label>
           <label>Produto ou categoria<input value={aiProduct} onChange={(e) => setAiProduct(e.target.value)} placeholder="Ex.: acessórios para celular" style={field} /></label>
           <label>Oferta e condições confirmadas<input value={aiOffer} onChange={(e) => setAiOffer(e.target.value)} placeholder="Ex.: 10% de desconto até domingo (se confirmado)" style={field} /></label>
