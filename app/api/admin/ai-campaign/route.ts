@@ -96,21 +96,40 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
 
   try {
     if (hasImage) {
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [
-            { text: prompt },
-            { inline_data: { mime_type: imageMimeType, data: imageBase64 } },
-          ] }],
-          generationConfig: { responseMimeType: "application/json" },
-        }),
-        signal: AbortSignal.timeout(60000),
-      });
-      const imageResult = await response.json();
-      if (!response.ok) {
-        return errorResponse(imageResult?.error?.message || "O Gemini não conseguiu analisar essa imagem. Tente outra imagem.", response.status === 429 ? 429 : 502);
+      const imageModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+      let imageResult: any = null;
+      let imageResponseStatus = 502;
+      let imageProviderMessage = "O Gemini não conseguiu analisar essa imagem.";
+      for (const model of imageModels) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          body: JSON.stringify({
+            contents: [{ parts: [
+              { text: prompt },
+              { inline_data: { mime_type: imageMimeType, data: imageBase64 } },
+            ] }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+        imageResult = await response.json();
+        imageResponseStatus = response.status;
+        if (response.ok) break;
+        imageProviderMessage = imageResult?.error?.message || imageProviderMessage;
+        const retryable = response.status === 429 || response.status === 503 || response.status === 500 ||
+          /high demand|overload|temporar|unavailable|resource exhausted|capacity/i.test(imageProviderMessage);
+        if (!retryable || model === imageModels[imageModels.length - 1]) {
+          return errorResponse(
+            retryable
+              ? "Os modelos de IA estão temporariamente ocupados. Tente novamente em alguns minutos."
+              : imageProviderMessage,
+            imageResponseStatus === 429 ? 429 : 502
+          );
+        }
+      }
+      if (!imageResult || imageResponseStatus < 200 || imageResponseStatus >= 300) {
+        return errorResponse("Não foi possível analisar a imagem neste momento. Tente novamente.", 502);
       }
       const imageText = imageResult?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
       if (!imageText) return errorResponse("A IA não conseguiu extrair uma proposta dessa imagem. Tente outra.", 502);
@@ -127,7 +146,7 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
         visual_idea: String(imageGenerated.visual_idea || "").slice(0, 1000),
       });
     }
-    const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    const models = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
     let result: any = null;
     let lastProviderMessage = "O serviço Gemini está temporariamente indisponível.";
 
