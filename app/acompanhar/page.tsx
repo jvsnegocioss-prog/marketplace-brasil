@@ -130,7 +130,7 @@ export default function AcompanharPedidoPage() {
     setLoading(true);
     try {
       const { data, error: rpcError } = await supabase.rpc("track_customer_order", {
-        p_order_number: orderId.trim(),
+        p_order_number: orderId.trim().replace(/^#\s*/, ""),
         p_phone: phone.trim(),
       });
 
@@ -251,7 +251,7 @@ export default function AcompanharPedidoPage() {
               <div>
                 <span className="tracking-eyebrow">RESULTADO DA CONSULTA</span>
                 <h2>Detalhes do pedido</h2>
-                <p className="tracking-order-number">Pedido <strong>#{order.order_number}</strong></p>
+                <p className="tracking-order-number">Pedido <strong>{order.order_number}</strong></p>
               </div>
               <span className="tracking-status-pill"><CheckCircle2 size={15} /> Pedido localizado</span>
             </div>
