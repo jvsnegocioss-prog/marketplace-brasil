@@ -3655,3 +3655,154 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .admin-dashboard .admin-stat-card { transition: none !important; }
 }
+
+
+/* Gestão de pedidos e entregas — identidade visual NovaShopp */
+.admin-orders {
+  background: #f4f7fb !important;
+  padding: 32px 24px 64px !important;
+  color: #263b57 !important;
+}
+.admin-orders > div {
+  width: min(100%, 1420px);
+  max-width: 1420px !important;
+}
+.admin-orders .admin-orders-header {
+  min-height: 178px;
+  padding: 30px 34px !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 23px !important;
+  background: linear-gradient(120deg, #091f43 0%, #123d70 58%, #1e5688 100%) !important;
+  box-shadow: 0 16px 38px rgba(9,31,67,.17) !important;
+}
+.admin-orders .admin-orders-header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(27px, 3vw, 36px) !important;
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+.admin-orders .admin-orders-header button {
+  min-height: 46px;
+  padding: 10px 17px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.18);
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.admin-orders .admin-orders-header button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  color: #fff !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.25);
+}
+.admin-orders .admin-orders-header button:focus-visible,
+.admin-orders button:focus-visible,
+.admin-orders a:focus-visible,
+.admin-orders input:focus-visible,
+.admin-orders select:focus-visible {
+  outline: 3px solid #f3c943 !important;
+  outline-offset: 3px;
+}
+.admin-orders > div > section[style*="grid-template-columns"] article {
+  min-height: 126px;
+  padding: 22px !important;
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(12,38,72,.055) !important;
+}
+.admin-orders > div > section[style*="grid-template-columns"] article strong {
+  color: #102b50 !important;
+  font-variant-numeric: tabular-nums;
+}
+.admin-orders > div > section:not([style*="grid-template-columns"]) {
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 19px !important;
+  box-shadow: 0 9px 28px rgba(12,38,72,.055) !important;
+}
+.admin-orders input,
+.admin-orders select {
+  min-height: 45px;
+  border: 1px solid #d8e2ee !important;
+  border-radius: 11px !important;
+  background: #f9fbfd !important;
+  color: #263b57 !important;
+}
+.admin-orders input:focus,
+.admin-orders select:focus {
+  border-color: #7898c1 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 4px rgba(36,83,137,.09) !important;
+}
+.admin-orders > div > div[style*="display: grid"] > article {
+  padding: 22px !important;
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 19px !important;
+  box-shadow: 0 9px 26px rgba(12,38,72,.055) !important;
+}
+.admin-orders article h3 {
+  letter-spacing: -.02em;
+}
+.admin-orders article [style*="background: rgb(247, 249, 252)"],
+.admin-orders article [style*="background: #f7f9fc"] {
+  border-color: #e3eaf3 !important;
+  border-radius: 15px !important;
+}
+.admin-orders article button:not(.admin-orders-header button) {
+  min-height: 43px;
+  padding: 10px 16px !important;
+  border: 1px solid #244d7b !important;
+  border-bottom: 4px solid #e5b51f !important;
+  border-radius: 11px !important;
+  background: linear-gradient(115deg, #0a2852, #1e5688) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 5px 13px rgba(9,39,79,.14);
+}
+.admin-orders article button:hover:not(:disabled) {
+  background: linear-gradient(115deg, #123b70, #28689a) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+.admin-orders article a[href^="https://wa.me/"] {
+  min-height: 43px;
+  border: 1px solid #17613a !important;
+  border-bottom: 4px solid #e5b51f !important;
+  border-radius: 11px !important;
+  box-shadow: 0 5px 13px rgba(9,39,79,.10);
+}
+@media (min-width: 1100px) {
+  .admin-orders > div > section[style*="grid-template-columns"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 760px) {
+  .admin-orders {
+    padding: 18px 12px 44px !important;
+  }
+  .admin-orders .admin-orders-header {
+    min-height: 0;
+    padding: 22px 18px !important;
+    border-radius: 18px !important;
+  }
+  .admin-orders .admin-orders-header h1 {
+    font-size: 25px !important;
+  }
+  .admin-orders > div > section:not([style*="grid-template-columns"]) {
+    padding: 17px !important;
+  }
+  .admin-orders > div > div[style*="display: grid"] > article {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-orders *,
+  .admin-orders *::before,
+  .admin-orders *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
