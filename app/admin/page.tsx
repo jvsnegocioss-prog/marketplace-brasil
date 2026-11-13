@@ -141,9 +141,9 @@ function DashboardCard({
 }) {
   return (
     <article className="admin-stat-card" style={dashboardCardStyle}>
-      <p style={{ margin: 0, color: "#555555" }}>{title}</p>
-      <h2 style={{ margin: "12px 0", fontSize: 25 }}>{value}</h2>
-      <small style={{ color: "#666666" }}>{detail}</small>
+      <p className="admin-stat-title" style={{ margin: 0 }}>{title}</p>
+      <h2 className="admin-stat-value" style={{ margin: "12px 0", fontSize: 25 }}>{value}</h2>
+      <small className="admin-stat-detail">{detail}</small>
     </article>
   );
 }
@@ -726,7 +726,7 @@ export default function AdminPage() {
 
       <hr />
 
-      <h2>Visão geral dos produtos</h2>
+      <h2 className="admin-section-title">Visão geral dos produtos</h2>
 
       <section style={dashboardGrid}>
         <DashboardCard
@@ -756,7 +756,7 @@ export default function AdminPage() {
         />
       </section>
 
-      <h2>Acessos da loja — últimos 30 dias</h2>
+      <h2 className="admin-section-title">Acessos da loja — últimos 30 dias</h2>
       <p style={{ color: "#666", marginTop: 4 }}>Dados registrados pela própria NovaShopp. Visitantes são identificados por navegador, sem nome ou e-mail.</p>
       <section style={dashboardGrid}>
         <DashboardCard title="Visitantes" value={String(uniqueVisitors)} detail="Navegadores únicos registrados" />
@@ -774,7 +774,7 @@ export default function AdminPage() {
         </section>
       </div>
 
-      <h2>Resumo financeiro</h2>
+      <h2 className="admin-section-title">Resumo financeiro</h2>
 
       <section style={dashboardGrid}>
         <DashboardCard
@@ -823,9 +823,7 @@ export default function AdminPage() {
 
       <hr />
 
-      <h2>
-        {editingId ? "Editar produto" : "Cadastrar produto"}
-      </h2>
+      <h2 className="admin-section-title">{editingId ? "Editar produto" : "Cadastrar produto"}</h2>
 
       <form className="admin-product-form" onSubmit={saveProduct} style={formStyle}>
         <label>Nome do produto</label>
@@ -1020,9 +1018,7 @@ export default function AdminPage() {
 
       <hr />
 
-      <h2>
-        Produtos cadastrados ({products.length})
-      </h2>
+      <h2 className="admin-section-title">Produtos cadastrados ({products.length})</h2>
 
       {products.length === 0 && (
         <p>Nenhum produto cadastrado ainda.</p>
