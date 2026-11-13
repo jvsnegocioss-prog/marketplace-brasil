@@ -44,6 +44,9 @@ function normalizedStatus(status: string) {
 function isPaid(status: string) {
   return ["pago", "aprovado", "approved", "concluido", "concluído"].includes(normalizedStatus(status));
 }
+function isCancelled(status: string) {
+  return ["cancelado", "cancelada", "cancelled", "canceled"].includes(normalizedStatus(status));
+}
 function deliveryLabel(status: string) {
   return deliverySteps.find((step) => step.value === status)?.label || "Pedido aceito";
 }
