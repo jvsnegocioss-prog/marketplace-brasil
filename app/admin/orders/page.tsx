@@ -68,7 +68,6 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
-  const [trackingDrafts, setTrackingDrafts] = useState<Record<string, string>>({});
   const [estimateDrafts, setEstimateDrafts] = useState<Record<string, string>>({});
   const [savingDelivery, setSavingDelivery] = useState<string | null>(null);
 
@@ -88,15 +87,12 @@ export default function OrdersPage() {
     } else {
       const loaded = ((data || []) as Order[]).filter((order) => isPaid(order.status));
       setOrders(loaded);
-      const drafts: Record<string, string> = {};
       const estimateDrafts: Record<string, string> = {};
       loaded.forEach((order) => {
-        drafts[order.id] = order.tracking_code || "";
         estimateDrafts[order.id] = order.estimated_delivery_at
           ? new Date(new Date(order.estimated_delivery_at).getTime() - new Date(order.estimated_delivery_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
           : "";
       });
-      setTrackingDrafts(drafts);
       setEstimateDrafts(estimateDrafts);
     }
     setLoading(false);
