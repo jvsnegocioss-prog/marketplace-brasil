@@ -21,6 +21,8 @@ type Order = {
   created_at: string;
   delivery_status: string;
   tracking_code: string | null;
+  delivery_method: string | null;
+  estimated_delivery_at: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
   order_items: {
@@ -55,7 +57,7 @@ function whatsappLink(order: Order) {
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
   const message = order.delivery_status === "entregue"
     ? `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi marcado como entregue. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
-    : `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${order.tracking_code ? `Código de rastreio: ${order.tracking_code}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
+    : `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado para entrega por motoboy. ${order.estimated_delivery_at ? `Previsão de entrega: ${new Date(order.estimated_delivery_at).toLocaleString("pt-BR")}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
@@ -67,6 +69,7 @@ export default function OrdersPage() {
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
   const [trackingDrafts, setTrackingDrafts] = useState<Record<string, string>>({});
+  const [estimateDrafts, setEstimateDrafts] = useState<Record<string, string>>({});
   const [savingDelivery, setSavingDelivery] = useState<string | null>(null);
 
   async function loadOrders() {
@@ -74,8 +77,9 @@ export default function OrdersPage() {
     setMessage("");
     const { data, error } = await supabase.from("orders").select(`
       id, customer_name, customer_email, customer_phone, delivery_address,
-      total, status, created_at, delivery_status, tracking_code, shipped_at,
-      delivered_at, order_items ( product_name, quantity, unit_price, subtotal )
+      total, status, created_at, delivery_status, tracking_code, delivery_method,
+      estimated_delivery_at, shipped_at, delivered_at,
+      order_items ( product_name, quantity, unit_price, subtotal )
     `).order("created_at", { ascending: false });
 
     if (error) {
@@ -85,8 +89,15 @@ export default function OrdersPage() {
       const loaded = ((data || []) as Order[]).filter((order) => isPaid(order.status));
       setOrders(loaded);
       const drafts: Record<string, string> = {};
-      loaded.forEach((order) => { drafts[order.id] = order.tracking_code || ""; });
+      const estimateDrafts: Record<string, string> = {};
+      loaded.forEach((order) => {
+        drafts[order.id] = order.tracking_code || "";
+        estimateDrafts[order.id] = order.estimated_delivery_at
+          ? new Date(new Date(order.estimated_delivery_at).getTime() - new Date(order.estimated_delivery_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : "";
+      });
       setTrackingDrafts(drafts);
+      setEstimateDrafts(estimateDrafts);
     }
     setLoading(false);
   }
@@ -120,21 +131,32 @@ export default function OrdersPage() {
     await loadOrders();
   }
 
-  async function saveTrackingCode(order: Order) {
+  async function saveEstimatedDelivery(order: Order) {
     if (!isPaid(order.status)) {
-      alert("O código de rastreio só pode ser salvo após a confirmação do pagamento.");
+      alert("A previsão só pode ser definida após a confirmação do pagamento.");
+      return;
+    }
+    const value = estimateDrafts[order.id] || "";
+    const estimated = value ? new Date(value) : null;
+    if (estimated && Number.isNaN(estimated.getTime())) {
+      alert("Informe uma data e horário válidos.");
+      return;
+    }
+    if (estimated && estimated.getTime() < Date.now()) {
+      alert("A previsão de entrega não pode estar no passado.");
       return;
     }
     setSavingDelivery(order.id);
     const { error } = await supabase.from("orders")
-      .update({ tracking_code: (trackingDrafts[order.id] || "").trim() || null })
+      .update({ estimated_delivery_at: estimated ? estimated.toISOString() : null, delivery_method: "motoboy" })
       .eq("id", order.id);
     setSavingDelivery(null);
     if (error) {
-      alert("Erro ao salvar rastreio: " + error.message);
+      alert("Erro ao salvar a previsão: " + error.message);
       return;
     }
     await loadOrders();
+    alert("Previsão de entrega salva com sucesso.");
   }
 
   useEffect(() => {
@@ -318,12 +340,13 @@ export default function OrdersPage() {
                           </select>
                         </div>
                         <div>
-                          <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Código de rastreio</label>
-                          <input value={trackingDrafts[order.id] ?? ""} onChange={e => setTrackingDrafts(current => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, boxSizing: "border-box" }} />
+                          <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Previsão de entrega (motoboy)</label>
+                          <input type="datetime-local" value={estimateDrafts[order.id] ?? ""} onChange={e => setEstimateDrafts(current => ({ ...current, [order.id]: e.target.value }))} style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, boxSizing: "border-box", background: "#fff" }} />
                         </div>
                       </div>
+                      <p style={{ margin: "10px 0 0", color: "#526176", fontSize: 12 }}><Truck size={14} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />Modalidade de entrega: <strong>Motoboy / entrega própria</strong></p>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 11 }}>
-                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} style={{ padding: "10px 15px", border: 0, borderRadius: 8, background: "#173b68", color: "#fff", cursor: "pointer", fontWeight: 700, opacity: savingDelivery === order.id ? .6 : 1 }}>{savingDelivery === order.id ? "Salvando..." : "Salvar rastreio"}</button>
+                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveEstimatedDelivery(order)} style={{ padding: "10px 15px", border: 0, borderRadius: 8, background: "#173b68", color: "#fff", cursor: "pointer", fontWeight: 700, opacity: savingDelivery === order.id ? .6 : 1 }}>{savingDelivery === order.id ? "Salvando..." : "Salvar previsão"}</button>
                         {(order.delivery_status === "enviado" || order.delivery_status === "entregue") && order.customer_phone && (
                           <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", padding: "10px 15px", borderRadius: 8, background: "#16713b", color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
                             {order.delivery_status === "entregue" ? "Avisar entrega concluída pelo WhatsApp" : "Avisar envio pelo WhatsApp"} <ExternalLink size={13} style={{ marginLeft: 7 }} />
