@@ -609,6 +609,7 @@ export default function Home() {
 
       {heroCampaigns.length > 0 ? (
         <section
+          className="hero-campaign-carousel"
           aria-label="Campanhas em destaque"
           style={{
             position: "relative",
@@ -632,6 +633,7 @@ export default function Home() {
           >
             {heroCampaigns.map((campaign) => (
               <article
+                className="hero-campaign-slide"
                 key={campaign.id}
                 aria-hidden={heroCampaigns[heroIndex]?.id !== campaign.id}
                 style={{
@@ -681,7 +683,7 @@ export default function Home() {
                     {campaign.button_text || "Conheça a loja"} <ArrowRight size={18} style={{ marginLeft: 10 }} />
                   </a>
                 </div>
-                <div style={{
+                <div className="hero-campaign-media" style={{
                   position: "relative", minWidth: 0, minHeight: 240,
                   borderRadius: 18, overflow: "hidden",
                   background: "rgba(255,255,255,.08)",
