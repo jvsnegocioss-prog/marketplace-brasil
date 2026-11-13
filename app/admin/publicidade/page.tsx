@@ -233,7 +233,15 @@ export default function AdminCampaignsPage() {
       resetForm();
       await loadCampaigns();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Não foi possível salvar a campanha.");
+      const details = err && typeof err === "object" && "message" in err
+        ? String((err as { message?: unknown }).message || "")
+        : err instanceof Error ? err.message : "";
+      const code = err && typeof err === "object" && "code" in err
+        ? String((err as { code?: unknown }).code || "")
+        : "";
+      setMessage(details
+        ? `Falha ao salvar campanha: ${details}${code ? ` (código: ${code})` : ""}`
+        : "Não foi possível salvar a campanha. Verifique os dados e tente novamente.");
     } finally {
       setSaving(false);
     }
