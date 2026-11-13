@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Package, X, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, X, Trash2, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Product = {
@@ -113,6 +113,48 @@ export default function ProductPage() {
   useEffect(() => {
     void loadCartPreview();
   }, []);
+
+  async function removeCartItem(productIdToRemove: string) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id || null;
+      let items: { id: string; qty: number }[] = [];
+
+      if (userId) {
+        const { data, error } = await supabase
+          .from("customer_carts")
+          .select("items")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (error) throw error;
+        items = Array.isArray(data?.items) ? data.items : [];
+      } else {
+        const saved = localStorage.getItem("novashopp_cart");
+        const parsed = saved ? JSON.parse(saved) : [];
+        items = Array.isArray(parsed) ? parsed : [];
+      }
+
+      const updated = items.filter((item: any) => item?.id !== productIdToRemove);
+      localStorage.setItem("novashopp_cart", JSON.stringify(updated));
+
+      if (userId) {
+        const { error } = await supabase
+          .from("customer_carts")
+          .upsert({
+            user_id: userId,
+            items: updated,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+        if (error) throw error;
+      }
+
+      setCartMessage("Produto removido do carrinho.");
+      await loadCartPreview();
+    } catch (error) {
+      console.error("Erro ao remover produto do carrinho:", error);
+      setCartMessage("Não foi possível remover o produto. Tente novamente.");
+    }
+  }
 
   async function loadReviews() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -521,7 +563,18 @@ export default function ProductPage() {
                           <strong style={{ display: "block", color: "#172554", fontSize: 13, lineHeight: 1.35 }}>{cartProduct.name}</strong>
                           <span style={{ color: "#64748b", fontSize: 12 }}>{qty} × {money(Number(cartProduct.price))}</span>
                         </div>
-                        <strong style={{ color: "#102a56", fontSize: 13, whiteSpace: "nowrap" }}>{money(Number(cartProduct.price) * qty)}</strong>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 7, flex: "0 0 auto" }}>
+                          <strong style={{ color: "#102a56", fontSize: 13, whiteSpace: "nowrap" }}>{money(Number(cartProduct.price) * qty)}</strong>
+                          <button
+                            type="button"
+                            onClick={() => removeCartItem(cartProduct.id)}
+                            aria-label={`Remover ${cartProduct.name} do carrinho`}
+                            title="Remover do carrinho"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid #fecaca", borderRadius: 8, padding: "6px 9px", background: "#fff1f2", color: "#b91c1c", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                          >
+                            <Trash2 size={14} /> Remover
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
