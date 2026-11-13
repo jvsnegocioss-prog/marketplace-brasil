@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
     return errorResponse("Acesso administrativo não autorizado.", 401);
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return errorResponse("Configure OPENROUTER_API_KEY nas variáveis de ambiente da Vercel para ativar a IA gratuita.", 503);
+    return errorResponse("Configure GROQ_API_KEY nas variáveis de ambiente da Vercel para ativar a IA gratuita.", 503);
   }
 
   let body: {
@@ -111,18 +111,15 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
       });
     }
 
-    // O roteador e o modelo visual são exclusivamente gratuitos.
-    // Não adicionar modelos pagos a esta lista nem configurar fallback pago.
-    const model = hasImage
-      ? "nvidia/nemotron-3.5-super-vl:free"
-      : "openrouter/free";
+    // O plano Free da Groq aplica limites de uso, mas não cobra por chamadas.
+    // Este modelo Qwen aceita texto e imagens. Não habilitar plano Developer pago.
+    const model = "qwen/qwen3.8-27b";
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://novashoppstore.vercel.app",
         "X-Title": "NOVASHOPP STORE - Assistente de Publicidade",
       },
       body: JSON.stringify({
@@ -145,12 +142,12 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
         return errorResponse("O limite gratuito de solicitações foi atingido ou o modelo está ocupado. Aguarde um pouco e tente novamente.", 429);
       }
       if (response.status === 402) {
-        return errorResponse("O provedor recusou a solicitação por configuração de créditos. Nenhum modelo pago será utilizado; confira se a chave e o modelo gratuito estão corretos.", 502);
+        return errorResponse("A Groq recusou a solicitação. Confira se sua conta continua no plano Free; não é necessário contratar o plano Developer.", 502);
       }
-      if (response.status === 404 && hasImage) {
-        return errorResponse("O modelo gratuito de análise de imagem está temporariamente indisponível. Tente novamente mais tarde ou use a criação por texto.", 502);
+      if ((response.status === 404 || response.status === 400) && hasImage) {
+        return errorResponse("O modelo gratuito não aceitou essa imagem. Tente JPG ou PNG, ou use a criação por texto.", 502);
       }
-      return errorResponse(providerMessage.slice(0, 500) || "O serviço gratuito de IA está temporariamente indisponível. Tente novamente.", 502);
+      return errorResponse(providerMessage.slice(0, 500) || "O serviço gratuito da Groq está temporariamente indisponível. Tente novamente.", 502);
     }
 
     const messageContent = result?.choices?.[0]?.message?.content;
@@ -184,6 +181,6 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
       visual_idea: String(generated.visual_idea || "").slice(0, 1000),
     });
   } catch {
-    return errorResponse("Não foi possível conectar ao OpenRouter. Tente novamente em instantes.", 502);
+    return errorResponse("Não foi possível conectar à Groq. Tente novamente em instantes.", 502);
   }
 }
