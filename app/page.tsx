@@ -54,6 +54,7 @@ const money = (value: number) =>
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [campaigns, setCampaigns] = useState<HomeCampaign[]>([]);
+  const [heroIndex, setHeroIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -98,6 +99,17 @@ export default function Home() {
     void loadCampaigns();
     return () => { cancelled = true; };
   }, []);
+
+  const heroCampaigns = campaigns.filter((campaign) => campaign.placement === "hero");
+
+  useEffect(() => {
+    setHeroIndex(0);
+    if (heroCampaigns.length < 2) return;
+    const interval = window.setInterval(() => {
+      setHeroIndex((current) => (current + 1) % heroCampaigns.length);
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [heroCampaigns.length]);
 
   async function loadProducts() {
     setLoading(true);
@@ -595,227 +607,150 @@ export default function Home() {
         ))}
       </nav>
 
-      {campaigns.some((campaign) => campaign.placement === "hero") ? (
+      {heroCampaigns.length > 0 ? (
         <section
-          aria-label="Campanha em destaque"
+          aria-label="Campanhas em destaque"
           style={{
             position: "relative",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-            alignItems: "center",
-            gap: "clamp(22px, 4vw, 48px)",
-            padding: "clamp(26px, 5vw, 64px)",
-            borderRadius: 24,
-            margin: "22px auto",
             maxWidth: 1240,
             width: "calc(100% - 32px)",
+            margin: "22px auto",
             overflow: "hidden",
-            background: `linear-gradient(125deg, ${campaigns.find((campaign) => campaign.placement === "hero")?.background_color || "#071b43"} 0%, #102e60 100%)`,
-            color: campaigns.find((campaign) => campaign.placement === "hero")?.text_color || "#fff",
+            borderRadius: 24,
+            background: heroCampaigns[heroIndex]?.background_color || "#071b43",
+            color: heroCampaigns[heroIndex]?.text_color || "#fff",
             boxShadow: "0 18px 48px rgba(7, 27, 67, .18)",
           }}
         >
-          {campaigns.filter((campaign) => campaign.placement === "hero").slice(0, 1).map((campaign) => (
-            <div key={campaign.id} style={{ display: "contents" }}>
-              <div style={{ position: "relative", zIndex: 1, minWidth: 0 }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "7px 12px", borderRadius: 999,
-                  background: "rgba(255, 201, 40, .16)", color: "#ffc928",
-                  fontSize: 11, fontWeight: 900, letterSpacing: 1.2,
-                }}>
-                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: "#ffc928" }} />
-                  DESTAQUE NOVASHOPP
-                </span>
-                <h1 style={{
-                  fontSize: "clamp(32px, 5vw, 58px)", lineHeight: 1.04,
-                  letterSpacing: "-.035em", fontWeight: 900,
-                  margin: "20px 0 12px", maxWidth: 650,
-                }}>{campaign.title}</h1>
-                {campaign.subtitle && <h2 style={{
-                  fontSize: "clamp(18px, 2.4vw, 25px)", lineHeight: 1.3,
-                  fontWeight: 700, margin: "0 0 12px", opacity: .96,
-                }}>{campaign.subtitle}</h2>}
-                {campaign.description && <p style={{
-                  lineHeight: 1.75, fontSize: 15, opacity: .88,
-                  maxWidth: 560, margin: 0,
-                }}>{campaign.description}</p>}
-                <a href={campaign.button_url || "#produtos"} style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  padding: "14px 22px", marginTop: 24, borderRadius: 10,
-                  background: "#ffc928", color: "#071b43", fontWeight: 900,
-                  fontSize: 14, textDecoration: "none",
-                  boxShadow: "0 8px 22px rgba(255, 201, 40, .2)",
-                }}>
-                  {campaign.button_text || "Conheça a loja"} <ArrowRight size={18} style={{ marginLeft: 10 }} />
-                </a>
-              </div>
-              <div style={{
-                position: "relative", minWidth: 0, minHeight: 240,
-                borderRadius: 18, overflow: "hidden",
-                background: "rgba(255,255,255,.08)",
-                border: "1px solid rgba(255,255,255,.14)",
-                boxShadow: "0 18px 38px rgba(0,0,0,.18)",
-              }}>
-                {campaign.media_url ? (campaign.media_type === "video"
-                  ? <video src={campaign.media_url} autoPlay muted loop playsInline controls
-                      aria-label={campaign.title}
-                      style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />
-                  : <img src={campaign.media_url} alt={campaign.title}
-                      style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />)
-                  : <div style={{
-                      display: "grid", placeItems: "center", minHeight: 280,
-                      background: "radial-gradient(circle at 50% 45%, rgba(255,201,40,.22), transparent 55%)",
-                      color: "#ffc928", textAlign: "center", padding: 24,
-                    }}>
-                      <div><Package size={76} strokeWidth={1.2} /><strong style={{ display: "block", marginTop: 12, color: "#fff", fontSize: 17 }}>Novidades para descobrir</strong></div>
-                    </div>}
-              </div>
-            </div>
-          ))}
-        </section>
-      ) : (
-      <section className="hero">
-        <div className="hero-content">
-          <span className="hero-label">NOVASHOPP STORE • CONHEÇA NOSSA LOJA</span>
-          <h1>Tudo o que você precisa, <em>em um só lugar!</em></h1>
-          <p>
-            Descubra tecnologia, casa, moda, acessórios e muitas novidades.
-            Explore nosso catálogo e conheça a NOVASHOPP STORE.
-          </p>
-          <button
-            className="hero-button"
-            onClick={() =>
-              document.getElementById("produtos")?.scrollIntoView({
-                behavior: "smooth",
-              })
-            }
-          >
-            Explorar produtos <ArrowRight size={18} />
-          </button>
-        </div>
-
-        <div className="hero-art">
-          <div className="hero-circle">
-            <ShoppingCart size={110} strokeWidth={1.2} />
-            <span>NOVIDADES</span>
-          </div>
-          <div className="floating-card">Descubra nosso catálogo</div>
-        </div>
-      </section>
-      )}
-      <section className="benefits">
-        <div>
-          <Truck />
-          <span>
-            <strong>Entrega facilitada</strong>
-            <small>Comodidade para você</small>
-          </span>
-        </div>
-        <div>
-          <ShieldCheck />
-          <span>
-            <strong>Compra segura</strong>
-            <small>Mais tranquilidade</small>
-          </span>
-        </div>
-        <div>
-          <CreditCard />
-          <span>
-            <strong>Pagamento prático</strong>
-            <small>Opções para comprar</small>
-          </span>
-        </div>
-        <div>
-          <Star />
-          <span>
-            <strong>Ofertas especiais</strong>
-            <small>Preços especiais</small>
-          </span>
-        </div>
-      </section>
-
-      <section
-        aria-label="Acompanhe seu pedido"
-        style={{
-          maxWidth: 1180,
-          margin: "28px auto",
-          padding: "0 20px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 22,
-            flexWrap: "wrap",
-            padding: "22px 26px",
-            borderRadius: 18,
-            background: "linear-gradient(115deg, #071b43 0%, #102e60 100%)",
-            color: "#ffffff",
-            boxShadow: "0 10px 28px rgba(7, 27, 67, 0.14)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 54,
-                height: 54,
-                flex: "0 0 54px",
-                display: "grid",
-                placeItems: "center",
-                borderRadius: 15,
-                background: "rgba(255, 196, 0, 0.16)",
-                color: "#ffc400",
-              }}
-            >
-              <Package size={29} />
-            </span>
-            <div>
-              <span style={{ display: "block", color: "#ffc400", fontSize: 11, fontWeight: 800, letterSpacing: 1.2, marginBottom: 4 }}>
-                CENTRAL DE PEDIDOS
-              </span>
-              <h2 style={{ margin: 0, fontSize: "clamp(18px, 3vw, 23px)", fontWeight: 800, lineHeight: 1.2 }}>
-                Acompanhe seu pedido
-              </h2>
-              <p style={{ margin: "5px 0 0", color: "#dbe5f5", fontSize: 13, lineHeight: 1.45 }}>
-                Consulte as etapas e a previsão de entrega da sua compra.
-              </p>
-            </div>
-          </div>
-          <a
-            href="/acompanhar"
+          <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 9,
-              minHeight: 46,
-              padding: "0 20px",
-              borderRadius: 11,
-              background: "#ffc400",
-              color: "#071b43",
-              textDecoration: "none",
-              fontSize: 13,
-              fontWeight: 900,
-              letterSpacing: 0.35,
-              whiteSpace: "nowrap",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+              display: "flex",
+              width: "100%",
+              transform: `translateX(-${heroIndex * 100}%)`,
+              transition: "transform 700ms cubic-bezier(.22,.8,.25,1)",
             }}
           >
-            ACOMPANHAR PEDIDO <ArrowRight size={17} />
-          </a>
-        </div>
-      </section>
-
-      {campaigns.filter((campaign) => campaign.placement === "middle").map((campaign) => (
-        <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 20, alignItems: "center" }}>
-          <div><h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p><a href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a></div>
-          {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 300, borderRadius: 12 }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 12 }} />)}
+            {heroCampaigns.map((campaign) => (
+              <article
+                key={campaign.id}
+                aria-hidden={heroCampaigns[heroIndex]?.id !== campaign.id}
+                style={{
+                  boxSizing: "border-box",
+                  flex: "0 0 100%",
+                  minWidth: 0,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+                  alignItems: "center",
+                  gap: "clamp(22px, 4vw, 48px)",
+                  padding: "clamp(26px, 5vw, 64px)",
+                  paddingBottom: 82,
+                  background: `linear-gradient(125deg, ${campaign.background_color || "#071b43"} 0%, #102e60 100%)`,
+                  color: campaign.text_color || "#fff",
+                }}
+              >
+                <div style={{ position: "relative", zIndex: 1, minWidth: 0 }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "7px 12px", borderRadius: 999,
+                    background: "rgba(255, 201, 40, .16)", color: "#ffc928",
+                    fontSize: 11, fontWeight: 900, letterSpacing: 1.2,
+                  }}>
+                    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: "#ffc928" }} />
+                    DESTAQUE NOVASHOPP
+                  </span>
+                  <h1 style={{
+                    fontSize: "clamp(32px, 5vw, 58px)", lineHeight: 1.04,
+                    letterSpacing: "-.035em", fontWeight: 900,
+                    margin: "20px 0 12px", maxWidth: 650,
+                  }}>{campaign.title}</h1>
+                  {campaign.subtitle && <h2 style={{
+                    fontSize: "clamp(18px, 2.4vw, 25px)", lineHeight: 1.3,
+                    fontWeight: 700, margin: "0 0 12px", opacity: .96,
+                  }}>{campaign.subtitle}</h2>}
+                  {campaign.description && <p style={{
+                    lineHeight: 1.75, fontSize: 15, opacity: .88,
+                    maxWidth: 560, margin: 0,
+                  }}>{campaign.description}</p>}
+                  <a href={campaign.button_url || "#produtos"} style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    padding: "14px 22px", marginTop: 24, borderRadius: 10,
+                    background: "#ffc928", color: "#071b43", fontWeight: 900,
+                    fontSize: 14, textDecoration: "none",
+                    boxShadow: "0 8px 22px rgba(255, 201, 40, .2)",
+                  }}>
+                    {campaign.button_text || "Conheça a loja"} <ArrowRight size={18} style={{ marginLeft: 10 }} />
+                  </a>
+                </div>
+                <div style={{
+                  position: "relative", minWidth: 0, minHeight: 240,
+                  borderRadius: 18, overflow: "hidden",
+                  background: "rgba(255,255,255,.08)",
+                  border: "1px solid rgba(255,255,255,.14)",
+                  boxShadow: "0 18px 38px rgba(0,0,0,.18)",
+                }}>
+                  {campaign.media_url ? (campaign.media_type === "video"
+                    ? <video src={campaign.media_url} autoPlay muted loop playsInline controls
+                        aria-label={campaign.title}
+                        style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />
+                    : <img src={campaign.media_url} alt={campaign.title}
+                        style={{ display: "block", width: "100%", height: "100%", minHeight: 240, maxHeight: 420, objectFit: "cover" }} />)
+                    : <div style={{
+                        display: "grid", placeItems: "center", minHeight: 280,
+                        background: "radial-gradient(circle at 50% 45%, rgba(255,201,40,.22), transparent 55%)",
+                        color: "#ffc928", textAlign: "center", padding: 24,
+                      }}>
+                        <div><Package size={76} strokeWidth={1.2} /><strong style={{ display: "block", marginTop: 12, color: "#fff", fontSize: 17 }}>Novidades para descobrir</strong></div>
+                      </div>}
+                </div>
+              </article>
+            ))}
+          </div>
+          {heroCampaigns.length > 1 && (
+            <>
+              <div style={{
+                position: "absolute", left: 0, right: 0, bottom: 18,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                zIndex: 3,
+              }}>
+                <button type="button" aria-label="Campanha anterior"
+                  onClick={() => setHeroIndex((current) => (current - 1 + heroCampaigns.length) % heroCampaigns.length)}
+                  style={{ width: 34, height: 34, borderRadius: 999, border: "1px solid rgba(255,255,255,.55)", background: "rgba(255,255,255,.14)", color: "#fff", cursor: "pointer", fontSize: 20 }}>‹</button>
+                {heroCampaigns.map((campaign, index) => (
+                  <button key={campaign.id} type="button"
+                    aria-label={`Mostrar campanha ${index + 1}`}
+                    aria-current={heroIndex === index ? "true" : undefined}
+                    onClick={() => setHeroIndex(index)}
+                    style={{ width: heroIndex === index ? 24 : 9, height: 9, padding: 0, border: 0, borderRadius: 99, background: heroIndex === index ? "#ffc928" : "rgba(255,255,255,.65)", cursor: "pointer", transition: "all 250ms ease" }} />
+                ))}
+                <button type="button" aria-label="Próxima campanha"
+                  onClick={() => setHeroIndex((current) => (current + 1) % heroCampaigns.length)}
+                  style={{ width: 34, height: 34, borderRadius: 999, border: "1px solid rgba(255,255,255,.55)", background: "rgba(255,255,255,.14)", color: "#fff", cursor: "pointer", fontSize: 20 }}>›</button>
+              </div>
+            </>
+          )}
         </section>
-      ))}
+      ) : (
+        <section className="hero">
+          <div className="hero-content">
+            <span className="hero-label">NOVASHOPP STORE • CONHEÇA NOSSA LOJA</span>
+            <h1>Tudo o que você precisa, <em>em um só lugar!</em></h1>
+            <p>
+              Descubra tecnologia, casa, moda, acessórios e muitas novidades.
+              Explore nosso catálogo e conheça a NOVASHOPP STORE.
+            </p>
+            <button
+              className="hero-button"
+              onClick={() =>
+                document.getElementById("produtos")?.scrollIntoView({
+                  behavior: "smooth",
+                })
+              }
+            >
+              Explorar produtos
+            </button>
+          </div>
+        </section>
+      )}
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
