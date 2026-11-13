@@ -31,8 +31,6 @@ type Order = {
   }[];
 };
 
-type Filter = "todos" | "pagos" | "aguardando" | "cancelados";
-
 const deliverySteps = [
   { value: "aguardando_separacao", label: "Pedido aceito" },
   { value: "em_preparacao", label: "Em separação" },
@@ -45,12 +43,6 @@ function normalizedStatus(status: string) {
 }
 function isPaid(status: string) {
   return ["pago", "aprovado", "approved", "concluido", "concluído"].includes(normalizedStatus(status));
-}
-function isWaiting(status: string) {
-  return ["aguardando", "pendente", "pending"].includes(normalizedStatus(status));
-}
-function isCancelled(status: string) {
-  return ["cancelado", "cancelada", "cancelled", "canceled"].includes(normalizedStatus(status));
 }
 function deliveryLabel(status: string) {
   return deliverySteps.find((step) => step.value === status)?.label || "Pedido aceito";
@@ -68,7 +60,6 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [filter, setFilter] = useState<Filter>("todos");
   const [search, setSearch] = useState("");
   const [trackingDrafts, setTrackingDrafts] = useState<Record<string, string>>({});
   const [savingDelivery, setSavingDelivery] = useState<string | null>(null);
@@ -86,7 +77,7 @@ export default function OrdersPage() {
       setMessage("Erro ao carregar pedidos: " + error.message);
       setOrders([]);
     } else {
-      const loaded = (data || []) as Order[];
+      const loaded = ((data || []) as Order[]).filter((order) => isPaid(order.status));
       setOrders(loaded);
       const drafts: Record<string, string> = {};
       loaded.forEach((order) => { drafts[order.id] = order.tracking_code || ""; });
@@ -186,25 +177,12 @@ export default function OrdersPage() {
     return labels[normalizedStatus(status)] || status;
   };
 
-  const paid = orders.filter((o) => isPaid(o.status));
-  const waiting = orders.filter((o) => isWaiting(o.status));
-  const cancelled = orders.filter((o) => isCancelled(o.status));
-  const revenue = paid.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const visibleOrders = orders.filter((order) => {
-    const matchesFilter = filter === "todos" || (filter === "pagos" && isPaid(order.status)) ||
-      (filter === "aguardando" && isWaiting(order.status)) || (filter === "cancelados" && isCancelled(order.status));
     const term = search.trim().toLowerCase();
-    const matchesSearch = !term || order.customer_name.toLowerCase().includes(term) ||
+    return !term || order.customer_name.toLowerCase().includes(term) ||
       order.id.toLowerCase().includes(term) || (order.customer_email || "").toLowerCase().includes(term);
-    return matchesFilter && matchesSearch;
   });
-
-  const filters: { value: Filter; label: string; count: number }[] = [
-    { value: "todos", label: "Todos", count: orders.length },
-    { value: "pagos", label: "Pagos", count: paid.length },
-    { value: "aguardando", label: "Aguardando", count: waiting.length },
-    { value: "cancelados", label: "Cancelados", count: cancelled.length },
-  ];
 
   return (
     <main style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
@@ -227,10 +205,8 @@ export default function OrdersPage() {
 
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
           {[
-            { label: "Total vendido", value: money(revenue), note: "Pagamentos confirmados" },
-            { label: "Pedidos pagos", value: String(paid.length), note: "Pagamentos aprovados" },
-            { label: "Aguardando pagamento", value: String(waiting.length), note: "Aguardam confirmação" },
-            { label: "Total de pedidos", value: String(orders.length), note: String(cancelled.length) + " cancelado(s)" },
+            { label: "Total vendido", value: money(revenue), note: "Somente pagamentos confirmados" },
+            { label: "Pedidos pagos", value: String(orders.length), note: "Pedidos aprovados" },
           ].map(item => (
             <article key={item.label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 18, boxShadow: "0 4px 14px rgba(15,23,42,.04)" }}>
               <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{item.label}</p>
@@ -250,13 +226,7 @@ export default function OrdersPage() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, boxSizing: "border-box", background: "#fff" }} />
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-            {filters.map(item => (
-              <button key={item.value} type="button" onClick={() => setFilter(item.value)} style={{ flex: "0 0 auto", padding: "9px 14px", border: filter === item.value ? 0 : "1px solid #dbe3ef", borderRadius: 22, background: filter === item.value ? "#173b68" : "#fff", color: filter === item.value ? "#fff" : "#526176", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
-                {item.label} ({item.count})
-              </button>
-            ))}
-          </div>
+
         </section>
 
         {message && <p role="status" style={{ background: "#fff", border: "1px solid #f2c7c7", color: "#a12626", padding: 14, borderRadius: 10, overflowWrap: "anywhere" }}>{message}</p>}
