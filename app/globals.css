@@ -2476,3 +2476,45 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   transform: translateX(-2px);
   box-shadow: 0 5px 16px #102b5014;
 }
+
+
+/* Carrossel principal mais compacto em telas de computador */
+@media (min-width: 901px) {
+  .hero-campaign-carousel {
+    margin-top: 14px !important;
+    margin-bottom: 14px !important;
+    border-radius: 20px !important;
+  }
+  .hero-campaign-slide {
+    padding: 26px 36px 62px !important;
+    gap: 28px !important;
+  }
+  .hero-campaign-slide h1 {
+    font-size: clamp(30px, 3.2vw, 43px) !important;
+    margin: 12px 0 9px !important;
+  }
+  .hero-campaign-slide h2 {
+    font-size: clamp(16px, 1.7vw, 21px) !important;
+    margin-bottom: 8px !important;
+  }
+  .hero-campaign-slide p {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+  .hero-campaign-slide a {
+    margin-top: 15px !important;
+    padding: 11px 18px !important;
+  }
+  .hero-campaign-media {
+    min-height: 180px !important;
+    max-height: 260px !important;
+  }
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 180px !important;
+    max-height: 260px !important;
+  }
+  .hero-campaign-media > div {
+    min-height: 200px !important;
+  }
+}
