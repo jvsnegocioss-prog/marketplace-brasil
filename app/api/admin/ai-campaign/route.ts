@@ -22,9 +22,17 @@ async function isAdmin(request: NextRequest) {
 
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) return false;
-
   const { data, error } = await userClient.rpc("is_marketplace_admin");
   return !error && data === true;
+}
+
+function parseJsonContent(value: unknown) {
+  let text = typeof value === "string" ? value.trim() : "";
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) text = text.slice(start, end + 1);
+  return JSON.parse(text);
 }
 
 export async function POST(request: NextRequest) {
@@ -32,9 +40,9 @@ export async function POST(request: NextRequest) {
     return errorResponse("Acesso administrativo não autorizado.", 401);
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return errorResponse("A chave do Gemini não está configurada no servidor.", 500);
+    return errorResponse("Configure OPENROUTER_API_KEY nas variáveis de ambiente da Vercel para ativar a IA gratuita.", 503);
   }
 
   let body: {
@@ -56,13 +64,13 @@ export async function POST(request: NextRequest) {
   const objective = String(body.objective || "").trim().slice(0, 500);
   const product = String(body.product || "").trim().slice(0, 300);
   const offer = String(body.offer || "").trim().slice(0, 500);
-  const audience: string = body.audience ? String(body.audience).trim().slice(0, 300) : "";
-  const tone: string = body.tone ? String(body.tone).trim().slice(0, 100) : "Persuasivo e profissional";
-
-  const imageBase64: string = body.imageBase64 ? String(body.imageBase64) : "";
+  const audience = body.audience ? String(body.audience).trim().slice(0, 300) : "";
+  const tone = body.tone ? String(body.tone).trim().slice(0, 100) : "Persuasivo e profissional";
+  const imageBase64 = body.imageBase64 ? String(body.imageBase64) : "";
   const imageMimeType = String(body.imageMimeType || "");
   const hasImage = Boolean(imageBase64);
   const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
   if (!objective && !product && !offer && !hasImage) {
     return errorResponse("Preencha os detalhes da campanha ou envie uma imagem para a IA analisar.", 400);
   }
@@ -83,7 +91,7 @@ REGRAS:
 - Dê uma ideia visual para foto/vídeo/banner, sem afirmar que a arte foi criada.
 - Sugira um local da página: hero (banner principal), middle (entre seções) ou bottom (próximo ao final).
 - A proposta é apenas um rascunho. O administrador revisará e decidirá se salva ou publica.
-- Responda somente JSON válido com as chaves: title, subtitle, description, button_text, placement, visual_idea (todas strings).
+- Responda somente um objeto JSON válido com as chaves: title, subtitle, description, button_text, placement, visual_idea (todas strings).
 
 DADOS DA CAMPANHA:
 Objetivo: ${objective || "Não informado"}
@@ -92,132 +100,73 @@ Oferta/condições confirmadas: ${offer || "Não informado"}
 Público: ${audience || "Público geral"}
 Tom: ${tone}
 
-${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produto, cores, estilo, textos e informações que estejam realmente legíveis. Use a imagem como referência para criar a campanha mesmo que os demais campos estejam vazios. Não presuma preço, desconto, marca, especificações ou condições que não estejam claramente visíveis ou informadas. Se houver texto ilegível, não o invente." : ""}`;
+${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produto, cores, estilo, textos e informações que estejam realmente legíveis. Use a imagem como referência mesmo que os demais campos estejam vazios. Não presuma preço, desconto, marca, especificações ou condições que não estejam claramente visíveis ou informadas. Se houver texto ilegível, não o invente." : ""}`;
 
   try {
+    const userContent: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
     if (hasImage) {
-      const imageModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
-      let imageResult: any = null;
-      let imageResponseStatus = 502;
-      let imageProviderMessage = "O Gemini não conseguiu analisar essa imagem.";
-      for (const model of imageModels) {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-          body: JSON.stringify({
-            contents: [{ parts: [
-              { text: prompt },
-              { inline_data: { mime_type: imageMimeType, data: imageBase64 } },
-            ] }],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-          signal: AbortSignal.timeout(60000),
-        });
-        imageResult = await response.json();
-        imageResponseStatus = response.status;
-        if (response.ok) break;
-        imageProviderMessage = imageResult?.error?.message || imageProviderMessage;
-        const retryable = response.status === 429 || response.status === 503 || response.status === 500 ||
-          /high demand|overload|temporar|unavailable|resource exhausted|capacity/i.test(imageProviderMessage);
-        if (!retryable || model === imageModels[imageModels.length - 1]) {
-          return errorResponse(
-            retryable
-              ? "Os modelos de IA estão temporariamente ocupados. Tente novamente em alguns minutos."
-              : imageProviderMessage,
-            imageResponseStatus === 429 ? 429 : 502
-          );
-        }
-      }
-      if (!imageResult || imageResponseStatus < 200 || imageResponseStatus >= 300) {
-        return errorResponse("Não foi possível analisar a imagem neste momento. Tente novamente.", 502);
-      }
-      const imageText = imageResult?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
-      if (!imageText) return errorResponse("A IA não conseguiu extrair uma proposta dessa imagem. Tente outra.", 502);
-      let imageGenerated: any;
-      try { imageGenerated = JSON.parse(imageText); }
-      catch { return errorResponse("A resposta da IA veio em formato inesperado. Tente novamente.", 502); }
-      const imagePlacement = ["hero", "middle", "bottom"].includes(imageGenerated.placement) ? imageGenerated.placement : "hero";
-      return NextResponse.json({
-        title: String(imageGenerated.title || "").slice(0, 100),
-        subtitle: String(imageGenerated.subtitle || "").slice(0, 180),
-        description: String(imageGenerated.description || "").slice(0, 1200),
-        button_text: String(imageGenerated.button_text || "Confira").slice(0, 40),
-        placement: imagePlacement,
-        visual_idea: String(imageGenerated.visual_idea || "").slice(0, 1000),
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
       });
     }
-    const models = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
-    let result: any = null;
-    let lastProviderMessage = "O serviço Gemini está temporariamente indisponível.";
 
-    for (const model of models) {
-      const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/interactions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            model,
-            input: [{ type: "text", text: prompt }],
-            response_format: {
-              type: "text",
-              mime_type: "application/json",
-              schema: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  subtitle: { type: "string" },
-                  description: { type: "string" },
-                  button_text: { type: "string" },
-                  placement: { type: "string", enum: ["hero", "middle", "bottom"] },
-                  visual_idea: { type: "string" },
-                },
-                required: ["title", "subtitle", "description", "button_text", "placement", "visual_idea"],
-              },
-            },
-            store: false,
-          }),
-          signal: AbortSignal.timeout(45000),
-        }
-      );
+    // O roteador e o modelo visual são exclusivamente gratuitos.
+    // Não adicionar modelos pagos a esta lista nem configurar fallback pago.
+    const model = hasImage
+      ? "nvidia/nemotron-3.5-super-vl:free"
+      : "openrouter/free";
 
-      result = await response.json();
-      if (response.ok) break;
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://novashoppstore.vercel.app",
+        "X-Title": "NOVASHOPP STORE - Assistente de Publicidade",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "Você cria campanhas de marketing em português brasileiro. Siga rigorosamente as instruções e retorne somente JSON válido." },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.7,
+        max_tokens: 1200,
+        response_format: { type: "json_object" },
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
 
-      lastProviderMessage = result?.error?.message || lastProviderMessage;
-      const retryable = response.status === 429 || response.status === 503 ||
-        /high demand|overload|temporar|unavailable|resource exhausted/i.test(lastProviderMessage);
-
-      if (!retryable || model === models[models.length - 1]) {
-        return errorResponse(
-          retryable
-            ? "Os modelos do Gemini estão temporariamente ocupados. Tente novamente mais tarde."
-            : lastProviderMessage,
-          response.status === 429 ? 429 : 502
-        );
+    const result = await response.json();
+    if (!response.ok) {
+      const providerMessage = String(result?.error?.message || "");
+      if (response.status === 429) {
+        return errorResponse("O limite gratuito de solicitações foi atingido ou o modelo está ocupado. Aguarde um pouco e tente novamente.", 429);
       }
+      if (response.status === 402) {
+        return errorResponse("O provedor recusou a solicitação por configuração de créditos. Nenhum modelo pago será utilizado; confira se a chave e o modelo gratuito estão corretos.", 502);
+      }
+      if (response.status === 404 && hasImage) {
+        return errorResponse("O modelo gratuito de análise de imagem está temporariamente indisponível. Tente novamente mais tarde ou use a criação por texto.", 502);
+      }
+      return errorResponse(providerMessage.slice(0, 500) || "O serviço gratuito de IA está temporariamente indisponível. Tente novamente.", 502);
     }
 
-    if (!result) return errorResponse("Não foi possível obter uma resposta do Gemini.", 502);
+    const messageContent = result?.choices?.[0]?.message?.content;
+    const rawText = typeof messageContent === "string"
+      ? messageContent
+      : Array.isArray(messageContent)
+        ? messageContent.map((part: { text?: string }) => part.text || "").join("")
+        : "";
 
-    const outputText =
-      result?.output_text ||
-      result?.steps
-        ?.filter((step: { type?: string }) => step.type === "model_output")
-        ?.flatMap((step: { content?: Array<{ type?: string; text?: string }> }) => step.content || [])
-        ?.filter((item: { type?: string }) => item.type === "text")
-        ?.map((item: { text?: string }) => item.text || "")
-        ?.join("");
-
-    const rawText = String(outputText || "").trim();
-    if (!rawText) return errorResponse("A IA não retornou uma proposta. Tente novamente.", 502);
+    if (!rawText.trim()) {
+      return errorResponse("A IA não retornou uma proposta. Tente novamente.", 502);
+    }
 
     let generated: any;
     try {
-      generated = JSON.parse(rawText);
+      generated = parseJsonContent(rawText);
     } catch {
       return errorResponse("A resposta da IA veio em formato inesperado. Tente novamente.", 502);
     }
@@ -235,6 +184,6 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
       visual_idea: String(generated.visual_idea || "").slice(0, 1000),
     });
   } catch {
-    return errorResponse("Não foi possível conectar ao Gemini. Tente novamente em instantes.", 502);
+    return errorResponse("Não foi possível conectar ao OpenRouter. Tente novamente em instantes.", 502);
   }
 }
