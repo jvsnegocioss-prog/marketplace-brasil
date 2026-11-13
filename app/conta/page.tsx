@@ -147,8 +147,21 @@ export default function ContaClientePage() {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Não foi possível carregar os pedidos.");
+        const responseText = await response.text();
+        let result: { orders?: CustomerOrder[]; error?: string } = {};
+        try {
+          result = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          console.error("RESPOSTA INVÁLIDA AO CARREGAR PEDIDOS:", {
+            status: response.status,
+            contentType: response.headers.get("content-type"),
+            preview: responseText.slice(0, 300),
+          });
+          throw new Error(
+            `A consulta de pedidos retornou uma resposta inválida (HTTP ${response.status}). Atualize a página; se persistir, informe este código ao suporte.`
+          );
+        }
+        if (!response.ok) throw new Error(result.error || `Não foi possível carregar os pedidos (HTTP ${response.status}).`);
         if (active) setOrders((result.orders || []) as CustomerOrder[]);
       } catch (err) {
         if (active) setOrdersError(err instanceof Error ? err.message : "Erro ao consultar pedidos.");
