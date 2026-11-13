@@ -207,198 +207,163 @@ export default function OrdersPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f6fb_0%,#f8faff_48%,#f2f5fa_100%)] text-[#17243b]">
-      <div className="bg-[#06183d] px-[5%] py-2.5 text-center text-[10px] font-extrabold tracking-[0.16em] text-white sm:flex sm:justify-between sm:text-left"><span>NOVASHOPP STORE <span className="text-[#ffc928]">·</span> COMPRE FÁCIL, RECEBA RÁPIDO</span><span className="hidden text-[#ffc928] sm:inline">PAINEL DE OPERAÇÕES</span></div>
-      <header className="header sticky top-0 z-20 !flex-wrap !justify-between !gap-4 !border-b !border-slate-100 !bg-white/95 !px-[5%] !py-4 !shadow-[0_8px_24px_rgba(7,27,67,0.06)] backdrop-blur">
-        <Link href="/" className="logo" aria-label="NovaShopp Store">
-          <span className="logo-icon">N</span>
-          <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE · ADMIN</small></span>
-        </Link>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <span className="hidden sm:inline-flex items-center rounded-full bg-[#fff8dc] px-3 py-2 text-xs font-bold text-[#806000]">
-            Gestão da loja
-          </span>
-          <button onClick={() => void loadOrders()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-4 py-2.5 text-sm font-bold text-[#06183d] transition hover:border-[#ffc400] hover:bg-[#fff9e5] disabled:opacity-60">
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Atualizar
-          </button>
-          <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl bg-[#ffc400] px-4 py-2.5 text-sm font-extrabold text-[#06183d] shadow-sm transition hover:bg-[#f2b900]">
-            <ArrowLeft size={16} /> Voltar ao painel
-          </Link>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-        <div className="mb-7 overflow-hidden rounded-3xl bg-[linear-gradient(120deg,#06183d_0%,#0b2b62_62%,#164781_100%)] px-5 py-7 text-white shadow-[0_18px_42px_rgba(7,27,67,0.16)] sm:px-8 sm:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="max-w-2xl">
-              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#ffc928]">NOVASHOPP STORE · ADMINISTRAÇÃO</p>
-              <h1 className="font-[Outfit,sans-serif] text-2xl font-extrabold tracking-tight sm:text-4xl">Gestão de pedidos</h1>
-              <p className="mt-2 text-sm leading-relaxed text-blue-100 sm:text-base">Gerencie pedidos, confirme etapas e acompanhe cada entrega em um só lugar.</p>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white backdrop-blur">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#ffc928] shadow-[0_0_0_4px_rgba(255,201,40,0.15)]" /> Painel de operações ativo
-            </div>
+    <main style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
+      <div style={{ maxWidth: 1080, margin: "auto" }}>
+        <header style={{ background: "linear-gradient(125deg,#102b50,#1d4d7c)", color: "#fff", padding: "26px 24px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.16)" }}>
+          <div>
+            <p style={{ margin: "0 0 8px", color: "#f6cc55", fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>NOVASHOPP STORE · ADMINISTRAÇÃO</p>
+            <h1 style={{ margin: 0, fontSize: 28 }}>Gestão de pedidos</h1>
+            <p style={{ margin: "8px 0 0", color: "#d8e5f3" }}>Gerencie pedidos, pagamentos e entregas em um só lugar.</p>
           </div>
-        </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => void loadOrders()} disabled={loading} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#fff", color: "#173b68", cursor: "pointer", fontWeight: 700, opacity: loading ? .6 : 1 }}>
+              <RefreshCw size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />Atualizar
+            </button>
+            <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}>
+              ← Voltar ao painel
+            </button>
+          </div>
+        </header>
 
-        <section className="mb-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
           {[
-            { label: "Total vendido", value: money(revenue), detail: "Pedidos com pagamento confirmado", icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Pedidos pagos", value: String(paid.length), detail: "Pagamentos confirmados", icon: CheckCircle2, color: "text-[#a47b00]", bg: "bg-[#fff8dc]" },
-            { label: "Aguardando pagamento", value: String(waiting.length), detail: "Precisam de confirmação", icon: Clock3, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "Total de pedidos", value: String(orders.length), detail: `${cancelled.length} cancelado(s)`, icon: ShoppingBag, color: "text-[#06183d]", bg: "bg-[#eef3fc]" },
-          ].map((card) => {
-            const Icon = card.icon;
-            return (
-              <div key={card.label} className="rounded-2xl border border-[#e5ebf4] bg-white p-4 shadow-[0_8px_26px_rgba(7,27,67,0.055)] transition-shadow hover:shadow-[0_12px_30px_rgba(7,27,67,0.09)] sm:p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-500 sm:text-sm">{card.label}</p>
-                    <p className="mt-2 break-words text-xl font-extrabold tracking-tight text-[#06183d] sm:text-2xl">{card.value}</p>
-                  </div>
-                  <span className={`rounded-lg p-2 ${card.bg} ${card.color}`}><Icon size={20} /></span>
-                </div>
-                <p className="mt-2 text-[11px] text-slate-400 sm:text-xs">{card.detail}</p>
-              </div>
-            );
-          })}
+            { label: "Total vendido", value: money(revenue), note: "Pagamentos confirmados" },
+            { label: "Pedidos pagos", value: String(paid.length), note: "Pagamentos aprovados" },
+            { label: "Aguardando pagamento", value: String(waiting.length), note: "Aguardam confirmação" },
+            { label: "Total de pedidos", value: String(orders.length), note: String(cancelled.length) + " cancelado(s)" },
+          ].map(item => (
+            <article key={item.label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 18, boxShadow: "0 4px 14px rgba(15,23,42,.04)" }}>
+              <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{item.label}</p>
+              <strong style={{ display: "block", fontSize: 25, margin: "7px 0", color: "#173b68", overflowWrap: "anywhere" }}>{item.value}</strong>
+              <small style={{ color: "#8492a6" }}>{item.note}</small>
+            </article>
+          ))}
         </section>
 
-        <section className="mb-5 rounded-2xl border border-[#e5ebf4] bg-white p-4 shadow-[0_8px_26px_rgba(7,27,67,0.05)] sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <section style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, boxShadow: "0 6px 20px rgba(15,23,42,.05)", marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
             <div>
-              <h2 className="font-bold text-[#06183d]">Pedidos da loja</h2>
-              <p className="mt-0.5 text-xs text-slate-500">{visibleOrders.length} pedido(s) encontrado(s)</p>
+              <h2 style={{ margin: 0, fontSize: 21, color: "#14243a" }}>Pedidos da loja</h2>
+              <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>{visibleOrders.length} pedido(s) encontrado(s)</p>
             </div>
-            <div className="relative w-full sm:max-w-xs">
-              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8faff] py-3 pl-9 pr-3 text-sm outline-none transition focus:border-[#ffc400] focus:bg-white focus:ring-2 focus:ring-[#fff0b3]" />
+            <div style={{ width: "100%", maxWidth: 320 }}>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente ou pedido" style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, boxSizing: "border-box", background: "#fff" }} />
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {filters.map((item) => (
-              <button key={item.value} onClick={() => setFilter(item.value)} className={`shrink-0 rounded-full px-4 py-2.5 text-xs font-bold transition sm:text-sm ${filter === item.value ? "bg-[#06183d] text-white shadow-sm" : "border border-[#e8edf4] bg-white text-slate-600 hover:border-[#ffc400] hover:bg-[#fff9e5] hover:text-[#806000]"}`}>
-                {item.label} <span className={`ml-1 ${filter === item.value ? "text-[#ffc400]" : "text-slate-400"}`}>{item.count}</span>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+            {filters.map(item => (
+              <button key={item.value} type="button" onClick={() => setFilter(item.value)} style={{ flex: "0 0 auto", padding: "9px 14px", border: filter === item.value ? 0 : "1px solid #dbe3ef", borderRadius: 22, background: filter === item.value ? "#173b68" : "#fff", color: filter === item.value ? "#fff" : "#526176", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                {item.label} ({item.count})
               </button>
             ))}
           </div>
         </section>
 
-        {loading && <div className="rounded-2xl border border-[#e8edf4] bg-white p-10 text-center text-sm text-slate-500">Carregando pedidos...</div>}
-        {!loading && message && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{message}</div>}
+        {message && <p role="status" style={{ background: "#fff", border: "1px solid #f2c7c7", color: "#a12626", padding: 14, borderRadius: 10, overflowWrap: "anywhere" }}>{message}</p>}
+        {loading && <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 28, textAlign: "center", color: "#64748b" }}>Carregando pedidos...</div>}
         {!loading && !message && visibleOrders.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center">
-            <PackageCheck className="mx-auto mb-3 text-slate-300" size={38} />
-            <h2 className="font-bold text-[#06183d]">Nenhum pedido encontrado</h2>
-            <p className="mt-1 text-sm text-slate-500">Tente alterar o filtro ou a busca.</p>
+          <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 14, padding: 28, textAlign: "center", color: "#64748b" }}>
+            <PackageCheck size={34} style={{ margin: "0 auto 10px", color: "#94a3b8" }} />
+            <strong style={{ display: "block", color: "#173b68" }}>Nenhum pedido encontrado</strong>
+            <span style={{ fontSize: 13 }}>Tente alterar o filtro ou a busca.</span>
           </div>
         )}
 
-        <div className="space-y-4">
-          {!loading && visibleOrders.map((order) => {
+        <div style={{ display: "grid", gap: 14 }}>
+          {!loading && visibleOrders.map(order => {
             const paidOrder = isPaid(order.status);
-            const currentStep = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
+            const currentStep = deliverySteps.findIndex(step => step.value === (order.delivery_status || "aguardando_separacao"));
             return (
-              <article key={order.id} className="overflow-hidden rounded-2xl border border-[#e5ebf4] bg-white shadow-[0_10px_32px_rgba(7,27,67,0.07)] transition-shadow hover:shadow-[0_14px_38px_rgba(7,27,67,0.10)]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#fff8dc] text-[#06183d]"><ShoppingBag size={19} /></span>
-                    <div className="min-w-0">
-                      <h3 className="truncate font-extrabold text-[#06183d]">{order.customer_name}</h3>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
-                        <span className="inline-flex items-center gap-1"><Hash size={11} />{order.id.slice(0, 8).toUpperCase()}</span>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1"><CalendarDays size={11} />{new Date(order.created_at).toLocaleString("pt-BR")}</span>
-                      </p>
-                    </div>
+              <article key={order.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 15, padding: 18, boxShadow: "0 5px 16px rgba(15,23,42,.045)", overflow: "hidden" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid #edf1f5", paddingBottom: 13 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>PEDIDO #{order.id.slice(0, 8).toUpperCase()}</span>
+                    <h3 style={{ margin: "5px 0 3px", color: "#173b68", fontSize: 18, overflowWrap: "anywhere" }}>{order.customer_name}</h3>
+                    <span style={{ color: "#8492a6", fontSize: 12 }}>{new Date(order.created_at).toLocaleString("pt-BR")}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${paidOrder ? "bg-emerald-50 text-emerald-700" : isCancelled(order.status) ? "bg-red-50 text-red-700" : "bg-[#fff6d8] text-[#806000]"}`}>{paymentLabel(order.status)}</span>
-                    <strong className="text-lg font-extrabold text-[#06183d]">{money(order.total)}</strong>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+                    <span style={{ borderRadius: 20, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: paidOrder ? "#16713b" : isCancelled(order.status) ? "#a12626" : "#815c00", background: paidOrder ? "#e9f7ee" : isCancelled(order.status) ? "#fff0f0" : "#fff5d6" }}>{paymentLabel(order.status)}</span>
+                    <strong style={{ color: "#173b68", fontSize: 19 }}>{money(order.total)}</strong>
                   </div>
                 </div>
 
-                <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 18, padding: "16px 0" }}>
                   <div>
-                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Dados do cliente</p>
-                    <div className="space-y-2 text-sm text-slate-600">
-                      <p className="flex min-w-0 items-start gap-2"><Mail size={15} className="mt-0.5 shrink-0 text-[#a47b00]" /><span className="break-all">{order.customer_email || "E-mail não informado"}</span></p>
-                      <p className="flex items-start gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-[#a47b00]" />{order.customer_phone || "Telefone não informado"}</p>
-                      <p className="flex items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0 text-[#a47b00]" /><span>{order.delivery_address || "Endereço não informado"}</span></p>
+                    <p style={{ margin: "0 0 9px", color: "#173b68", fontSize: 12, fontWeight: 800 }}>DADOS DO CLIENTE</p>
+                    <div style={{ display: "grid", gap: 8, color: "#526176", fontSize: 13 }}>
+                      <p style={{ margin: 0, overflowWrap: "anywhere" }}><Mail size={14} style={{ display: "inline", marginRight: 7, verticalAlign: "middle", color: "#a47b00" }} />{order.customer_email || "E-mail não informado"}</p>
+                      <p style={{ margin: 0, overflowWrap: "anywhere" }}><Phone size={14} style={{ display: "inline", marginRight: 7, verticalAlign: "middle", color: "#a47b00" }} />{order.customer_phone || "Telefone não informado"}</p>
+                      <p style={{ margin: 0 }}><MapPin size={14} style={{ display: "inline", marginRight: 7, verticalAlign: "middle", color: "#a47b00" }} />{order.delivery_address || "Endereço não informado"}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Resumo da compra</p>
-                    <div className="space-y-2">
+                    <p style={{ margin: "0 0 9px", color: "#173b68", fontSize: 12, fontWeight: 800 }}>RESUMO DA COMPRA</p>
+                    <div style={{ display: "grid", gap: 8 }}>
                       {order.order_items?.map((item, index) => (
-                        <div key={index} className="flex items-start justify-between gap-3 text-sm">
-                          <span className="min-w-0 text-slate-600">{item.product_name} <span className="text-slate-400">× {item.quantity}</span></span>
-                          <strong className="shrink-0 text-slate-700">{money(item.subtotal)}</strong>
+                        <div key={index} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
+                          <span style={{ color: "#526176", minWidth: 0, overflowWrap: "anywhere" }}>{item.product_name} × {item.quantity}</span>
+                          <strong style={{ color: "#24364b", whiteSpace: "nowrap" }}>{money(item.subtotal)}</strong>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 bg-[#f8faff] px-4 py-4 sm:px-5">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div style={{ background: "#f7f9fc", border: "1px solid #edf1f5", borderRadius: 12, padding: 15 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
                     <div>
-                      <p className="text-sm font-extrabold text-[#06183d]">Etapas do pedido</p>
-                      <p className="text-xs text-slate-500">O cliente acompanha a evolução da entrega.</p>
+                      <strong style={{ display: "block", color: "#173b68", fontSize: 14 }}>Etapas do pedido</strong>
+                      <span style={{ color: "#64748b", fontSize: 12 }}>O cliente acompanha a evolução da entrega.</span>
                     </div>
-                    <span className="rounded-full bg-[#fff8dc] px-3 py-1 text-xs font-bold text-[#806000]">{deliveryLabel(order.delivery_status || "aguardando_separacao")}</span>
+                    <span style={{ background: "#fff5d6", color: "#815c00", borderRadius: 20, padding: "6px 10px", fontSize: 11, fontWeight: 800 }}>{deliveryLabel(order.delivery_status || "aguardando_separacao")}</span>
                   </div>
 
                   {paidOrder ? (
                     <>
-                      <div className="mb-4 grid grid-cols-4 gap-1">
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 6, marginBottom: 14 }}>
                         {deliverySteps.map((step, index) => {
                           const completed = currentStep >= index;
-                          return (
-                            <div key={step.value} className="min-w-0">
-                              <div className={`h-1.5 rounded-full ${completed ? "bg-[#ffc400]" : "bg-slate-200"}`} />
-                              <p className={`mt-1.5 text-center text-[9px] font-semibold leading-tight sm:text-[11px] ${completed ? "text-[#06183d]" : "text-slate-400"}`}>{step.label}</p>
-                            </div>
-                          );
+                          return <div key={step.value} style={{ minWidth: 0 }}>
+                            <div style={{ height: 6, borderRadius: 8, background: completed ? "#e5b72e" : "#dbe2ea" }} />
+                            <p style={{ margin: "6px 0 0", textAlign: "center", fontSize: 10, lineHeight: 1.25, color: completed ? "#173b68" : "#8492a6", fontWeight: 700 }}>{step.label}</p>
+                          </div>;
                         })}
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 12 }}>
                         <div>
-                          <label className="mb-1.5 block text-xs font-bold text-slate-600">Atualizar etapa</label>
-                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={(e) => void updateDeliveryStatus(order, e.target.value)} className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-3 text-sm font-semibold text-[#06183d] outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]">
-                            {deliverySteps.map((step) => <option key={step.value} value={step.value}>{step.label}</option>)}
+                          <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Atualizar etapa</label>
+                          <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={e => void updateDeliveryStatus(order, e.target.value)} style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", boxSizing: "border-box" }}>
+                            {deliverySteps.map(step => <option key={step.value} value={step.value}>{step.label}</option>)}
                           </select>
                         </div>
-                        <div className="flex items-end">
-                          <span className="text-xs text-slate-400">{savingDelivery === order.id ? "Salvando alteração..." : "Alterações salvas no pedido"}</span>
-                        </div>
-                      </div>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                         <div>
-                          <label className="mb-1.5 block text-xs font-bold text-slate-600">Código de rastreio</label>
-                          <input value={trackingDrafts[order.id] ?? ""} onChange={(e) => setTrackingDrafts((current) => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#ffc400] focus:ring-2 focus:ring-[#fff0b3]" />
+                          <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Código de rastreio</label>
+                          <input value={trackingDrafts[order.id] ?? ""} onChange={e => setTrackingDrafts(current => ({ ...current, [order.id]: e.target.value }))} placeholder="Digite o código de rastreio" style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, boxSizing: "border-box" }} />
                         </div>
-                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} className="rounded-xl bg-[#06183d] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#123b78] disabled:opacity-50">Salvar rastreio</button>
                       </div>
-                      {order.delivery_status === "enviado" && order.customer_phone && (
-                        <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#12805c] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0d684a]">
-                          Avisar cliente pelo WhatsApp <ExternalLink size={14} />
-                        </a>
-                      )}
-                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-200 pt-3 text-[11px] text-slate-400">
-                        <span><Truck className="mr-1 inline" size={12} />Enviado: {date(order.shipped_at)}</span>
-                        <span><CheckCircle2 className="mr-1 inline" size={12} />Entregue: {date(order.delivered_at)}</span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 11 }}>
+                        <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} style={{ padding: "10px 15px", border: 0, borderRadius: 8, background: "#173b68", color: "#fff", cursor: "pointer", fontWeight: 700, opacity: savingDelivery === order.id ? .6 : 1 }}>{savingDelivery === order.id ? "Salvando..." : "Salvar rastreio"}</button>
+                        {order.delivery_status === "enviado" && order.customer_phone && (
+                          <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", padding: "10px 15px", borderRadius: 8, background: "#16713b", color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
+                            Avisar cliente pelo WhatsApp <ExternalLink size={13} style={{ marginLeft: 7 }} />
+                          </a>
+                        )}
+                        {savingDelivery === order.id && <span style={{ alignSelf: "center", color: "#64748b", fontSize: 12 }}>Salvando alteração...</span>}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, borderTop: "1px solid #e2e8f0", marginTop: 13, paddingTop: 11, color: "#8492a6", fontSize: 11 }}>
+                        <span><Truck size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />Enviado: {date(order.shipped_at)}</span>
+                        <span><CheckCircle2 size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />Entregue: {date(order.delivered_at)}</span>
                       </div>
                     </>
                   ) : (
-                    <p className="flex items-center gap-2 text-sm text-slate-500"><CreditCard size={16} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}><CreditCard size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
                   )}
                 </div>
               </article>
             );
           })}
         </div>
-        <footer className="mt-8 border-t border-slate-200 py-5 text-center text-xs text-slate-400">NovaShopp Store · Gestão de pedidos e entregas</footer>
+        <footer style={{ marginTop: 28, borderTop: "1px solid #e2e8f0", paddingTop: 16, textAlign: "center", color: "#8492a6", fontSize: 12 }}>NovaShopp Store · Gestão de pedidos e entregas</footer>
       </div>
     </main>
   );
