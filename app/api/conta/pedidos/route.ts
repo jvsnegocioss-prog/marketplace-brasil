@@ -51,6 +51,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq("customer_email", user.email)
+      .in("status", ["Pago", "pago", "Aprovado", "aprovado", "approved", "paid"])
       .order("created_at", { ascending: false })
       .limit(50);
 
