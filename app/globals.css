@@ -2783,3 +2783,95 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   }
 }
 
+
+
+/* NOVASHOPP STORE — área do cliente ampla em desktop */
+@media (min-width: 1024px) {
+  .customer-account-page {
+    align-items: flex-start;
+    padding: 42px 28px;
+  }
+  .customer-account-card {
+    width: min(100%, 1240px);
+    max-width: 1240px;
+    padding: 38px 42px;
+  }
+  .customer-account-card > .customer-account-brand,
+  .customer-account-card > .customer-account-eyebrow,
+  .customer-account-card > h1,
+  .customer-account-card > .customer-account-intro {
+    max-width: 100%;
+  }
+  .customer-account-card > h1 {
+    font-size: clamp(30px, 2.5vw, 36px);
+  }
+  .customer-account-intro {
+    max-width: 760px;
+  }
+  .customer-account-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr);
+    align-items: start;
+    gap: 34px;
+    margin-top: 24px;
+  }
+  .customer-account-details,
+  .customer-account-orders-panel {
+    min-width: 0;
+  }
+  .customer-account-details {
+    padding: 22px;
+    border: 1px solid #e7edf5;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #fff, #f9fbfe);
+  }
+  .customer-account-details .customer-account-profile {
+    margin-top: 0;
+  }
+  .customer-account-details .customer-account-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .customer-account-details .customer-account-form label,
+  .customer-account-details .customer-account-form .customer-account-footnote,
+  .customer-account-details .customer-account-form button {
+    min-width: 0;
+  }
+  .customer-account-details .customer-account-form .customer-account-footnote,
+  .customer-account-details .customer-account-form button {
+    grid-column: 1 / -1;
+  }
+  .customer-account-orders-panel {
+    padding: 22px;
+    border: 1px solid #e7edf5;
+    border-radius: 18px;
+    background: #fff;
+  }
+  .customer-account-orders-panel .customer-orders-heading {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .customer-account-orders-panel .customer-order-card {
+    padding: 20px;
+  }
+  .customer-account-card > .customer-account-submit[ type="button" ] {
+    max-width: 280px;
+    margin-top: 24px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1023px) {
+  .customer-account-card {
+    max-width: 760px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .customer-account-layout {
+    display: block;
+  }
+  .customer-account-details,
+  .customer-account-orders-panel {
+    min-width: 0;
+  }
+}
