@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Package, RefreshCw, Search, Save, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import "./estoque.css";
 
 type Product = {
   id: string;
@@ -141,7 +142,7 @@ export default function StockPage() {
   const money = (value: number) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
+    <main className="admin-stock" style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
       <div style={{ maxWidth: 1080, margin: "auto" }}>
         <header style={{ background: "linear-gradient(125deg,#071b43,#173b68)", color: "#fff", padding: "25px 22px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.14)" }}>
           <div>
