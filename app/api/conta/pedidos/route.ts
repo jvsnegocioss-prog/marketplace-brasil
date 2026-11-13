@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       .from("orders")
       .select(`
         id,
+        order_number,
         total,
         coupon_code,
         discount_amount,
