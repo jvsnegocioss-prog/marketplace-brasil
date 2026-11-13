@@ -123,7 +123,7 @@ export default function AcompanharPedidoPage() {
     setOrder(null);
 
     if (!orderId.trim() || !phone.trim()) {
-      setError("Informe o número do pedido e o telefone utilizado na compra.");
+      setError("Informe o número do pedido ou código de rastreio e o telefone utilizado na compra.");
       return;
     }
 
@@ -187,18 +187,18 @@ export default function AcompanharPedidoPage() {
             <div className="tracking-panel-icon"><Search size={20} /></div>
             <div>
               <h2>Localizar meu pedido</h2>
-              <p>Informe os mesmos dados utilizados na compra ou abra um pedido diretamente pelo seu histórico quando estiver logado.</p>
+              <p>Informe o número do pedido ou o código de rastreio, junto com o telefone utilizado na compra.</p>
             </div>
           </div>
 
           {!order && <form onSubmit={handleSearch} className="tracking-form">
             <label>
-              <span>Número do pedido</span>
+              <span>Número do pedido ou código de rastreio</span>
               <input
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Ex.: 110C1D43"
+                placeholder="Ex.: 110C1D43 ou JVS-A83F91B2"
                 className="tracking-input"
                 required
               />
@@ -312,7 +312,7 @@ export default function AcompanharPedidoPage() {
             </div>
 
             <div className="tracking-code-box">
-              <div><small>ENTREGA DA SUA COMPRA</small><strong>Entrega própria por motoboy</strong><p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.85 }}>Acompanhe as etapas do pedido nesta página. A previsão será atualizada pela loja quando necessário.</p></div>
+              <div><small>CÓDIGO DE RASTREIO DA SUA ENTREGA</small><strong>{order.tracking_code || "Código não disponível"}</strong><p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.85 }}>Guarde este código. Você também pode utilizá-lo junto com seu telefone para localizar esta entrega.</p></div>
               <Truck size={22} />
             </div>
           </section>
