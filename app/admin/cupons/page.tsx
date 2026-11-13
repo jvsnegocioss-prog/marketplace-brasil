@@ -118,7 +118,7 @@ export default function CouponsPage() {
             <h1 style={{ margin: 0, fontSize: 28 }}>Central de cupons</h1>
             <p style={{ margin: "8px 0 0", color: "#d8e5f3" }}>Crie ofertas e acompanhe o uso dos descontos.</p>
           </div>
-          <button type="button" onClick={() => router.push("/admin")} style={{ ...buttonStyle, background: "#fff", color: "#173b68", fontWeight: 700, margin: 0 }}>← Voltar ao painel</button>
+          <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800, margin: 0 }}>← Voltar ao painel</button>
         </header>
 
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
