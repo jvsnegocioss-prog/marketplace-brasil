@@ -708,7 +708,7 @@ export default function AdminPage() {
           <button onClick={() => router.push("/admin/estoque")} style={{ ...buttonStyle, background: "#173b68", color: "#ffffff", fontWeight: 800 }}>Estoque</button>
           <button onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Gestão de avaliações</button>
           <button onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
-          <button onClick={() => router.push("/admin/publicidade")} style={{ ...buttonStyle, background: "#ffc928", color: "#06183d", fontWeight: 800 }}>Publicidade e Promoções</button>
+          <button onClick={() => router.push("/admin/publicidade")} style={buttonStyle}>Publicidade e Promoções</button>
         </div>
 
         <button onClick={logout} style={buttonStyle}>
