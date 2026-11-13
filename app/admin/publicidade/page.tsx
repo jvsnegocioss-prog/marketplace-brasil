@@ -52,6 +52,7 @@ export default function AdminCampaignsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAiProposal, setPreviewAiProposal] = useState(false);
   const [previewMediaUrl, setPreviewMediaUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<"manual" | "ai">("manual");
   const [aiObjective, setAiObjective] = useState("");
@@ -266,6 +267,10 @@ export default function AdminCampaignsPage() {
     await loadCampaigns();
   }
 
+  const previewCampaign = previewAiProposal && aiProposal
+    ? { ...draft, ...aiProposal, media_url: null, media_type: "image" as const }
+    : draft;
+
   if (loading) return <main style={{ padding: 24 }}>Carregando publicidade...</main>;
   if (!authorized) return null;
 
@@ -281,27 +286,27 @@ export default function AdminCampaignsPage() {
       </header>
 
       {previewOpen && (
-        <div role="dialog" aria-modal="true" aria-label="Prévia da campanha" onClick={() => setPreviewOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(4,12,28,.78)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div role="dialog" aria-modal="true" aria-label="Prévia da campanha" onClick={() => { setPreviewOpen(false); setPreviewAiProposal(false); }} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(4,12,28,.78)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={(event) => event.stopPropagation()} style={{ width: "100%", maxWidth: 850, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 18, padding: 18, boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
               <div><strong style={{ color: "#071b43" }}>Prévia da campanha</strong><p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>Simulação — nada será publicado nesta etapa.</p></div>
-              <button type="button" onClick={() => setPreviewOpen(false)} style={{ ...button, margin: 0 }}>Fechar</button>
+              <button type="button" onClick={() => { setPreviewOpen(false); setPreviewAiProposal(false); }} style={{ ...button, margin: 0 }}>Fechar</button>
             </div>
-            <div style={{ borderRadius: 14, overflow: "hidden", background: draft.background_color || "#071b43", color: draft.text_color || "#ffffff", display: "grid", gridTemplateColumns: (previewMediaUrl || draft.media_url) ? "repeat(auto-fit,minmax(240px,1fr))" : "1fr", minHeight: 230 }}>
-              {(previewMediaUrl || draft.media_url) && (
+            <div style={{ borderRadius: 14, overflow: "hidden", background: previewCampaign.background_color || "#071b43", color: previewCampaign.text_color || "#ffffff", display: "grid", gridTemplateColumns: (!previewAiProposal && (previewMediaUrl || previewCampaign.media_url)) ? "repeat(auto-fit,minmax(240px,1fr))" : "1fr", minHeight: 230 }}>
+              {(!previewAiProposal && (previewMediaUrl || previewCampaign.media_url)) && (
                 <div style={{ minHeight: 220, background: "#071b43", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {(mediaFile ? mediaFile.type.startsWith("video/") : draft.media_type === "video") ? <video src={previewMediaUrl || draft.media_url || undefined} controls playsInline style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} /> : <img src={previewMediaUrl || draft.media_url || undefined} alt="Prévia da campanha" style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} />}
+                  {(mediaFile ? mediaFile.type.startsWith("video/") : previewCampaign.media_type === "video") ? <video src={previewMediaUrl || previewCampaign.media_url || undefined} controls playsInline style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} /> : <img src={previewMediaUrl || previewCampaign.media_url || undefined} alt="Prévia da campanha" style={{ width: "100%", maxHeight: 360, objectFit: "contain" }} />}
                 </div>
               )}
               <div style={{ padding: "clamp(22px,5vw,42px)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start" }}>
                 <small style={{ opacity: .8, fontWeight: 800, letterSpacing: 1 }}>NOVASHOPP STORE</small>
-                <h2 style={{ fontSize: "clamp(25px,4vw,38px)", lineHeight: 1.1, margin: "12px 0 8px" }}>{draft.title || "Título da sua campanha"}</h2>
-                {draft.subtitle && <h3 style={{ margin: "0 0 10px", fontSize: 19 }}>{draft.subtitle}</h3>}
-                {draft.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{draft.description}</p>}
-                <span style={{ display: "inline-block", marginTop: 12, padding: "12px 20px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800 }}>{draft.button_text || "Confira"}</span>
+                <h2 style={{ fontSize: "clamp(25px,4vw,38px)", lineHeight: 1.1, margin: "12px 0 8px" }}>{previewCampaign.title || "Título da sua campanha"}</h2>
+                {previewCampaign.subtitle && <h3 style={{ margin: "0 0 10px", fontSize: 19 }}>{previewCampaign.subtitle}</h3>}
+                {previewCampaign.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{previewCampaign.description}</p>}
+                <span style={{ display: "inline-block", marginTop: 12, padding: "12px 20px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800 }}>{previewCampaign.button_text || "Confira"}</span>
               </div>
             </div>
-            <p style={{ color: "#64748b", fontSize: 13, marginBottom: 0 }}>Posição escolhida: {draft.placement === "hero" ? "Banner principal (topo)" : draft.placement === "middle" ? "Entre as seções" : "Próximo ao final"}. A aparência pode variar um pouco conforme o dispositivo.</p>
+            <p style={{ color: "#64748b", fontSize: 13, marginBottom: 0 }}>Posição escolhida: {previewCampaign.placement === "hero" ? "Banner principal (topo)" : previewCampaign.placement === "middle" ? "Entre as seções" : "Próximo ao final"}. A aparência pode variar um pouco conforme o dispositivo.</p>
           </div>
         </div>
       )}
@@ -345,6 +350,7 @@ export default function AdminCampaignsPage() {
               <p><strong>Botão sugerido:</strong> {aiProposal.button_text}</p>
               <p><strong>Posição sugerida:</strong> {aiProposal.placement === "hero" ? "Banner principal" : aiProposal.placement === "middle" ? "Entre as seções" : "Próximo ao final"}</p>
               <p><strong>Ideia visual:</strong> {aiProposal.visual_idea}</p>
+              <button type="button" onClick={() => { setPreviewAiProposal(true); setPreviewOpen(true); }} style={{ ...button, background: "#e8edf5", color: "#071b43" }}><Eye size={16} style={{ verticalAlign: "middle" }} /> Visualizar antes de publicar</button>
               <button type="button" onClick={useAiProposal} style={{ ...button, background: "#ffc928", color: "#071b43" }}>Usar proposta no editor manual</button>
             </div>
           )}
