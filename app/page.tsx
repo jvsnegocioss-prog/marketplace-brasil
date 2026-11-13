@@ -629,6 +629,81 @@ export default function Home() {
         </div>
       </section>
 
+      <section
+        aria-label="Acompanhe seu pedido"
+        style={{
+          maxWidth: 1180,
+          margin: "28px auto",
+          padding: "0 20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 22,
+            flexWrap: "wrap",
+            padding: "22px 26px",
+            borderRadius: 18,
+            background: "linear-gradient(115deg, #071b43 0%, #102e60 100%)",
+            color: "#ffffff",
+            boxShadow: "0 10px 28px rgba(7, 27, 67, 0.14)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 54,
+                height: 54,
+                flex: "0 0 54px",
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 15,
+                background: "rgba(255, 196, 0, 0.16)",
+                color: "#ffc400",
+              }}
+            >
+              <Package size={29} />
+            </span>
+            <div>
+              <span style={{ display: "block", color: "#ffc400", fontSize: 11, fontWeight: 800, letterSpacing: 1.2, marginBottom: 4 }}>
+                CENTRAL DE PEDIDOS
+              </span>
+              <h2 style={{ margin: 0, fontSize: "clamp(18px, 3vw, 23px)", fontWeight: 800, lineHeight: 1.2 }}>
+                Acompanhe seu pedido
+              </h2>
+              <p style={{ margin: "5px 0 0", color: "#dbe5f5", fontSize: 13, lineHeight: 1.45 }}>
+                Consulte as etapas e a previsão de entrega da sua compra.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/acompanhar"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 9,
+              minHeight: 46,
+              padding: "0 20px",
+              borderRadius: 11,
+              background: "#ffc400",
+              color: "#071b43",
+              textDecoration: "none",
+              fontSize: 13,
+              fontWeight: 900,
+              letterSpacing: 0.35,
+              whiteSpace: "nowrap",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+            }}
+          >
+            ACOMPANHAR PEDIDO <ArrowRight size={17} />
+          </a>
+        </div>
+      </section>
+
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
