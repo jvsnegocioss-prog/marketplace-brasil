@@ -207,8 +207,9 @@ export default function OrdersPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-[#17243b]">
-      <div className="bg-[#06183d] px-[5%] py-2 text-center text-[11px] font-semibold tracking-wide text-white sm:flex sm:justify-between sm:text-left"><span>NOVASHOPP STORE · COMPRE FÁCIL, RECEBA RÁPIDO</span><span className="hidden text-[#ffc400] sm:inline">PAINEL DE OPERAÇÕES</span></div>\n      <header className="header !flex-wrap !justify-between !gap-4 !bg-white !px-[5%] !py-4">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f6fb_0%,#f8faff_48%,#f2f5fa_100%)] text-[#17243b]">
+      <div className="bg-[#06183d] px-[5%] py-2.5 text-center text-[10px] font-extrabold tracking-[0.16em] text-white sm:flex sm:justify-between sm:text-left"><span>NOVASHOPP STORE <span className="text-[#ffc928]">·</span> COMPRE FÁCIL, RECEBA RÁPIDO</span><span className="hidden text-[#ffc928] sm:inline">PAINEL DE OPERAÇÕES</span></div>
+      <header className="header sticky top-0 z-20 !flex-wrap !justify-between !gap-4 !border-b !border-slate-100 !bg-white/95 !px-[5%] !py-4 !shadow-[0_8px_24px_rgba(7,27,67,0.06)] backdrop-blur">
         <Link href="/" className="logo" aria-label="NovaShopp Store">
           <span className="logo-icon">N</span>
           <span className="brand-name">NovaShopp<span className="logo-dot">.</span><small>STORE · ADMIN</small></span>
@@ -227,14 +228,16 @@ export default function OrdersPage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-        <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-[#a47b00]">NOVASHOPP STORE · ADMINISTRAÇÃO</p>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#06183d] sm:text-3xl">Gestão de pedidos</h1>
-            <p className="mt-1 text-sm text-slate-500">Gerencie pedidos, confirme etapas e acompanhe cada entrega.</p>
-          </div>
-          <div className="rounded-lg border border-[#f4e6ad] bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" /> Sistema de pedidos
+        <div className="mb-7 overflow-hidden rounded-3xl bg-[linear-gradient(120deg,#06183d_0%,#0b2b62_62%,#164781_100%)] px-5 py-7 text-white shadow-[0_18px_42px_rgba(7,27,67,0.16)] sm:px-8 sm:py-9">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#ffc928]">NOVASHOPP STORE · ADMINISTRAÇÃO</p>
+              <h1 className="font-[Outfit,sans-serif] text-2xl font-extrabold tracking-tight sm:text-4xl">Gestão de pedidos</h1>
+              <p className="mt-2 text-sm leading-relaxed text-blue-100 sm:text-base">Gerencie pedidos, confirme etapas e acompanhe cada entrega em um só lugar.</p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white backdrop-blur">
+              <span className="inline-block h-2 w-2 rounded-full bg-[#ffc928] shadow-[0_0_0_4px_rgba(255,201,40,0.15)]" /> Painel de operações ativo
+            </div>
           </div>
         </div>
 
@@ -247,7 +250,7 @@ export default function OrdersPage() {
           ].map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-[0_5px_20px_rgba(7,27,67,0.05)] sm:p-5">
+              <div key={card.label} className="rounded-2xl border border-[#e5ebf4] bg-white p-4 shadow-[0_8px_26px_rgba(7,27,67,0.055)] transition-shadow hover:shadow-[0_12px_30px_rgba(7,27,67,0.09)] sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-500 sm:text-sm">{card.label}</p>
@@ -261,7 +264,7 @@ export default function OrdersPage() {
           })}
         </section>
 
-        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="mb-5 rounded-2xl border border-[#e5ebf4] bg-white p-4 shadow-[0_8px_26px_rgba(7,27,67,0.05)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-bold text-[#06183d]">Pedidos da loja</h2>
@@ -296,7 +299,7 @@ export default function OrdersPage() {
             const paidOrder = isPaid(order.status);
             const currentStep = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
             return (
-              <article key={order.id} className="overflow-hidden rounded-2xl border border-[#e8edf4] bg-white shadow-[0_8px_28px_rgba(7,27,67,0.06)]">
+              <article key={order.id} className="overflow-hidden rounded-2xl border border-[#e5ebf4] bg-white shadow-[0_10px_32px_rgba(7,27,67,0.07)] transition-shadow hover:shadow-[0_14px_38px_rgba(7,27,67,0.10)]">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#fff8dc] text-[#06183d]"><ShoppingBag size={19} /></span>
