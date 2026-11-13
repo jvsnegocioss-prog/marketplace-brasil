@@ -185,6 +185,23 @@ export default function ProductPage() {
         .maybeSingle();
 
       setProduct(data as Product | null);
+      if (data) {
+        try {
+          let visitorId = localStorage.getItem("novashopp_visitor_id");
+          if (!visitorId) {
+            visitorId = crypto.randomUUID();
+            localStorage.setItem("novashopp_visitor_id", visitorId);
+          }
+          void supabase.rpc("record_store_page_view", {
+            p_visitor_id: visitorId,
+            p_path: window.location.pathname,
+            p_product_id: String(data.id),
+            p_product_name: String(data.name),
+          });
+        } catch (error) {
+          console.warn("Não foi possível registrar a visualização do produto.", error);
+        }
+      }
       const { data: mediaData } = await supabase
         .from("product_media")
         .select("id,media_type,url,poster_url,sort_order")
