@@ -59,6 +59,7 @@ export default function AdminCampaignsPage() {
   const [aiOffer, setAiOffer] = useState("");
   const [aiAudience, setAiAudience] = useState("");
   const [aiTone, setAiTone] = useState("Persuasivo e profissional");
+  const [aiImageFile, setAiImageFile] = useState<File | null>(null);
   const [generating, setGenerating] = useState(false);
   const [aiProposal, setAiProposal] = useState<{
     title: string; subtitle: string; description: string; button_text: string;
@@ -124,6 +125,18 @@ export default function AdminCampaignsPage() {
       const token = sessionData.session?.access_token;
       if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente no painel.");
 
+      let imageBase64 = "";
+      if (aiImageFile) {
+        if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(aiImageFile.type)) throw new Error("Envie uma imagem JPG, PNG, WEBP ou GIF.");
+        if (aiImageFile.size > 8 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 8 MB.");
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+          reader.onerror = () => reject(new Error("Não foi possível ler a imagem selecionada."));
+          reader.readAsDataURL(aiImageFile);
+        });
+      }
+
       const response = await fetch("/api/admin/ai-campaign", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -133,6 +146,8 @@ export default function AdminCampaignsPage() {
           offer: aiOffer,
           audience: aiAudience,
           tone: aiTone,
+          imageBase64,
+          imageMimeType: aiImageFile?.type || "",
         }),
       });
       const result = await response.json();
@@ -303,6 +318,13 @@ export default function AdminCampaignsPage() {
           <label>Estilo da comunicação<select value={aiTone} onChange={(e) => setAiTone(e.target.value)} style={field}>
             <option>Persuasivo e profissional</option><option>Moderno e descontraído</option><option>Elegante e sofisticado</option><option>Direto e promocional</option><option>Amigável e próximo</option>
           </select></label>
+          <div style={{ border: "1px dashed #c7d2e2", borderRadius: 12, padding: 14, margin: "4px 0 16px", background: "#fff" }}>
+            <label style={{ display: "block", fontWeight: 700 }}>Ou envie uma imagem para a IA analisar (opcional)
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setAiImageFile(e.target.files?.[0] || null)} style={field} />
+            </label>
+            <small style={{ color: "#64748b" }}>Você pode enviar somente a imagem, sem preencher os campos acima, ou combinar a imagem com os detalhes. Formatos JPG, PNG, WEBP ou GIF, até 8 MB.</small>
+            {aiImageFile && <p style={{ marginBottom: 0, fontWeight: 700 }}>Imagem selecionada: {aiImageFile.name} <button type="button" onClick={() => setAiImageFile(null)} style={{ ...button, padding: "6px 10px", marginLeft: 8 }}>Remover</button></p>}
+          </div>
           <button type="button" disabled={generating} onClick={generateCampaign} style={{ ...button, background: "#ffc928", color: "#071b43", opacity: generating ? 0.65 : 1 }}>
             <Sparkles size={16} style={{ verticalAlign: "middle" }} /> {generating ? "Criando sugestão..." : "Gerar sugestão com IA"}
           </button>
@@ -318,7 +340,7 @@ export default function AdminCampaignsPage() {
               <button type="button" onClick={useAiProposal} style={{ ...button, background: "#ffc928", color: "#071b43" }}>Usar proposta no editor manual</button>
             </div>
           )}
-          <p style={{ marginBottom: 0, fontWeight: 700 }}>A IA não cria, salva nem publica campanhas sozinha. A proposta só vai para o editor se você escolher usá-la.</p>
+          <p style={{ marginBottom: 0, fontWeight: 700 }}>Você pode usar os campos, enviar uma imagem ou combinar os dois. A IA não salva nem publica campanhas sozinha; a proposta só vai para o editor se você escolher usá-la.</p>
         </section>
       ) : (
         <form onSubmit={saveCampaign} style={{ border: "1px solid #dce3ed", borderRadius: 14, padding: 18, background: "#fff", marginBottom: 28 }}>
