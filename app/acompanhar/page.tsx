@@ -70,7 +70,7 @@ export default function AcompanharPedidoPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const selectedOrderId = params.get("pedido");
+    const selectedOrderId = params.get("pedido") || "";
     if (!selectedOrderId) return;
 
     let active = true;
