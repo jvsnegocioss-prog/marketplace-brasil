@@ -215,9 +215,9 @@ export default function OrdersPage() {
   });
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
+    <main className="admin-orders" style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
       <div style={{ maxWidth: 1080, margin: "auto" }}>
-        <header style={{ background: "linear-gradient(125deg,#102b50,#1d4d7c)", color: "#fff", padding: "26px 24px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.16)" }}>
+        <header className="admin-orders-header" style={{ background: "linear-gradient(125deg,#102b50,#1d4d7c)", color: "#fff", padding: "26px 24px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.16)" }}>
           <div>
             <p style={{ margin: "0 0 8px", color: "#f6cc55", fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>NOVASHOPP STORE · ADMINISTRAÇÃO</p>
             <h1 style={{ margin: 0, fontSize: 28 }}>Gestão de pedidos</h1>
