@@ -489,7 +489,7 @@ export default function ContaClientePage() {
                   {order.tracking_code && (
                     <p className="customer-order-tracking">Rastreio: <strong>{order.tracking_code}</strong></p>
                   )}
-                  <a className="customer-order-track-link" href="/acompanhar">Acompanhar entrega</a>
+                  <a className="customer-order-track-link" href={`/acompanhar?pedido=${encodeURIComponent(order.id)}`}>Ver detalhes e acompanhar</a>
                 </article>
               ))}
             </div>
