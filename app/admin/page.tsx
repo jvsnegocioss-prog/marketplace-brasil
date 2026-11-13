@@ -155,6 +155,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [analyticsRows, setAnalyticsRows] = useState<{ visitor_id: string; path: string; product_id: string | null; product_name: string | null; viewed_at: string }[]>([]);
+  const [analyticsMessage, setAnalyticsMessage] = useState("");
   const [message, setMessage] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const touchStartY = useRef<number | null>(null);
@@ -199,6 +201,7 @@ export default function AdminPage() {
         await Promise.all([
           loadProducts(),
           loadOrders(),
+          loadAnalytics(),
         ]);
       } catch {
         setMessage("Erro ao verificar acesso ao painel.");
@@ -224,6 +227,23 @@ export default function AdminPage() {
     setProducts((data || []) as Product[]);
   }
 
+  async function loadAnalytics() {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const { data, error } = await supabase
+      .from("store_page_views")
+      .select("visitor_id,path,product_id,product_name,viewed_at")
+      .gte("viewed_at", since.toISOString())
+      .order("viewed_at", { ascending: false })
+      .limit(10000);
+    if (error) {
+      setAnalyticsMessage("Não foi possível carregar os acessos: " + error.message);
+      return;
+    }
+    setAnalyticsRows(data || []);
+    setAnalyticsMessage("");
+  }
+
   async function loadOrders() {
     const { data, error } = await supabase
       .from("orders")
@@ -237,6 +257,20 @@ export default function AdminPage() {
 
     setOrders((data || []) as Order[]);
   }
+
+  const uniqueVisitors = new Set(analyticsRows.map((row) => row.visitor_id)).size;
+  const pageViewCount = analyticsRows.length;
+  const topPages = Object.entries(analyticsRows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.path] = (acc[row.path] || 0) + 1;
+    return acc;
+  }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const topProducts = Object.entries(analyticsRows.reduce<Record<string, { name: string; count: number }>>((acc, row) => {
+    if (!row.product_id) return acc;
+    const current = acc[row.product_id] || { name: row.product_name || "Produto", count: 0 };
+    current.count += 1;
+    acc[row.product_id] = current;
+    return acc;
+  }, {})).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
 
   const paidOrders = orders.filter((order) =>
     isPaid(order.status)
@@ -605,6 +639,7 @@ export default function AdminPage() {
       await Promise.all([
         loadProducts(),
         loadOrders(),
+        loadAnalytics(),
       ]);
     } finally {
       setRefreshing(false);
@@ -718,6 +753,24 @@ export default function AdminPage() {
           detail="Precisam de reposição"
         />
       </section>
+
+      <h2>Acessos da loja — últimos 30 dias</h2>
+      <p style={{ color: "#666", marginTop: 4 }}>Dados registrados pela própria NovaShopp. Visitantes são identificados por navegador, sem nome ou e-mail.</p>
+      <section style={dashboardGrid}>
+        <DashboardCard title="Visitantes" value={String(uniqueVisitors)} detail="Navegadores únicos registrados" />
+        <DashboardCard title="Visualizações" value={String(pageViewCount)} detail="Páginas e produtos visualizados" />
+      </section>
+      {analyticsMessage && <p role="status" style={{ color: "#9a3412" }}>{analyticsMessage}</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 16 }}>
+        <section style={dashboardCardStyle}>
+          <h3 style={{ marginTop: 0 }}>Páginas mais acessadas</h3>
+          {topPages.length ? topPages.map(([path, count]) => <p key={path} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><span style={{ overflowWrap: "anywhere" }}>{path}</span><strong>{count}</strong></p>) : <p>Aguardando os primeiros acessos.</p>}
+        </section>
+        <section style={dashboardCardStyle}>
+          <h3 style={{ marginTop: 0 }}>Produtos mais visualizados</h3>
+          {topProducts.length ? topProducts.map(([id, item]) => <p key={id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><span>{item.name}</span><strong>{item.count}</strong></p>) : <p>Aguardando visualizações de produtos.</p>}
+        </section>
+      </div>
 
       <h2>Resumo financeiro</h2>
 
