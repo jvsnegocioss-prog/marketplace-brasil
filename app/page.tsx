@@ -889,7 +889,10 @@ export default function Home() {
 
         <button
           onClick={() =>
-            window.scrollTo({ top: 0, behavior: "smooth" })
+            document.getElementById("produtos")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            })
           }
         >
           Explorar produtos <ArrowRight size={18} />
