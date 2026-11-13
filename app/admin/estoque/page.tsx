@@ -11,6 +11,7 @@ type Product = {
   category: string | null;
   price: number;
   stock: number;
+  minimum_stock: number;
   active: boolean;
   image_url: string | null;
 };
@@ -20,6 +21,8 @@ export default function StockPage() {
   const [authorized, setAuthorized] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [minimumDrafts, setMinimumDrafts] = useState<Record<string, string>>({});
+  const [editingMinimumId, setEditingMinimumId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export default function StockPage() {
   const loadProducts = useCallback(async () => {
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,category,price,stock,active,image_url")
+      .select("id,name,category,price,stock,minimum_stock,active,image_url")
       .order("name", { ascending: true });
     if (error) {
       setMessage("Não foi possível carregar o estoque: " + error.message);
@@ -37,8 +40,13 @@ export default function StockPage() {
     const loaded = (data || []) as Product[];
     setProducts(loaded);
     const next: Record<string, string> = {};
-    loaded.forEach((product) => { next[product.id] = String(product.stock ?? 0); });
+    const nextMinimum: Record<string, string> = {};
+    loaded.forEach((product) => {
+      next[product.id] = String(product.stock ?? 0);
+      nextMinimum[product.id] = String(product.minimum_stock ?? 5);
+    });
     setDrafts(next);
+    setMinimumDrafts(nextMinimum);
   }, []);
 
   useEffect(() => {
@@ -76,7 +84,7 @@ export default function StockPage() {
 
   const totalUnits = products.reduce((sum, product) => sum + Number(product.stock || 0), 0);
   const outOfStock = products.filter((product) => Number(product.stock) <= 0).length;
-  const lowStock = products.filter((product) => Number(product.stock) > 0 && Number(product.stock) <= 5).length;
+  const lowStock = products.filter((product) => Number(product.stock) > 0 && Number(product.stock) <= Number(product.minimum_stock ?? 5)).length;
 
   async function saveStock(product: Product) {
     const raw = drafts[product.id] ?? "";
@@ -100,6 +108,31 @@ export default function StockPage() {
       item.id === product.id ? { ...item, stock: quantity } : item
     ));
     setMessage("Estoque de " + product.name + " atualizado com sucesso.");
+  }
+
+  async function saveMinimumStock(product: Product) {
+    const raw = minimumDrafts[product.id] ?? String(product.minimum_stock ?? 5);
+    const minimum = Number(raw);
+    if (!Number.isInteger(minimum) || minimum < 0) {
+      setMessage("Informe um estoque mínimo inteiro igual ou maior que zero.");
+      return;
+    }
+    setSaving(product.id);
+    setMessage("");
+    const { error } = await supabase.from("products").update({
+      minimum_stock: minimum,
+      updated_at: new Date().toISOString(),
+    }).eq("id", product.id);
+    setSaving(null);
+    if (error) {
+      setMessage("Erro ao salvar o estoque mínimo de " + product.name + ": " + error.message);
+      return;
+    }
+    setProducts((current) => current.map((item) =>
+      item.id === product.id ? { ...item, minimum_stock: minimum } : item
+    ));
+    setEditingMinimumId(null);
+    setMessage("Estoque mínimo de " + product.name + " salvo com sucesso.");
   }
 
   if (loading) return <main style={{ padding: 28, textAlign: "center" }}>Verificando acesso administrativo...</main>;
@@ -149,15 +182,19 @@ export default function StockPage() {
               {visibleProducts.map((product) => {
                 const quantity = Number(product.stock || 0);
                 const changed = (drafts[product.id] ?? String(quantity)) !== String(quantity);
-                const status = quantity <= 0 ? "Sem estoque" : quantity <= 5 ? "Estoque baixo" : "Disponível";
-                const statusColor = quantity <= 0 ? "#b42318" : quantity <= 5 ? "#a16207" : "#167044";
-                return <article key={product.id} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", padding: 13, border: "1px solid #e2e8f0", borderRadius: 11, background: quantity <= 0 ? "#fffafa" : "#fff" }}>
+                const minimum = Number(product.minimum_stock ?? 5);
+                const belowMinimum = quantity < minimum;
+                const atMinimum = quantity === minimum;
+                const status = quantity <= 0 ? "Sem estoque" : belowMinimum ? "Abaixo do mínimo" : atMinimum ? "No mínimo" : "Acima do mínimo";
+                const statusColor = belowMinimum ? "#b42318" : atMinimum ? "#a16207" : "#167044";
+                const statusBackground = belowMinimum ? "#fff1f0" : atMinimum ? "#fff8e1" : "#effaf3";
+                return <article key={product.id} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", padding: 13, border: "1px solid " + (belowMinimum ? "#f2aaa5" : atMinimum ? "#f2d27a" : "#b7dfc5"), borderRadius: 11, background: statusBackground }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                     {product.image_url ? <img src={product.image_url} alt={product.name} style={{ width: 58, height: 58, objectFit: "contain", borderRadius: 8, background: "#f8fafc" }} /> : <div style={{ width: 58, height: 58, borderRadius: 8, background: "#f1f5f9", display: "grid", placeItems: "center", color: "#64748b" }}><Package size={23} /></div>}
                     <div style={{ minWidth: 0 }}>
                       <strong style={{ display: "block", overflowWrap: "anywhere" }}>{product.name}</strong>
                       <small style={{ display: "block", color: "#64748b", marginTop: 3 }}>{product.category || "Sem categoria"} · {money(Number(product.price))}</small>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: statusColor, fontSize: 12, fontWeight: 800, marginTop: 5 }}>{quantity <= 5 ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} />}{status}</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: statusColor, fontSize: 12, fontWeight: 800, marginTop: 5 }}>{belowMinimum || atMinimum ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} />}{status} · mínimo {minimum}</span>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "end", gap: 7, flexWrap: "wrap", justifyContent: "end" }}>
@@ -165,7 +202,14 @@ export default function StockPage() {
                       <input type="number" min="0" step="1" inputMode="numeric" value={drafts[product.id] ?? String(quantity)} onChange={(e) => setDrafts((current) => ({ ...current, [product.id]: e.target.value }))} style={{ display: "block", width: 92, boxSizing: "border-box", marginTop: 4, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 16 }} />
                     </label>
                     <button type="button" disabled={!changed || saving === product.id} onClick={() => void saveStock(product)} style={{ padding: "10px 12px", border: 0, borderRadius: 7, background: changed ? "#ffc928" : "#e2e8f0", color: "#173b68", cursor: changed ? "pointer" : "default", fontWeight: 800, opacity: saving === product.id ? .6 : 1 }}><Save size={14} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />{saving === product.id ? "Salvando" : "Salvar"}</button>
+                    <button type="button" onClick={() => setEditingMinimumId(editingMinimumId === product.id ? null : product.id)} style={{ padding: "10px 12px", border: "1px solid #173b68", borderRadius: 7, background: "#fff", color: "#173b68", cursor: "pointer", fontWeight: 800 }}>Estoque mínimo</button>
                   </div>
+                  {editingMinimumId === product.id && <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", padding: "10px 0 0", borderTop: "1px solid #dbe3ed" }}>
+                    <label style={{ fontSize: 12, color: "#64748b" }}>Definir quantidade mínima
+                      <input type="number" min="0" step="1" inputMode="numeric" value={minimumDrafts[product.id] ?? String(minimum)} onChange={(e) => setMinimumDrafts((current) => ({ ...current, [product.id]: e.target.value }))} style={{ display: "block", width: 120, boxSizing: "border-box", marginTop: 4, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 16 }} />
+                    </label>
+                    <button type="button" disabled={saving === product.id} onClick={() => void saveMinimumStock(product)} style={{ padding: "10px 12px", border: 0, borderRadius: 7, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}><Save size={14} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />Salvar mínimo</button>
+                  </div>}
                 </article>;
               })}
             </div>
