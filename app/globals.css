@@ -3206,3 +3206,105 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 .admin-dashboard .admin-product-form > ul {
   grid-column: 1 / -1 !important;
 }
+
+
+/* Navegação principal do painel administrativo */
+.admin-dashboard > header.admin-header {
+  align-items: flex-start !important;
+}
+.admin-dashboard > header.admin-header > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 100%;
+}
+.admin-dashboard > header.admin-header .admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 13px;
+}
+.admin-dashboard > header.admin-header .admin-nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 9px 16px 10px 10px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.2) !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  line-height: 1.25;
+  letter-spacing: .005em;
+  white-space: nowrap;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.admin-dashboard > header.admin-header .admin-nav-button::before {
+  content: "→";
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #ffc928;
+  color: #09254b;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+.admin-dashboard > header.admin-header .admin-nav-button:hover {
+  transform: translateY(-2px);
+  border-bottom-color: #ffe17a !important;
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.28) !important;
+}
+.admin-dashboard > header.admin-header .admin-nav-button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(3,16,39,.2) !important;
+}
+.admin-dashboard > header.admin-header .admin-nav-button:focus-visible {
+  outline: 3px solid #ffdb61 !important;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .admin-dashboard > header.admin-header {
+    align-items: stretch !important;
+  }
+  .admin-dashboard > header.admin-header .admin-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 14px;
+  }
+  .admin-dashboard > header.admin-header .admin-nav-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px !important;
+    padding: 8px 9px !important;
+    justify-content: flex-start;
+    white-space: normal;
+    text-align: left;
+    font-size: 12px !important;
+  }
+  .admin-dashboard > header.admin-header .admin-nav-button::before {
+    flex-basis: 25px;
+    width: 25px;
+    height: 25px;
+    font-size: 15px;
+  }
+}
+@media (max-width: 390px) {
+  .admin-dashboard > header.admin-header .admin-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
