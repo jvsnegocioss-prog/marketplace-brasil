@@ -689,6 +689,36 @@ export default function AdminPage() {
 
       <hr />
 
+      <h2>Visão geral dos produtos</h2>
+
+      <section style={dashboardGrid}>
+        <DashboardCard
+          title="Total de produtos"
+          value={String(products.length)}
+          detail="Produtos cadastrados"
+        />
+        <DashboardCard
+          title="Produtos ativos"
+          value={String(products.filter((product) => product.active).length)}
+          detail="Visíveis conforme as regras da loja"
+        />
+        <DashboardCard
+          title="Produtos inativos"
+          value={String(products.filter((product) => !product.active).length)}
+          detail="Desativados no cadastro"
+        />
+        <DashboardCard
+          title="Estoque baixo"
+          value={String(products.filter((product) => Number(product.stock) > 0 && Number(product.stock) <= 5).length)}
+          detail="Com 1 a 5 unidades disponíveis"
+        />
+        <DashboardCard
+          title="Sem estoque"
+          value={String(products.filter((product) => Number(product.stock) <= 0).length)}
+          detail="Precisam de reposição"
+        />
+      </section>
+
       <h2>Resumo financeiro</h2>
 
       <section style={dashboardGrid}>
