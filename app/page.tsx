@@ -86,6 +86,24 @@ export default function Home() {
   const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
+    try {
+      let visitorId = localStorage.getItem("novashopp_visitor_id");
+      if (!visitorId) {
+        visitorId = crypto.randomUUID();
+        localStorage.setItem("novashopp_visitor_id", visitorId);
+      }
+      void supabase.rpc("record_store_page_view", {
+        p_visitor_id: visitorId,
+        p_path: window.location.pathname,
+        p_product_id: null,
+        p_product_name: null,
+      });
+    } catch (error) {
+      console.warn("Não foi possível registrar a visualização.", error);
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     async function loadCampaigns() {
       const { data, error } = await supabase.from("homepage_campaigns")
