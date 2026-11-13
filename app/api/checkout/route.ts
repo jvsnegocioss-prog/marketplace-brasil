@@ -27,6 +27,13 @@ async function cancelOrder(orderId: string) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.STORE_SALES_ENABLED !== "true") {
+    return NextResponse.json(
+      { error: "As vendas estão temporariamente suspensas. Em breve voltaremos!" },
+      { status: 503 }
+    );
+  }
+
   let createdOrderId: string | null = null;
 
   try {
