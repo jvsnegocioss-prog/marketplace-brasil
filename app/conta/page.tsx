@@ -463,7 +463,7 @@ export default function ContaClientePage() {
                   <div className="customer-order-top">
                     <div>
                       <small>PEDIDO</small>
-                      <strong className="customer-order-id">#{order.order_number}</strong>
+                      <strong className="customer-order-id">{order.order_number}</strong>
                     </div>
                     <strong className="customer-order-total">{money(order.total)}</strong>
                   </div>
