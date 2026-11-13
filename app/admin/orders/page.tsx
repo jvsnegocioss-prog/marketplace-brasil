@@ -53,7 +53,9 @@ function deliveryLabel(status: string) {
 function whatsappLink(order: Order) {
   const digits = (order.customer_phone || "").replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
-  const message = `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${order.tracking_code ? `Código de rastreio: ${order.tracking_code}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
+  const message = order.delivery_status === "entregue"
+    ? `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi marcado como entregue. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
+    : `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado. ${order.tracking_code ? `Código de rastreio: ${order.tracking_code}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
@@ -316,9 +318,9 @@ export default function OrdersPage() {
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 11 }}>
                         <button type="button" disabled={savingDelivery === order.id} onClick={() => void saveTrackingCode(order)} style={{ padding: "10px 15px", border: 0, borderRadius: 8, background: "#173b68", color: "#fff", cursor: "pointer", fontWeight: 700, opacity: savingDelivery === order.id ? .6 : 1 }}>{savingDelivery === order.id ? "Salvando..." : "Salvar rastreio"}</button>
-                        {order.delivery_status === "enviado" && order.customer_phone && (
+                        {(order.delivery_status === "enviado" || order.delivery_status === "entregue") && order.customer_phone && (
                           <a href={whatsappLink(order)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", padding: "10px 15px", borderRadius: 8, background: "#16713b", color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
-                            Avisar cliente pelo WhatsApp <ExternalLink size={13} style={{ marginLeft: 7 }} />
+                            {order.delivery_status === "entregue" ? "Avisar entrega concluída pelo WhatsApp" : "Avisar envio pelo WhatsApp"} <ExternalLink size={13} style={{ marginLeft: 7 }} />
                           </a>
                         )}
                         {savingDelivery === order.id && <span style={{ alignSelf: "center", color: "#64748b", fontSize: 12 }}>Salvando alteração...</span>}
