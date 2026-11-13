@@ -57,8 +57,8 @@ function whatsappLink(order: Order) {
   const digits = (order.customer_phone || "").replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
   const message = order.delivery_status === "entregue"
-    ? `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi marcado como entregue. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
-    : `Olá, ${order.customer_name}! Seu pedido na NovaShopp Store foi enviado para entrega por motoboy. ${order.estimated_delivery_at ? `Previsão de entrega: ${new Date(order.estimated_delivery_at).toLocaleString("pt-BR")}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
+    ? `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi marcado como entregue. Obrigado por comprar conosco! Esperamos que aproveite sua compra.`
+    : `Olá, ${order.customer_name}! Seu pedido #${order.order_number} na NovaShopp Store foi enviado para entrega por motoboy. ${order.estimated_delivery_at ? `Previsão de entrega: ${new Date(order.estimated_delivery_at).toLocaleString("pt-BR")}. ` : ""}Acompanhe: https://novashoppstore.vercel.app/acompanhar`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
