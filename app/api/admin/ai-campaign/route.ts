@@ -104,7 +104,7 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
             { text: prompt },
             { inline_data: { mime_type: imageMimeType, data: imageBase64 } },
           ] }],
-          generationConfig: { response_mime_type: "application/json" },
+          generationConfig: { responseMimeType: "application/json" },
         }),
         signal: AbortSignal.timeout(60000),
       });
