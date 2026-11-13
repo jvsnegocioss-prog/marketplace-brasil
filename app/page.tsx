@@ -20,6 +20,14 @@ type Product = {
   active: boolean;
 };
 
+
+type HomeCampaign = {
+  id: string; title: string; subtitle: string; description: string;
+  media_url: string | null; media_type: "image" | "video";
+  button_text: string; button_url: string; placement: "hero" | "middle" | "bottom";
+  background_color: string; text_color: string; sort_order: number;
+};
+
 type CartItem = {
   id: string;
   qty: number;
@@ -43,6 +51,7 @@ const money = (value: number) =>
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [campaigns, setCampaigns] = useState<HomeCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -72,6 +81,21 @@ export default function Home() {
   } | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCampaigns() {
+      const { data, error } = await supabase.from("homepage_campaigns")
+        .select("id,title,subtitle,description,media_url,media_type,button_text,button_url,placement,background_color,text_color,sort_order")
+        .eq("active", true)
+        .or(`start_at.is.null,start_at.lte.${new Date().toISOString()}`)
+        .or(`end_at.is.null,end_at.gt.${new Date().toISOString()}`)
+        .order("sort_order", { ascending: true });
+      if (!cancelled && !error) setCampaigns((data || []) as HomeCampaign[]);
+    }
+    void loadCampaigns();
+    return () => { cancelled = true; };
+  }, []);
 
   async function loadProducts() {
     setLoading(true);
@@ -569,6 +593,24 @@ export default function Home() {
         ))}
       </nav>
 
+      {campaigns.some((campaign) => campaign.placement === "hero") ? (
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", alignItems: "center", gap: 24, padding: "clamp(28px,5vw,64px)", borderRadius: 18, margin: "18px auto", maxWidth: 1240, background: campaigns.find((campaign) => campaign.placement === "hero")?.background_color || "#071b43", color: campaigns.find((campaign) => campaign.placement === "hero")?.text_color || "#fff" }}>
+          {campaigns.filter((campaign) => campaign.placement === "hero").map((campaign) => (
+            <div key={campaign.id} style={{ display: "contents" }}>
+              <div>
+                <span style={{ fontWeight: 800, letterSpacing: 1, opacity: .85 }}>NOVASHOPP STORE • OFERTA ESPECIAL</span>
+                <h1 style={{ fontSize: "clamp(30px,5vw,54px)", lineHeight: 1.08, margin: "14px 0" }}>{campaign.title}</h1>
+                {campaign.subtitle && <h2 style={{ fontSize: "clamp(18px,2.5vw,25px)", margin: "0 0 10px" }}>{campaign.subtitle}</h2>}
+                {campaign.description && <p style={{ lineHeight: 1.7, maxWidth: 620 }}>{campaign.description}</p>}
+                <a href={campaign.button_url || "/"} style={{ display: "inline-flex", padding: "13px 20px", marginTop: 12, borderRadius: 9, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"} <ArrowRight size={18} style={{ marginLeft: 8 }} /></a>
+              </div>
+              {campaign.media_url && (campaign.media_type === "video"
+                ? <video src={campaign.media_url} autoPlay muted loop playsInline controls style={{ width: "100%", maxHeight: 380, objectFit: "contain", borderRadius: 14 }} />
+                : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 380, objectFit: "contain", borderRadius: 14 }} />)}
+            </div>
+          ))}
+        </section>
+      ) : (
       <section className="hero">
         <div className="hero-content">
           <span className="hero-label">NOVASHOPP STORE • COMPRE FÁCIL, RECEBA RÁPIDO</span>
@@ -597,7 +639,7 @@ export default function Home() {
           <div className="floating-card">Confira nossos produtos</div>
         </div>
       </section>
-
+      )}
       <section className="benefits">
         <div>
           <Truck />
@@ -704,6 +746,12 @@ export default function Home() {
         </div>
       </section>
 
+      {campaigns.filter((campaign) => campaign.placement === "middle").map((campaign) => (
+        <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 20, alignItems: "center" }}>
+          <div><h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p><a href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a></div>
+          {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 300, borderRadius: 12 }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 12 }} />)}
+        </section>
+      ))}
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
@@ -845,6 +893,13 @@ export default function Home() {
         </button>
       </section>
 
+      {campaigns.filter((campaign) => campaign.placement === "bottom").map((campaign) => (
+        <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, textAlign: "center" }}>
+          <h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p>
+          {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} />)}
+          <a href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a>
+        </section>
+      ))}
       <footer className="footer">
         <div className="footer-logo">
           <span className="logo-icon">N</span>
