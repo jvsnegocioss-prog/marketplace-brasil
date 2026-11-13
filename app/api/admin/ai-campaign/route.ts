@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   const audience = String(body.audience || "").trim().slice(0, 300);
   const tone = String(body.tone || "Persuasivo e profissional").trim().slice(0, 100);
 
-  const imageBase64 = String(body.imageBase64 || "").replace(/^data:image\\/[a-zA-Z0-9.+-]+;base64,/, "");
+  const imageBase64 = String(body.imageBase64 || "");
   const imageMimeType = String(body.imageMimeType || "");
   const hasImage = Boolean(imageBase64);
   const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
