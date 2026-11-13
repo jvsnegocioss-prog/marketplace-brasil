@@ -18,6 +18,8 @@ type TrackingResult = {
   payment_status: string;
   delivery_status: string | null;
   tracking_code: string | null;
+  delivery_method: string | null;
+  estimated_delivery_at: string | null;
   created_at: string;
   shipped_at: string | null;
   delivered_at: string | null;
@@ -227,10 +229,18 @@ export default function AcompanharPedidoPage() {
                 <PackageCheck size={18} />
                 <div><small>Entregue em</small><strong>{formatDate(order.delivered_at)}</strong></div>
               </div>
+              <div className="tracking-extra-card">
+                <Truck size={18} />
+                <div><small>Modalidade de entrega</small><strong>Motoboy / entrega própria</strong></div>
+              </div>
+              <div className="tracking-extra-card">
+                <CalendarDays size={18} />
+                <div><small>Previsão de entrega</small><strong>{formatDate(order.estimated_delivery_at)}</strong></div>
+              </div>
             </div>
 
             <div className="tracking-code-box">
-              <div><small>CÓDIGO DE RASTREIO</small><strong>{order.tracking_code || "Ainda não disponível"}</strong></div>
+              <div><small>ENTREGA DA SUA COMPRA</small><strong>Entrega própria por motoboy</strong><p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.85 }}>Acompanhe as etapas do pedido nesta página. A previsão será atualizada pela loja quando necessário.</p></div>
               <Truck size={22} />
             </div>
           </section>
