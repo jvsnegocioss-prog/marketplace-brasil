@@ -16,6 +16,7 @@ import {
 
 type TrackingResult = {
   order_id: string;
+  order_number: string;
   payment_status: string;
   delivery_status: string | null;
   tracking_code: string | null;
@@ -96,6 +97,7 @@ export default function AcompanharPedidoPage() {
         if (!selected) throw new Error("Este pedido não foi encontrado no histórico da sua conta.");
         if (active) setOrder({
           order_id: selected.id,
+          order_number: selected.order_number,
           payment_status: selected.status,
           delivery_status: selected.delivery_status,
           tracking_code: selected.tracking_code,
@@ -128,7 +130,7 @@ export default function AcompanharPedidoPage() {
     setLoading(true);
     try {
       const { data, error: rpcError } = await supabase.rpc("track_customer_order", {
-        p_order_id: orderId.trim(),
+        p_order_number: orderId.trim(),
         p_phone: phone.trim(),
       });
 
@@ -196,7 +198,7 @@ export default function AcompanharPedidoPage() {
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Cole o número do seu pedido"
+                placeholder="Ex.: 110C1D43"
                 className="tracking-input"
                 required
               />
@@ -249,7 +251,7 @@ export default function AcompanharPedidoPage() {
               <div>
                 <span className="tracking-eyebrow">RESULTADO DA CONSULTA</span>
                 <h2>Detalhes do pedido</h2>
-                <p className="tracking-order-number">Pedido <strong>{order.order_id}</strong></p>
+                <p className="tracking-order-number">Pedido <strong>#{order.order_number}</strong></p>
               </div>
               <span className="tracking-status-pill"><CheckCircle2 size={15} /> Pedido localizado</span>
             </div>
