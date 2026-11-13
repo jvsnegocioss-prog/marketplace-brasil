@@ -22,6 +22,7 @@ type AccountUser = {
 
 type CustomerOrder = {
   id: string;
+  order_number: string;
   total: number;
   coupon_code: string | null;
   discount_amount: number;
@@ -462,7 +463,7 @@ export default function ContaClientePage() {
                   <div className="customer-order-top">
                     <div>
                       <small>PEDIDO</small>
-                      <strong className="customer-order-id">{order.id}</strong>
+                      <strong className="customer-order-id">#{order.order_number}</strong>
                     </div>
                     <strong className="customer-order-total">{money(order.total)}</strong>
                   </div>
