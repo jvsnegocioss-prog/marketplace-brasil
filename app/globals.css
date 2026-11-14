@@ -4033,3 +4033,11 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 9px 18px rgba(3,16,39,.25) !important;
   filter: none !important;
 }
+
+/* Correção definitiva: mantém a faixa dourada mesmo contra regras mais específicas */
+.admin-stock > div > header button.admin-back-button,
+.admin-stock > div > header button.admin-back-button:hover,
+.admin-stock > div > header button.admin-back-button:focus-visible,
+.admin-stock > div > header button.admin-back-button:active {
+  border-bottom: 4px solid #ffc928 !important;
+}
