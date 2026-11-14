@@ -70,6 +70,38 @@ export default function Home() {
   const [favoritesCloudReadyFor, setFavoritesCloudReadyFor] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [customerAvatarUrl, setCustomerAvatarUrl] = useState("");
+  
+  // Atualização por gesto de puxar para baixo no celular.
+  useEffect(() => {
+    let startY = 0;
+    let startX = 0;
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      startY = event.touches[0].clientY;
+      startX = event.touches[0].clientX;
+    };
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (event.changedTouches.length !== 1) return;
+      const endY = event.changedTouches[0].clientY;
+      const endX = event.changedTouches[0].clientX;
+      const deltaY = endY - startY;
+      const deltaX = Math.abs(endX - startX);
+      if (
+        window.scrollY <= 2 && startY <= 100 && deltaY >= 95 &&
+        deltaY > deltaX * 1.4 &&
+        !document.querySelector(".cart-overlay, .detail-image-lightbox")
+      ) window.location.reload();
+      startY = 0;
+      startX = 0;
+    };
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
