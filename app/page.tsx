@@ -784,6 +784,49 @@ export default function Home() {
           </div>
         </section>
       )}
+      <section className="categories-section home-categories-section" aria-label="Explore por categoria">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ENCONTRE O QUE PROCURA</span>
+            <h2>Explore nossas categorias</h2>
+            <p className="categories-intro">Descubra produtos selecionados para facilitar o seu dia a dia.</p>
+          </div>
+          <button
+            type="button"
+            className="categories-see-all"
+            onClick={() => {
+              setCategory("Todos");
+              document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            Ver todos os produtos <ArrowRight size={17} />
+          </button>
+        </div>
+        <div className="home-category-grid">
+          {categories.map((item) => {
+            const CategoryIcon = item.icon;
+            const selected = category === item.name;
+            return (
+              <button
+                key={item.name}
+                type="button"
+                className={`home-category-card ${selected ? "is-selected" : ""}`}
+                aria-pressed={selected}
+                onClick={() => {
+                  setCategory(item.name);
+                  setShowFavorites(false);
+                  document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <span className="home-category-icon"><CategoryIcon size={25} strokeWidth={1.8} /></span>
+                <span className="home-category-name">{item.name}</span>
+                <span className="home-category-arrow"><ArrowRight size={16} /></span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
