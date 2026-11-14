@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -227,7 +227,7 @@ export default function AdminPage() {
     setProducts((data || []) as Product[]);
   }
 
-  async function loadAnalytics() {
+  const loadAnalytics = useCallback(async () => {
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const { data, error } = await supabase
@@ -242,7 +242,32 @@ export default function AdminPage() {
     }
     setAnalyticsRows(data || []);
     setAnalyticsMessage("");
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!authorized) return;
+
+    const channel = supabase
+      .channel("admin-store-page-views")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "store_page_views" },
+        () => {
+          void loadAnalytics();
+        }
+      )
+      .subscribe();
+
+    // Atualização de segurança caso o Realtime não esteja habilitado para a tabela.
+    const intervalId = window.setInterval(() => {
+      void loadAnalytics();
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      void supabase.removeChannel(channel);
+    };
+  }, [authorized, loadAnalytics]);
 
   async function loadOrders() {
     const { data, error } = await supabase
