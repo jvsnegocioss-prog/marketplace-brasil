@@ -204,12 +204,21 @@ export default function ProductPage() {
               localStorage.setItem("novashopp_visitor_id", visitorId);
             }
 
-            const { error } = await supabase.rpc("record_store_page_view", {
-              p_visitor_id: visitorId,
-              p_path: window.location.pathname,
-              p_product_id: String(data.id),
-              p_product_name: String(data.name),
+            const response = await fetch("/api/visitas", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                visitorId,
+                productId: String(data.id),
+              }),
+              keepalive: true,
             });
+
+            if (!response.ok) {
+              const result = await response.json().catch(() => ({}));
+              console.error("Falha ao registrar visualização do produto:", result.error || response.status);
+              return;
+            }
 
             if (error) {
               console.error("Falha ao registrar visualização do produto no Supabase:", {
