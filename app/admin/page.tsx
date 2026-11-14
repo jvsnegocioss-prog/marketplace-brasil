@@ -713,7 +713,7 @@ export default function AdminPage() {
           </nav>
         </div>
 
-        <button onClick={logout} style={buttonStyle}>
+        <button className="admin-logout-button" onClick={logout} style={buttonStyle}>
           Sair
         </button>
       </header>
@@ -815,6 +815,7 @@ export default function AdminPage() {
       </section>
 
       <button
+        className="admin-refresh-button"
         onClick={refreshDashboard}
         style={buttonStyle}
       >
