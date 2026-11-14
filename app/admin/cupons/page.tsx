@@ -110,15 +110,15 @@ export default function CouponsPage() {
   const totalUses = coupons.reduce((sum, c) => sum + Number(c.usage_count || 0), 0);
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
+    <main className="admin-coupons" style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
       <div style={{ maxWidth: 1080, margin: "auto" }}>
-        <header style={{ background: "linear-gradient(125deg,#102b50,#1d4d7c)", color: "#fff", padding: "26px 24px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.16)" }}>
+        <header className="admin-coupons-header" style={{ background: "linear-gradient(125deg,#102b50,#1d4d7c)", color: "#fff", padding: "26px 24px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.16)" }}>
           <div>
             <p style={{ margin: "0 0 8px", color: "#f6cc55", fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>NOVASHOPP STORE · ADMINISTRAÇÃO</p>
             <h1 style={{ margin: 0, fontSize: 28 }}>Central de cupons</h1>
             <p style={{ margin: "8px 0 0", color: "#d8e5f3" }}>Crie ofertas e acompanhe o uso dos descontos.</p>
           </div>
-          <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800, margin: 0 }}>← Voltar ao painel</button>
+          <button className="admin-back-button" type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800, margin: 0 }}>← Voltar ao painel</button>
         </header>
 
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
