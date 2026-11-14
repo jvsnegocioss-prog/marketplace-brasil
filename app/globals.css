@@ -5466,3 +5466,51 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 .detail-photo-frame {
   position: relative;
 }
+
+/* Painel principal no celular — indicadores em duas colunas */
+@media (max-width: 760px) {
+  .admin-dashboard > section[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .admin-dashboard .admin-stat-card {
+    min-width: 0;
+    min-height: 106px;
+    padding: 13px 12px !important;
+    border-radius: 14px !important;
+  }
+  .admin-dashboard .admin-stat-title {
+    font-size: 11px !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .admin-dashboard .admin-stat-value {
+    margin: 9px 0 !important;
+    font-size: clamp(20px, 5.5vw, 26px) !important;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .admin-dashboard .admin-stat-detail {
+    display: block;
+    font-size: 10px !important;
+    line-height: 1.35;
+  }
+  .admin-dashboard > div[style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 11px !important;
+  }
+  .admin-dashboard > div[style*="grid-template-columns"] > section {
+    padding: 16px !important;
+    border-radius: 15px !important;
+  }
+  .admin-dashboard .admin-refresh-button {
+    width: 100%;
+    min-height: 48px !important;
+    margin: 14px 0 4px !important;
+  }
+}
+@media (max-width: 360px) {
+  .admin-dashboard > section[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
