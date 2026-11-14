@@ -4998,6 +4998,7 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   border: 1px solid rgba(255,255,255,.25);
   border-radius: 999px !important;
   background: #102e58 !important;
+}
 
 /* Controle de estoque — refinamento mobile NovaShopp */
 @media (max-width: 760px) {
