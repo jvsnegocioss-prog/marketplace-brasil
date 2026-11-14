@@ -129,22 +129,26 @@ export default function AcompanharPedidoPage() {
 
     setLoading(true);
     try {
-      const { data, error: rpcError } = await supabase.rpc("track_customer_order", {
-        p_order_number: orderId.trim().replace(/^#\s*/, ""),
-        p_phone: phone.trim(),
+      const response = await fetch("/api/rastreamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderNumber: orderId.trim().replace(/^#\\s*/, ""),
+          phone: phone.trim(),
+        }),
+        cache: "no-store",
       });
 
-      if (rpcError) {
-        setError("Não foi possível consultar o pedido. Confira os dados e tente novamente.");
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Não foi possível consultar o pedido. Confira os dados e tente novamente.");
         return;
       }
-
-      const result = Array.isArray(data) ? data[0] : data;
-      if (!result) {
+      if (!result.order) {
         setError("Não encontramos pedido com esses dados. Confira o número e o telefone.");
         return;
       }
-      setOrder(result as TrackingResult);
+      setOrder(result.order as TrackingResult);
     } catch {
       setError("Ocorreu um erro na consulta. Tente novamente.");
     } finally {
