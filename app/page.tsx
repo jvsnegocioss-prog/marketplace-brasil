@@ -120,6 +120,13 @@ export default function Home() {
   useEffect(() => {
     const registerPageView = async () => {
       try {
+        // Evita registrar duas vezes a mesma abertura da página inicial
+        // em montagens simultâneas do navegador (ex.: pré-carregamento/Strict Mode).
+        const now = Date.now();
+        const lastHomeView = Number(localStorage.getItem("novashopp_home_view_last_registered_at") || 0);
+        if (lastHomeView && now - lastHomeView < 5000) return;
+        localStorage.setItem("novashopp_home_view_last_registered_at", String(now));
+
         let visitorId = localStorage.getItem("novashopp_visitor_id");
         if (!visitorId) {
           visitorId = crypto.randomUUID();
