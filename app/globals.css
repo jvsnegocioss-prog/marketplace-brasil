@@ -5460,3 +5460,9 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition: none !important;
   }
 }
+
+
+/* Mantém o selo de estoque esgotado ancorado sobre a foto do produto. */
+.detail-photo-frame {
+  position: relative;
+}
