@@ -4253,3 +4253,130 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition-duration: .01ms !important;
   }
 }
+
+/* Publicidade e Promoções — identidade visual NovaShopp */
+.admin-campaigns {
+  width: min(100% - 40px, 1420px) !important;
+  max-width: 1420px !important;
+  margin: 0 auto !important;
+  padding: 30px 24px 64px !important;
+  color: #263b57 !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+.admin-campaigns > .admin-back-button {
+  margin: 0 0 16px !important;
+}
+.admin-campaigns .admin-back-button,
+.admin-campaigns .admin-back-button:hover,
+.admin-campaigns .admin-back-button:focus-visible,
+.admin-campaigns .admin-back-button:active {
+  min-height: 46px !important;
+  padding: 10px 17px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.18) !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+  filter: none !important;
+}
+.admin-campaigns .admin-back-button:hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.25) !important;
+}
+.admin-campaigns .admin-campaigns-header {
+  margin: 0 0 22px !important;
+  padding: 28px 32px !important;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 22px;
+  background: linear-gradient(120deg, #091f43 0%, #123d70 58%, #1e5688 100%);
+  box-shadow: 0 16px 38px rgba(9,31,67,.17);
+}
+.admin-campaigns .admin-campaigns-header p:first-child {
+  color: #f6cc55 !important;
+  font-size: 12px;
+  letter-spacing: 2px !important;
+}
+.admin-campaigns .admin-campaigns-header h1 {
+  color: #fff !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(27px, 3vw, 36px) !important;
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+.admin-campaigns .admin-campaigns-header p:last-child { color: #d7e5f4 !important; }
+.admin-campaigns > section {
+  padding: 18px;
+  border: 1px solid #e1e8f1;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12,38,72,.05);
+}
+.admin-campaigns > form,
+.admin-campaigns > section[style*="fff9e7"] {
+  padding: 24px !important;
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 19px !important;
+  box-shadow: 0 9px 28px rgba(12,38,72,.055);
+}
+.admin-campaigns h2,
+.admin-campaigns h3 {
+  color: #102b50;
+  font-family: 'Outfit', sans-serif;
+}
+.admin-campaigns input:not([type="file"]):not([type="checkbox"]):not([type="color"]),
+.admin-campaigns textarea,
+.admin-campaigns select {
+  min-height: 44px;
+  border: 1px solid #d6e0ec !important;
+  border-radius: 11px !important;
+  color: #183451 !important;
+  background-color: #fff !important;
+}
+.admin-campaigns input:focus,
+.admin-campaigns textarea:focus,
+.admin-campaigns select:focus {
+  border-color: #d4a91e !important;
+  box-shadow: 0 0 0 3px rgba(255,201,40,.18) !important;
+  outline: none !important;
+}
+.admin-campaigns button {
+  min-height: 42px;
+  border-radius: 11px !important;
+  font-weight: 800 !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+}
+.admin-campaigns button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(9,39,79,.13);
+}
+.admin-campaigns button:focus-visible {
+  outline: 3px solid #f3c943 !important;
+  outline-offset: 3px;
+}
+.admin-campaigns > div[style*="grid-template-columns"] > article {
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 17px !important;
+  box-shadow: 0 7px 22px rgba(12,38,72,.05) !important;
+}
+@media (max-width: 760px) {
+  .admin-campaigns {
+    width: 100% !important;
+    padding: 18px 12px 44px !important;
+  }
+  .admin-campaigns .admin-campaigns-header {
+    padding: 22px 18px !important;
+    border-radius: 18px !important;
+  }
+  .admin-campaigns .admin-campaigns-header h1 { font-size: 26px !important; }
+  .admin-campaigns > form,
+  .admin-campaigns > section[style*="fff9e7"] { padding: 17px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-campaigns *, .admin-campaigns *::before, .admin-campaigns *::after {
+    transition-duration: .01ms !important;
+  }
+}
