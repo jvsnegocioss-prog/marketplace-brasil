@@ -869,7 +869,7 @@ export default function Home() {
               >
                 <div className="product-image">
                   {product.stock <= 0 && (
-                    <span className="product-tag">Esgotado</span>
+                    <span className="product-tag">Estoque esgotado</span>
                   )}
 
                   <button
@@ -927,7 +927,7 @@ export default function Home() {
                   <small className="installments">
                     {product.stock > 0
                       ? `${product.stock} unidade(s) disponíveis`
-                      : "Produto indisponível"}
+                      : "Estoque esgotado"}
                   </small>
 
                   <button
@@ -940,7 +940,7 @@ export default function Home() {
                       ? "Vendas em breve"
                       : product.stock > 0
                         ? "Adicionar ao carrinho"
-                        : "Esgotado"}
+                        : "Estoque esgotado"}
                   </button>
                 </div>
               </article>
