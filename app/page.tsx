@@ -133,12 +133,18 @@ export default function Home() {
           localStorage.setItem("novashopp_visitor_id", visitorId);
         }
 
-        const { error } = await supabase.rpc("record_store_page_view", {
-          p_visitor_id: visitorId,
-          p_path: window.location.pathname,
-          p_product_id: null,
-          p_product_name: null,
+        const response = await fetch("/api/visitas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visitorId }),
+          keepalive: true,
         });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          console.error("Falha ao registrar visualização da loja:", result.error || response.status);
+          return;
+        }
 
         if (error) {
           console.error("Falha ao registrar visualização da loja no Supabase:", {
