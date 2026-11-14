@@ -118,21 +118,38 @@ export default function Home() {
   const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
-    try {
-      let visitorId = localStorage.getItem("novashopp_visitor_id");
-      if (!visitorId) {
-        visitorId = crypto.randomUUID();
-        localStorage.setItem("novashopp_visitor_id", visitorId);
+    const registerPageView = async () => {
+      try {
+        let visitorId = localStorage.getItem("novashopp_visitor_id");
+        if (!visitorId) {
+          visitorId = crypto.randomUUID();
+          localStorage.setItem("novashopp_visitor_id", visitorId);
+        }
+
+        const { error } = await supabase.rpc("record_store_page_view", {
+          p_visitor_id: visitorId,
+          p_path: window.location.pathname,
+          p_product_id: null,
+          p_product_name: null,
+        });
+
+        if (error) {
+          console.error("Falha ao registrar visualização da loja no Supabase:", {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          });
+          return;
+        }
+
+        console.info("Visualização da loja registrada:", window.location.pathname);
+      } catch (error) {
+        console.error("Erro ao preparar o registro da visualização da loja:", error);
       }
-      void supabase.rpc("record_store_page_view", {
-        p_visitor_id: visitorId,
-        p_path: window.location.pathname,
-        p_product_id: null,
-        p_product_name: null,
-      });
-    } catch (error) {
-      console.warn("Não foi possível registrar a visualização.", error);
-    }
+    };
+
+    void registerPageView();
   }, []);
 
   useEffect(() => {
