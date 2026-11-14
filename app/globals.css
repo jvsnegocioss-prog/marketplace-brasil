@@ -5514,3 +5514,108 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+
+/* Pedidos e entregas — refinamento mobile */
+@media (max-width: 760px) {
+  .admin-orders {
+    padding: 14px 10px 36px !important;
+  }
+  .admin-orders .admin-orders-header {
+    align-items: stretch !important;
+    gap: 18px !important;
+    padding: 19px 16px !important;
+  }
+  .admin-orders .admin-orders-header > div:first-child {
+    min-width: 0;
+    width: 100%;
+  }
+  .admin-orders .admin-orders-header > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 9px !important;
+  }
+  .admin-orders .admin-orders-header button {
+    min-width: 0;
+    min-height: 48px !important;
+    padding: 10px 8px !important;
+    font-size: 12px;
+    white-space: normal;
+  }
+  .admin-orders > div > section[style*="grid-template-columns"] article {
+    min-height: 0;
+    padding: 15px !important;
+  }
+  .admin-orders > div > section:not([style*="grid-template-columns"]) {
+    padding: 15px !important;
+  }
+  .admin-orders > div > section:not([style*="grid-template-columns"]) > div {
+    align-items: stretch !important;
+  }
+  .admin-orders > div > section:not([style*="grid-template-columns"]) input {
+    max-width: 100%;
+    min-height: 48px !important;
+    font-size: 16px;
+  }
+  .admin-orders > div > div[style*="display: grid"] > article {
+    min-width: 0;
+    padding: 14px !important;
+    border-radius: 15px !important;
+  }
+  .admin-orders article > div[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+  .admin-orders article > div[style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .admin-orders article > div[style*="grid-template-columns: repeat(4"] p {
+    min-height: 28px;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+  .admin-orders article select,
+  .admin-orders article input {
+    min-height: 49px !important;
+    width: 100%;
+    font-size: 16px !important;
+  }
+  .admin-orders article button:not(.admin-orders-header button),
+  .admin-orders article a[href^="https://wa.me/"] {
+    min-height: 48px !important;
+    justify-content: center;
+    padding: 11px 12px !important;
+    font-size: 12px !important;
+    text-align: center;
+  }
+  .admin-orders article a[href^="https://wa.me/"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .admin-orders article > div[style*="display: flex"][style*="flex-wrap: wrap"] {
+    gap: 9px !important;
+  }
+  .admin-orders article > div[style*="display: flex"][style*="flex-wrap: wrap"] > button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .admin-orders article p,
+  .admin-orders article span,
+  .admin-orders article strong {
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 380px) {
+  .admin-orders .admin-orders-header > div:last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-orders .admin-orders-header button {
+    width: 100%;
+  }
+  .admin-orders > div > section[style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
