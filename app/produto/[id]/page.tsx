@@ -460,6 +460,29 @@ export default function ProductPage() {
               onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
               onTouchEnd={handleGalleryTouchEnd}
             >
+              {product.stock <= 0 && (
+                <span
+                  role="status"
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    left: 14,
+                    zIndex: 5,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "8px 13px",
+                    borderRadius: 999,
+                    background: "#b42318",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    letterSpacing: ".02em",
+                    boxShadow: "0 4px 14px rgba(180,35,24,.22)",
+                  }}
+                >
+                  Estoque esgotado
+                </span>
+              )}
               {selectedMedia?.media_type === "video" ? (
                 <video
                   key={selectedMedia.id}
@@ -553,7 +576,7 @@ export default function ProductPage() {
               </span>
             </div>
             <p className="detail-price">{money(product.price)}</p>
-            <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Produto indisponível"}</p>
+            <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Estoque esgotado"}</p>
             {product.description && <p className="detail-description">{product.description}</p>}
             <section className="product-share-panel" aria-label="Compartilhar produto">
               <div className="product-share-heading">
@@ -576,7 +599,7 @@ export default function ProductPage() {
               disabled={!SALES_ENABLED || product.stock <= 0}
               aria-label="Adicionar produto ao carrinho"
             >
-              <ShoppingCart size={18} /> {!SALES_ENABLED ? "Vendas em breve" : product.stock > 0 ? "Adicionar ao carrinho" : "Produto indisponível"}
+              <ShoppingCart size={18} /> {!SALES_ENABLED ? "Vendas em breve" : product.stock > 0 ? "Adicionar ao carrinho" : "Estoque esgotado"}
             </button>
             {cartMessage && (
               <p role="status" aria-live="polite" className="mt-3 text-sm font-semibold text-green-700">
