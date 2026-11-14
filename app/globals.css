@@ -4934,3 +4934,211 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition: none !important;
   }
 }
+
+
+/* Cards de produtos — vitrine NovaShopp Store */
+.products-section {
+  padding-left: clamp(16px, 3vw, 38px);
+  padding-right: clamp(16px, 3vw, 38px);
+}
+.product-grid {
+  align-items: stretch;
+  gap: clamp(14px, 2vw, 24px) !important;
+}
+.product-card {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0;
+  overflow: hidden !important;
+  border: 1px solid #e2e9f2 !important;
+  border-radius: 20px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(9,31,67,.065) !important;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease !important;
+  cursor: pointer;
+}
+.product-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(218,177,49,.85) !important;
+  box-shadow: 0 17px 36px rgba(9,31,67,.13) !important;
+}
+.product-image {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  min-height: 0 !important;
+  overflow: hidden;
+  border-bottom: 1px solid #edf1f6;
+  background: radial-gradient(circle at 50% 42%, #fff 0%, #f6f8fc 72%, #edf2f8 100%) !important;
+}
+.product-image > a {
+  display: grid !important;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 15px;
+}
+.product-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 290px;
+  object-fit: contain;
+  transition: transform .35s ease;
+}
+.product-card:hover .product-photo {
+  transform: scale(1.045);
+}
+.product-tag {
+  z-index: 2;
+  top: 13px !important;
+  left: 13px !important;
+  padding: 7px 11px !important;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px !important;
+  background: #102e58 !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  box-shadow: 0 4px 12px rgba(7,27,67,.18);
+}
+.heart-button {
+  z-index: 3;
+  top: 12px !important;
+  right: 12px !important;
+  width: 39px !important;
+  height: 39px !important;
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,.96) !important;
+  color: #52657d !important;
+  box-shadow: 0 4px 12px rgba(9,31,67,.1);
+  transition: transform .18s ease, color .18s ease, border-color .18s ease !important;
+}
+.heart-button:hover {
+  transform: scale(1.08);
+  border-color: #e7b92f !important;
+  color: #d52f55 !important;
+}
+.heart-button.is-favorite {
+  color: #d52f55 !important;
+}
+.product-info {
+  display: flex !important;
+  flex: 1 1 auto;
+  flex-direction: column !important;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 17px !important;
+}
+.product-category {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 4px 9px;
+  border: 1px solid #e7edf5;
+  border-radius: 999px;
+  background: #f4f7fb;
+  color: #536b87 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+.product-info h3 {
+  display: -webkit-box;
+  min-height: 2.7em;
+  margin: 2px 0 0 !important;
+  overflow: hidden;
+  color: #102b50 !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(15px, 1.3vw, 18px) !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.product-description {
+  display: -webkit-box;
+  min-height: 2.8em;
+  margin: 0 !important;
+  overflow: hidden;
+  color: #718096 !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.product-info > a {
+  margin: 1px 0 2px !important;
+  color: #315b88 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  text-underline-offset: 3px;
+}
+.product-info > a:hover {
+  color: #a77b05 !important;
+  text-decoration: underline !important;
+}
+.product-info .price {
+  display: block;
+  margin-top: auto;
+  padding-top: 8px;
+  color: #102e58 !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(20px, 1.8vw, 25px) !important;
+  font-weight: 900 !important;
+  letter-spacing: -.035em;
+}
+.product-info .installments {
+  color: #718096 !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+}
+.product-info .add-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 43px;
+  margin-top: 8px;
+  border: 1px solid #d9e1ec !important;
+  border-bottom: 3px solid #d5b34b !important;
+  border-radius: 11px !important;
+  background: linear-gradient(135deg, #edf2f8, #e5ebf3) !important;
+  color: #52657d !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  cursor: not-allowed !important;
+  opacity: .92;
+  box-shadow: none !important;
+}
+.product-info .add-button:disabled {
+  pointer-events: none;
+}
+.product-card:focus-visible {
+  outline: 3px solid #e6b82e !important;
+  outline-offset: 4px;
+}
+@media (max-width: 760px) {
+  .products-section {
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+  .product-grid { gap: 12px !important; }
+  .product-card { border-radius: 16px !important; }
+  .product-image > a { padding: 10px; }
+  .product-info { gap: 7px; padding: 12px !important; }
+  .product-info h3 { font-size: 14px !important; }
+  .product-description { font-size: 11px !important; }
+  .product-info .price { font-size: 20px !important; }
+  .product-info .add-button { min-height: 40px; font-size: 11px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-card, .product-photo, .heart-button {
+    transition: none !important;
+  }
+}
