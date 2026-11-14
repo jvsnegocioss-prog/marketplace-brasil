@@ -220,16 +220,6 @@ export default function ProductPage() {
               return;
             }
 
-            if (error) {
-              console.error("Falha ao registrar visualização do produto no Supabase:", {
-                message: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint,
-                productId: String(data.id),
-              });
-              return;
-            }
 
             console.info("Visualização do produto registrada:", String(data.id));
           } catch (error) {
