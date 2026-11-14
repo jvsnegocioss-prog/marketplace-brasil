@@ -196,21 +196,37 @@ export default function ProductPage() {
 
       setProduct(data as Product | null);
       if (data) {
-        try {
-          let visitorId = localStorage.getItem("novashopp_visitor_id");
-          if (!visitorId) {
-            visitorId = crypto.randomUUID();
-            localStorage.setItem("novashopp_visitor_id", visitorId);
+        void (async () => {
+          try {
+            let visitorId = localStorage.getItem("novashopp_visitor_id");
+            if (!visitorId) {
+              visitorId = crypto.randomUUID();
+              localStorage.setItem("novashopp_visitor_id", visitorId);
+            }
+
+            const { error } = await supabase.rpc("record_store_page_view", {
+              p_visitor_id: visitorId,
+              p_path: window.location.pathname,
+              p_product_id: String(data.id),
+              p_product_name: String(data.name),
+            });
+
+            if (error) {
+              console.error("Falha ao registrar visualização do produto no Supabase:", {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint,
+                productId: String(data.id),
+              });
+              return;
+            }
+
+            console.info("Visualização do produto registrada:", String(data.id));
+          } catch (error) {
+            console.error("Erro ao preparar o registro da visualização do produto:", error);
           }
-          void supabase.rpc("record_store_page_view", {
-            p_visitor_id: visitorId,
-            p_path: window.location.pathname,
-            p_product_id: String(data.id),
-            p_product_name: String(data.name),
-          });
-        } catch (error) {
-          console.warn("Não foi possível registrar a visualização do produto.", error);
-        }
+        })();
       }
       const { data: mediaData } = await supabase
         .from("product_media")
