@@ -452,6 +452,7 @@ export default function Home() {
   };
 
   const addToCart = (id: string) => {
+    if (!SALES_ENABLED) return;
     setAppliedCoupon(null);
     setCouponMessage("");
     const product = products.find((p) => p.id === id);
@@ -535,6 +536,10 @@ export default function Home() {
   };
 
   const submitOrder = async () => {
+    if (!SALES_ENABLED) {
+      setCheckoutMessage("As vendas estão temporariamente suspensas. Em breve voltaremos!");
+      return;
+    }
     if (cart.length === 0 || submitting) return;
 
     setSubmitting(true);
