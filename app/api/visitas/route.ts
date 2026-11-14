@@ -9,6 +9,12 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+const supabasePublic = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
 // Limite por instância: proteção básica contra rajadas; não substitui rate limiting distribuído.
 const requestBuckets = new Map<string, { minute: number; count: number }>();
 const recentViews = new Map<string, number>();
@@ -61,7 +67,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
       }
 
-      const { data: product, error: productError } = await supabaseAdmin
+      const { data: product, error: productError } = await supabasePublic
         .from("products")
         .select("id,name")
         .eq("id", productId)
