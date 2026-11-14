@@ -115,11 +115,11 @@ export default function AdminReviewsPage() {
   const published=reviews.filter(r=>r.status==="approved").length;
   const hidden=reviews.filter(r=>r.status==="hidden").length;
   return (
-    <main style={{minHeight:"100vh",background:"#f3f6fb",padding:"24px 16px 48px",fontFamily:"Arial,sans-serif",color:"#14243a"}}>
+    <main className="admin-reviews" style={{minHeight:"100vh",background:"#f3f6fb",padding:"24px 16px 48px",fontFamily:"Arial,sans-serif",color:"#14243a"}}>
       <div style={{maxWidth:1080,margin:"auto"}}>
-        <header style={{background:"linear-gradient(125deg,#102b50,#1d4d7c)",color:"#fff",padding:"26px 24px",borderRadius:18,display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",boxShadow:"0 12px 28px rgba(16,43,80,.16)"}}>
+        <header className="admin-reviews-header" style={{background:"linear-gradient(125deg,#102b50,#1d4d7c)",color:"#fff",padding:"26px 24px",borderRadius:18,display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",boxShadow:"0 12px 28px rgba(16,43,80,.16)"}}>
           <div><p style={{margin:"0 0 8px",color:"#f6cc55",fontSize:12,fontWeight:800,letterSpacing:2}}>NOVASHOPP STORE · ADMINISTRAÇÃO</p><h1 style={{margin:0,fontSize:28}}>Gestão de avaliações</h1><p style={{margin:"8px 0 0",color:"#d8e5f3"}}>Acompanhe, aprove e gerencie as avaliações dos compradores.</p></div>
-          <button type="button" onClick={()=>router.push("/admin")} style={{padding:"11px 16px",border:0,borderRadius:8,background:"#ffc928",color:"#173b68",cursor:"pointer",fontWeight:800}}>← Voltar ao painel</button>
+          <button className="admin-back-button" type="button" onClick={()=>router.push("/admin")} style={{padding:"11px 16px",border:0,borderRadius:8,background:"#ffc928",color:"#173b68",cursor:"pointer",fontWeight:800}}>← Voltar ao painel</button>
         </header>
         <section style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,margin:"18px 0"}}>
           {[{label:"Nesta lista",value:reviews.length,note:"Resultado do filtro atual"},{label:"Pendentes",value:pending,note:"Aguardando aprovação"},{label:"Publicadas",value:published,note:"Visíveis na loja"},{label:"Ocultas",value:hidden,note:"Não exibidas aos clientes"}].map(x=><article key={x.label} style={card}><p style={{margin:0,color:"#64748b",fontSize:13}}>{x.label}</p><strong style={{display:"block",fontSize:28,margin:"7px 0",color:"#173b68"}}>{x.value}</strong><small style={{color:"#8492a6"}}>{x.note}</small></article>)}
