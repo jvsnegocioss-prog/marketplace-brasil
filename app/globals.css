@@ -5183,3 +5183,65 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     color: #fff !important;
   }
 }
+
+
+/* Banners mais compactos no celular — NovaShopp */
+@media (max-width: 700px) {
+  .hero-campaign-carousel {
+    width: calc(100% - 28px) !important;
+    margin: 10px auto !important;
+    border-radius: 15px !important;
+  }
+  .hero-campaign-slide {
+    gap: 11px !important;
+    padding: 15px 13px 57px !important;
+  }
+  .hero-campaign-slide > div:first-child {
+    padding: 0 !important;
+  }
+  .hero-campaign-slide h1 {
+    font-size: clamp(22px, 6.2vw, 29px) !important;
+    line-height: 1.08 !important;
+    margin: 8px 0 6px !important;
+  }
+  .hero-campaign-slide h2 {
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+    margin: 0 0 6px !important;
+  }
+  .hero-campaign-slide p {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+  .hero-campaign-slide .hero-campaign-button {
+    min-height: 37px !important;
+    margin-top: 10px !important;
+    padding: 9px 13px !important;
+    font-size: 12px !important;
+  }
+  .hero-campaign-media {
+    min-height: 105px !important;
+    max-height: 125px !important;
+    border-radius: 11px !important;
+  }
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 105px !important;
+    max-height: 125px !important;
+    height: 125px !important;
+  }
+  .hero-campaign-carousel > div > article > div:last-child > div {
+    bottom: 10px !important;
+  }
+  .hero {
+    min-height: 0 !important;
+    padding: 24px 18px !important;
+    margin: 12px !important;
+    border-radius: 16px !important;
+  }
+  .hero-content h1 {
+    font-size: clamp(25px, 7vw, 32px) !important;
+    line-height: 1.12 !important;
+  }
+}
