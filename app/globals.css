@@ -5142,3 +5142,44 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition: none !important;
   }
 }
+
+
+/* Estados consistentes dos botões de categorias em mouse e toque */
+.navigation button,
+.navigation button:visited {
+  -webkit-tap-highlight-color: transparent !important;
+}
+.navigation button:hover,
+.navigation button:active,
+.navigation button:focus,
+.navigation button:focus-visible,
+.navigation button.nav-active,
+.navigation button.nav-active:hover,
+.navigation button.nav-active:active,
+.navigation button.nav-active:focus {
+  border-color: #d8ad28 !important;
+  border-bottom: 3px solid #d8ad28 !important;
+  background: linear-gradient(120deg, #071b43 0%, #173f75 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 14px rgba(7,27,67,.2) !important;
+}
+.navigation button:focus-visible {
+  outline: 2px solid #d8ad28 !important;
+  outline-offset: 3px;
+}
+.navigation button:focus:not(:focus-visible) {
+  outline: none !important;
+}
+.navigation button:hover .navigation-category-icon,
+.navigation button:active .navigation-category-icon,
+.navigation button:focus .navigation-category-icon,
+.navigation button.nav-active .navigation-category-icon {
+  color: #ffc928 !important;
+}
+.navigation button svg { color: inherit; }
+@media (hover: none) {
+  .navigation button:hover {
+    background: #071b43 !important;
+    color: #fff !important;
+  }
+}
