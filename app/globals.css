@@ -4380,3 +4380,119 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition-duration: .01ms !important;
   }
 }
+
+/* Página inicial — acabamento visual NovaShopp Store */
+.header {
+  min-height: 86px;
+  padding: 16px clamp(18px, 4.5vw, 72px) !important;
+  border-bottom: 1px solid #e8edf4;
+  background: rgba(255,255,255,.97) !important;
+  box-shadow: 0 8px 28px rgba(7,27,67,.07) !important;
+}
+.logo { gap: 11px; }
+.logo-icon {
+  box-shadow: 0 6px 16px rgba(7,27,67,.2);
+  border: 2px solid rgba(255,201,40,.75);
+}
+.search-box {
+  border: 1px solid #dce5f0 !important;
+  border-radius: 14px !important;
+  background: #f7f9fc !important;
+  box-shadow: inset 0 1px 2px rgba(10,35,70,.025);
+}
+.search-box:focus-within {
+  border-color: #d9ae27 !important;
+  box-shadow: 0 0 0 4px rgba(255,201,40,.15) !important;
+}
+.header-actions .icon-btn,
+.header-actions button {
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.header-actions .icon-btn:hover,
+.header-actions button:hover {
+  transform: translateY(-2px);
+}
+.hero {
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 48px rgba(7,27,67,.19) !important;
+}
+.hero-button {
+  box-shadow: 0 8px 20px rgba(255,196,0,.2);
+}
+.categories-section,
+.products-section {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.section-heading {
+  margin-bottom: 25px;
+}
+.section-heading h2 {
+  color: #102b50;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 850;
+}
+.category-card {
+  border: 1px solid #e2e9f2 !important;
+  background: linear-gradient(160deg,#fff,#f8faff) !important;
+  box-shadow: 0 7px 20px rgba(9,31,67,.055) !important;
+}
+.category-card:hover {
+  border-color: #e4b72d !important;
+  box-shadow: 0 13px 27px rgba(9,31,67,.1) !important;
+}
+.product-card {
+  border: 1px solid #e3eaf3 !important;
+  box-shadow: 0 8px 24px rgba(9,31,67,.06) !important;
+}
+.product-card:hover {
+  border-color: #d7b13a !important;
+  box-shadow: 0 17px 34px rgba(9,31,67,.12) !important;
+}
+.product-image {
+  background: linear-gradient(145deg,#f8faff,#eef3fa) !important;
+}
+.product-info h3 {
+  color: #102b50 !important;
+}
+.newsletter {
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(9,31,67,.055);
+}
+.newsletter-button {
+  box-shadow: 0 7px 18px rgba(7,27,67,.14);
+}
+.footer {
+  border-top: 4px solid #ffc928;
+}
+.footer-track-link {
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 4px;
+}
+.header button:focus-visible,
+.header a:focus-visible,
+.category-card:focus-visible,
+.product-card:focus-visible,
+.newsletter button:focus-visible {
+  outline: 3px solid #e6b82e !important;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .header {
+    min-height: 0;
+    padding: 14px 5% !important;
+  }
+  .search-box { border-radius: 12px !important; }
+  .hero { box-shadow: 0 13px 30px rgba(7,27,67,.16) !important; }
+  .categories-section,
+  .products-section { padding-top: 28px; padding-bottom: 28px; }
+  .product-card { box-shadow: 0 5px 16px rgba(9,31,67,.06) !important; }
+  .newsletter { border-radius: 18px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .header *, .category-card, .product-card, .newsletter-button {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
