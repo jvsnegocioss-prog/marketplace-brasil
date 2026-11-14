@@ -24,7 +24,37 @@ export default async function OpenGraphImage({ params }: Props) {
     .maybeSingle();
 
   const productName = data?.name || "Conheça nossos produtos";
-  const productImage = typeof data?.image_url === "string" ? data.image_url : null;
+  const { data: gallery } = await supabase
+    .from("product_media")
+    .select("url")
+    .eq("product_id", id)
+    .eq("media_type", "image")
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const imageUrl =
+    (typeof data?.image_url === "string" && data.image_url.trim()) ||
+    (typeof gallery?.url === "string" && gallery.url.trim()) ||
+    null;
+
+  let productImage: string | null = null;
+  if (imageUrl) {
+    try {
+      const imageResponse = await fetch(imageUrl, { headers: { Accept: "image/*" } });
+      if (imageResponse.ok) {
+        const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
+        if (contentType.startsWith("image/")) {
+          const bytes = new Uint8Array(await imageResponse.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          productImage = "data:" + contentType + ";base64," + btoa(binary);
+        }
+      }
+    } catch (error) {
+      console.error("Não foi possível carregar a imagem do produto para o banner:", error);
+    }
+  }
 
   return new ImageResponse(
     (
