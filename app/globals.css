@@ -5251,3 +5251,147 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     padding: 18px 14px !important;
   }
 }
+
+
+/* Gestão de cupons — ajustes responsivos para telas móveis */
+@media (max-width: 760px) {
+  .admin-coupons {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+    padding: 14px 10px 36px !important;
+  }
+  .admin-coupons > div {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .admin-coupons .admin-coupons-header {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+  .admin-coupons .admin-coupons-header > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons .admin-coupons-header h1 {
+    font-size: 24px !important;
+    line-height: 1.2 !important;
+  }
+  .admin-coupons .admin-coupons-header p {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+  .admin-coupons .admin-coupons-header .admin-back-button {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 12px !important;
+  }
+  .admin-coupons > div > section:first-of-type {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+    margin: 13px 0 !important;
+  }
+  .admin-coupons > div > section:first-of-type article {
+    min-width: 0;
+    padding: 13px !important;
+    border-radius: 13px !important;
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons > div > section:first-of-type article p {
+    min-height: 30px;
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+  .admin-coupons > div > section:first-of-type article strong {
+    font-size: 25px !important;
+    line-height: 1.15;
+  }
+  .admin-coupons form {
+    min-width: 0;
+    padding: 16px 13px !important;
+    border-radius: 15px !important;
+  }
+  .admin-coupons form h2 {
+    font-size: 19px !important;
+    line-height: 1.3;
+  }
+  .admin-coupons form > div[style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+  }
+  .admin-coupons form input:not([type="checkbox"]),
+  .admin-coupons form select {
+    width: 100% !important;
+    max-width: 100%;
+    min-height: 48px;
+    font-size: 16px !important;
+  }
+  .admin-coupons form label {
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons form > div[style*="border: 1px dashed"] {
+    padding: 13px !important;
+  }
+  .admin-coupons form > div[style*="border: 1px dashed"] input {
+    font-size: 18px !important;
+  }
+  .admin-coupons form button {
+    min-height: 46px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons form > div:last-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px !important;
+  }
+  .admin-coupons form > div:last-child button {
+    width: 100%;
+    margin: 0 !important;
+  }
+  .admin-coupons > div > div[style*="display: grid"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 11px !important;
+  }
+  .admin-coupons article {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons article h3 {
+    min-width: 0;
+    font-size: 18px !important;
+    overflow-wrap: anywhere;
+  }
+  .admin-coupons article strong {
+    max-width: 45%;
+    font-size: 19px !important;
+  }
+  .admin-coupons article button {
+    min-height: 45px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 380px) {
+  .admin-coupons > div > section:first-of-type {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .admin-coupons .admin-coupons-header {
+    padding: 18px 14px !important;
+  }
+  .admin-coupons form {
+    padding: 14px 11px !important;
+  }
+  .admin-coupons article > div[style*="justify-content: space-between"] {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+  .admin-coupons article strong {
+    max-width: 100%;
+  }
+}
