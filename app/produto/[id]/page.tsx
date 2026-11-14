@@ -365,7 +365,7 @@ export default function ProductPage() {
   }
 
   async function addProductToCart() {
-    if (!product || product.stock <= 0) return;
+    if (!SALES_ENABLED || !product || product.stock <= 0) return;
     try {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData.user?.id || null;
