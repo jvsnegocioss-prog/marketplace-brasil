@@ -138,12 +138,56 @@ export async function POST(request: Request) {
     const orderId = mpOrder.external_reference;
     const mpStatus = mpOrder.status;
     if (!orderId) {
-      console.error("[MP webhook] Pedido sem referência externa.");
+      console.warn("[MP webhook] Notificação ignorada: sem referência externa.");
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    // A referência externa deve apontar para um pedido UUID existente
+    // nesta loja. Nunca chamar RPC de estoque com uma referência arbitrária.
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (typeof orderId !== "string" || !uuidPattern.test(orderId)) {
+      console.warn("[MP webhook] Notificação ignorada: referência inválida.");
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    const { data: storeOrder, error: orderLookupError } = await supabaseAdmin
+      .from("orders")
+      .select("id, status, mercado_pago_order_id")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    if (orderLookupError) {
+      console.error(
+        "[MP webhook] Erro ao localizar pedido:",
+        orderLookupError.message
+      );
       return NextResponse.json(
-        { error: "Pedido sem referência externa." },
-        { status: 400 }
+        { error: "Não foi possível validar o pedido." },
+        { status: 500 }
       );
     }
+
+    if (!storeOrder) {
+      console.warn("[MP webhook] Notificação ignorada: pedido não pertence à loja.");
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    // Se o vínculo já foi gravado, exigir que corresponda ao ID consultado
+    // no Mercado Pago. Null é permitido para pedidos cujo salvamento do ID falhou.
+    if (
+      storeOrder.mercado_pago_order_id &&
+      String(storeOrder.mercado_pago_order_id) !== String(dataId)
+    ) {
+      console.warn("[MP webhook] Notificação ignorada: vínculo MP divergente.");
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    if (String(storeOrder.status).trim().toLowerCase() !== "aguardando") {
+      console.info("[MP webhook] Pedido já finalizado; notificação sem alteração.");
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
     if (mpStatus === "processed") {
       const { error } = await supabaseAdmin
         .from("orders")
