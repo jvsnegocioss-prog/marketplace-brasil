@@ -59,6 +59,7 @@ export default function ProductPage() {
   const [cartMessage, setCartMessage] = useState("");
   const [cartPreview, setCartPreview] = useState<{ product: Product; qty: number }[]>([]);
   const [cartPreviewLoading, setCartPreviewLoading] = useState(true);
+  const [shareMessage, setShareMessage] = useState("");
 
 
   async function loadCartPreview() {
@@ -222,6 +223,53 @@ export default function ProductPage() {
   const average = reviews.length
     ? reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length
     : 0;
+
+  function getProductShareUrl() {
+    return typeof window !== "undefined" ? window.location.href : "";
+  }
+
+  function openProductShare(network: "facebook" | "whatsapp" | "pinterest" | "x") {
+    if (!product) return;
+    const url = encodeURIComponent(getProductShareUrl());
+    const title = encodeURIComponent(product.name);
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(product.name + " — " + getProductShareUrl())}`,
+      pinterest: `https://pinterest.com/pin/create/button/?url=${url}&description=${title}`,
+      x: `https://twitter.com/intent/tweet?url=${url}&text=${title}`,
+    };
+    window.open(shareUrls[network], "_blank", "noopener,noreferrer");
+  }
+
+  async function shareProductNative() {
+    if (!product) return;
+    const url = getProductShareUrl();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, text: `Confira este produto na NovaShopp Store: ${product.name}`, url });
+        setShareMessage("Compartilhamento aberto.");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareMessage("Link do produto copiado. Agora é só colar no Instagram ou em outra rede.");
+      } else {
+        window.prompt("Copie o link deste produto:", url);
+        setShareMessage("Copie o link para compartilhar.");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setShareMessage("Não foi possível abrir o compartilhamento. Tente copiar o link.");
+    }
+  }
+
+  async function copyProductLink() {
+    const url = getProductShareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareMessage("Link copiado! Compartilhe onde quiser.");
+    } catch {
+      window.prompt("Copie o link deste produto:", url);
+    }
+  }
 
   async function submitReview() {
     if (saving) return;
@@ -530,6 +578,24 @@ export default function ProductPage() {
             <p className="detail-price">{money(product.price)}</p>
             <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Produto indisponível"}</p>
             {product.description && <p className="detail-description">{product.description}</p>}
+            <section className="product-share-panel" aria-label="Compartilhar produto">
+              <div className="product-share-heading">
+                <span className="product-share-icon"><Share2 size={19} /></span>
+                <div>
+                  <h2>Compartilhe este produto</h2>
+                  <p>Gostou? Divulgue com seus amigos e nas suas redes sociais.</p>
+                </div>
+              </div>
+              <div className="product-share-actions">
+                <button type="button" className="product-share-button share-facebook" onClick={() => openProductShare("facebook")}>f <span>Facebook</span></button>
+                <button type="button" className="product-share-button share-whatsapp" onClick={() => openProductShare("whatsapp")}>◉ <span>WhatsApp</span></button>
+                <button type="button" className="product-share-button share-pinterest" onClick={() => openProductShare("pinterest")}>P <span>Pinterest</span></button>
+                <button type="button" className="product-share-button share-x" onClick={() => openProductShare("x")}>𝕏 <span>X</span></button>
+                <button type="button" className="product-share-button share-instagram" onClick={shareProductNative}><Instagram size={18} /> <span>Instagram</span></button>
+                <button type="button" className="product-share-button share-copy" onClick={copyProductLink}><Copy size={17} /> <span>Copiar link</span></button>
+              </div>
+              {shareMessage && <p className="product-share-feedback" role="status" aria-live="polite">{shareMessage}</p>}
+            </section>
             <button
               type="button"
               className="detail-buy-link"
