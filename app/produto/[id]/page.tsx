@@ -13,8 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Share2,
-  Instagram,
-  Copy,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -71,7 +69,6 @@ export default function ProductPage() {
   const [cartMessage, setCartMessage] = useState("");
   const [cartPreview, setCartPreview] = useState<{ product: Product; qty: number }[]>([]);
   const [cartPreviewLoading, setCartPreviewLoading] = useState(true);
-  const [shareMessage, setShareMessage] = useState("");
 
 
   async function loadCartPreview() {
@@ -240,48 +237,15 @@ export default function ProductPage() {
     return typeof window !== "undefined" ? window.location.href : "";
   }
 
-  function openProductShare(network: "facebook" | "whatsapp" | "pinterest" | "x") {
+  function openProductShare(network: "facebook" | "whatsapp" | "x") {
     if (!product) return;
     const url = encodeURIComponent(getProductShareUrl());
-    const title = encodeURIComponent(product.name);
     const shareUrls = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
       whatsapp: `https://wa.me/?text=${encodeURIComponent(product.name + " — " + getProductShareUrl())}`,
-      pinterest: `https://pinterest.com/pin/create/button/?url=${url}&description=${title}`,
-      x: `https://twitter.com/intent/tweet?url=${url}&text=${title}`,
+      x: `https://twitter.com/intent/tweet?url=${url}&text=${encodeURIComponent(product.name)}`,
     };
     window.open(shareUrls[network], "_blank", "noopener,noreferrer");
-  }
-
-  function shareProductNative() {
-    if (!product) return;
-    const url = getProductShareUrl();
-
-    // Instagram não oferece um link web para publicar automaticamente um produto.
-    // Copiamos o endereço e abrimos o site oficial para o cliente divulgar manualmente.
-    const instagramWindow = window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
-
-    if (!instagramWindow) {
-      setShareMessage("O navegador bloqueou a abertura do Instagram. Permita pop-ups e tente novamente.");
-    }
-
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(url)
-        .then(() => setShareMessage("Link do produto copiado! O Instagram foi aberto em outra aba. Cole o link na sua divulgação."))
-        .catch(() => setShareMessage("Instagram aberto. Copie o endereço do produto pela opção Copiar link e cole na sua divulgação."));
-    } else {
-      setShareMessage("Instagram aberto. Use Copiar link para obter o endereço deste produto e colar na divulgação.");
-    }
-  }
-
-  async function copyProductLink() {
-    const url = getProductShareUrl();
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareMessage("Link copiado! Compartilhe onde quiser.");
-    } catch {
-      window.prompt("Copie o link deste produto:", url);
-    }
   }
 
   async function submitReview() {
@@ -602,12 +566,8 @@ export default function ProductPage() {
               <div className="product-share-actions">
                 <button type="button" className="product-share-button share-facebook" onClick={() => openProductShare("facebook")}>f <span>Facebook</span></button>
                 <button type="button" className="product-share-button share-whatsapp" onClick={() => openProductShare("whatsapp")}>◉ <span>WhatsApp</span></button>
-                <button type="button" className="product-share-button share-pinterest" onClick={() => openProductShare("pinterest")}>P <span>Pinterest</span></button>
                 <button type="button" className="product-share-button share-x" onClick={() => openProductShare("x")}>𝕏 <span>X</span></button>
-                <button type="button" className="product-share-button share-instagram" onClick={shareProductNative}><Instagram size={18} /> <span>Instagram</span></button>
-                <button type="button" className="product-share-button share-copy" onClick={copyProductLink}><Copy size={17} /> <span>Copiar link</span></button>
               </div>
-              {shareMessage && <p className="product-share-feedback" role="status" aria-live="polite">{shareMessage}</p>}
             </section>
             <button
               type="button"
