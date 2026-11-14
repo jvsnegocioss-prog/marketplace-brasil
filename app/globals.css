@@ -4631,3 +4631,91 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   outline: 3px solid #ffdb61 !important;
   outline-offset: 3px !important;
 }
+
+
+/* Compartilhamento social na página do produto */
+.product-share-panel {
+  margin-top: 22px;
+  padding: 17px 18px;
+  border: 1px solid #e5ebf3;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #fbfcfe 0%, #f3f6fb 100%);
+  box-shadow: 0 7px 20px rgba(12,35,68,.055);
+}
+.product-share-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.product-share-icon {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(255,201,40,.5);
+  border-radius: 12px;
+  background: linear-gradient(145deg,#102e58,#1c4c7d);
+  color: #ffd34f;
+}
+.product-share-heading h2 {
+  margin: 0;
+  color: #102b50;
+  font-size: 15px;
+  font-weight: 850;
+}
+.product-share-heading p {
+  margin: 3px 0 0;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.product-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.product-share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 39px;
+  padding: 8px 12px;
+  border: 1px solid #dce4ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #263b57;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.product-share-button:hover {
+  transform: translateY(-2px);
+  border-color: #c5d2e3;
+  box-shadow: 0 6px 13px rgba(12,35,68,.11);
+}
+.product-share-button.share-facebook { color: #1877f2; }
+.product-share-button.share-whatsapp { color: #168b50; }
+.product-share-button.share-pinterest { color: #bd2028; }
+.product-share-button.share-x { color: #111827; }
+.product-share-button.share-instagram { color: #a13a78; }
+.product-share-button.share-copy {
+  border-color: #d8c47d;
+  background: #fffaf0;
+  color: #71540a;
+}
+.product-share-feedback {
+  margin: 12px 0 0;
+  color: #236344;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+@media (max-width: 520px) {
+  .product-share-panel { padding: 15px 13px; }
+  .product-share-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .product-share-button { width: 100%; padding: 9px 7px; }
+}
