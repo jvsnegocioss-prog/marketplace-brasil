@@ -253,23 +253,24 @@ export default function ProductPage() {
     window.open(shareUrls[network], "_blank", "noopener,noreferrer");
   }
 
-  async function shareProductNative() {
+  function shareProductNative() {
     if (!product) return;
     const url = getProductShareUrl();
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: product.name, text: `Confira este produto na NovaShopp Store: ${product.name}`, url });
-        setShareMessage("Compartilhamento aberto.");
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        setShareMessage("Link do produto copiado. Agora é só colar no Instagram ou em outra rede.");
-      } else {
-        window.prompt("Copie o link deste produto:", url);
-        setShareMessage("Copie o link para compartilhar.");
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") return;
-      setShareMessage("Não foi possível abrir o compartilhamento. Tente copiar o link.");
+
+    // Instagram não oferece um link web para publicar automaticamente um produto.
+    // Copiamos o endereço e abrimos o site oficial para o cliente divulgar manualmente.
+    const instagramWindow = window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+
+    if (!instagramWindow) {
+      setShareMessage("O navegador bloqueou a abertura do Instagram. Permita pop-ups e tente novamente.");
+    }
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(() => setShareMessage("Link do produto copiado! O Instagram foi aberto em outra aba. Cole o link na sua divulgação."))
+        .catch(() => setShareMessage("Instagram aberto. Copie o endereço do produto pela opção Copiar link e cole na sua divulgação."));
+    } else {
+      setShareMessage("Instagram aberto. Use Copiar link para obter o endereço deste produto e colar na divulgação.");
     }
   }
 
