@@ -18,12 +18,13 @@ export default async function OpenGraphImage({ params }: Props) {
   );
   const { data } = await supabase
     .from("products")
-    .select("name")
+    .select("name,image_url")
     .eq("id", id)
     .eq("active", true)
     .maybeSingle();
 
   const productName = data?.name || "Conheça nossos produtos";
+  const productImage = typeof data?.image_url === "string" ? data.image_url : null;
 
   return new ImageResponse(
     (
@@ -63,22 +64,68 @@ export default async function OpenGraphImage({ params }: Props) {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 1040 }}>
-          <div style={{ color: "#fbd96b", fontSize: 25, fontWeight: 700, letterSpacing: 4 }}>CONFIRA ESTE PRODUTO</div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: productName.length > 48 ? 54 : 68,
-              lineHeight: 1.12,
-              fontWeight: 900,
-              overflow: "hidden",
-              maxHeight: 170,
-              wordBreak: "break-word",
-            }}
-          >
-            {productName}
+        <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 42, flex: 1, marginTop: 30, marginBottom: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fbd96b", fontSize: 25, fontWeight: 700, letterSpacing: 4 }}>CONFIRA ESTE PRODUTO</div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: productName.length > 48 ? 48 : 62,
+                lineHeight: 1.12,
+                fontWeight: 900,
+                overflow: "hidden",
+                maxHeight: 210,
+                wordBreak: "break-word",
+              }}
+            >
+              {productName}
+            </div>
+            <div style={{ width: 150, height: 8, borderRadius: 8, background: "#ffc928" }} />
           </div>
-          <div style={{ width: 150, height: 8, borderRadius: 8, background: "#ffc928" }} />
+          {productImage ? (
+            <div
+              style={{
+                display: "flex",
+                width: 430,
+                height: 350,
+                flexShrink: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 18,
+                borderRadius: 26,
+                background: "#ffffff",
+                border: "5px solid #ffc928",
+                boxShadow: "0 14px 35px rgba(0,0,0,.22)",
+              }}
+            >
+              <img
+                src={productImage}
+                alt={productName}
+                width={390}
+                height={310}
+                style={{ width: "390px", height: "310px", objectFit: "contain" }}
+              />
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                width: 430,
+                height: 350,
+                flexShrink: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 26,
+                background: "rgba(255,255,255,.12)",
+                border: "2px solid rgba(255,201,40,.65)",
+                color: "#fbd96b",
+                fontSize: 30,
+                fontWeight: 800,
+              }}
+            >
+              NOVASHOPP STORE
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "#d8e6f6", fontSize: 22 }}>
