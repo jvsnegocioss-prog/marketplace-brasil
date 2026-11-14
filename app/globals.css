@@ -4808,3 +4808,129 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .navigation button, .navigation-category-icon { transition: none !important; }
 }
+
+
+/* Banner principal da vitrine — NovaShopp Store */
+.hero-campaign-carousel {
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.hero-campaign-slide {
+  position: relative;
+  min-height: 390px;
+}
+.hero-campaign-slide::before {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  right: 25%;
+  top: -230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,201,40,.16), transparent 68%);
+  pointer-events: none;
+}
+.hero-campaign-slide > div:first-child {
+  padding: 8px 0;
+}
+.hero-campaign-slide h1 {
+  text-wrap: balance;
+  text-shadow: 0 3px 18px rgba(0,0,0,.12);
+}
+.hero-campaign-slide p {
+  text-wrap: pretty;
+}
+.hero-campaign-media {
+  min-height: 280px !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  border-radius: 22px !important;
+  background: rgba(255,255,255,.09) !important;
+  box-shadow: 0 22px 48px rgba(0,0,0,.22) !important;
+}
+.hero-campaign-media img,
+.hero-campaign-media video {
+  transition: transform .55s ease;
+}
+.hero-campaign-media:hover img,
+.hero-campaign-media:hover video {
+  transform: scale(1.025);
+}
+.hero-campaign-slide .hero-campaign-button {
+  min-height: 50px;
+  padding: 14px 23px !important;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  border-bottom: 4px solid #d9a900 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #ffdc58, #ffc928) !important;
+  color: #071b43 !important;
+  box-shadow: 0 9px 22px rgba(255,201,40,.22) !important;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease !important;
+}
+.hero-campaign-slide .hero-campaign-button:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 28px rgba(255,201,40,.3) !important;
+}
+.hero-campaign-slide .hero-campaign-button:focus-visible,
+.hero-campaign-carousel .campaign-carousel-control:focus-visible,
+.hero-campaign-carousel .campaign-carousel-indicator:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.hero-campaign-carousel .campaign-carousel-control {
+  display: inline-grid;
+  place-items: center;
+  transition: transform .18s ease, background .18s ease;
+}
+.hero-campaign-carousel .campaign-carousel-control:hover {
+  transform: scale(1.08);
+  background: rgba(255,255,255,.28) !important;
+}
+.hero-campaign-carousel .campaign-carousel-indicator {
+  transition: transform .18s ease, opacity .18s ease;
+}
+.hero-campaign-carousel .campaign-carousel-indicator:hover {
+  transform: scale(1.2);
+}
+@media (max-width: 700px) {
+  .hero-campaign-carousel {
+    width: calc(100% - 24px) !important;
+    margin: 14px auto !important;
+    border-radius: 19px !important;
+  }
+  .hero-campaign-slide {
+    min-height: 0;
+    gap: 22px !important;
+    padding: 25px 21px 78px !important;
+  }
+  .hero-campaign-slide h1 {
+    font-size: clamp(29px, 8vw, 40px) !important;
+    margin-top: 15px !important;
+  }
+  .hero-campaign-slide p {
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+  }
+  .hero-campaign-media {
+    min-height: 190px !important;
+    border-radius: 16px !important;
+  }
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 190px !important;
+    max-height: 260px !important;
+  }
+  .hero-campaign-slide .hero-campaign-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-campaign-media img,
+  .hero-campaign-media video,
+  .hero-campaign-slide .hero-campaign-button,
+  .hero-campaign-carousel .campaign-carousel-control,
+  .hero-campaign-carousel .campaign-carousel-indicator {
+    transition: none !important;
+  }
+}
