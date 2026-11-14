@@ -4009,3 +4009,27 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   box-shadow: none !important;
   transform: none !important;
 }
+
+
+/* Botão "Voltar ao painel" do estoque — mesmo código visual de Pedidos e Entregas */
+.admin-stock .admin-back-button {
+  min-height: 46px !important;
+  padding: 10px 17px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.18) !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+  filter: none !important;
+}
+.admin-stock .admin-back-button:hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.25) !important;
+  filter: none !important;
+}
