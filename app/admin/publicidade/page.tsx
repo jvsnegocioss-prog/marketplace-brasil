@@ -277,11 +277,11 @@ export default function AdminCampaignsPage() {
   if (!authorized) return null;
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: 20, color: "#10213e" }}>
-      <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}>
+    <main className="admin-campaigns" style={{ maxWidth: 1100, margin: "0 auto", padding: 20, color: "#10213e" }}>
+      <button className="admin-back-button" type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}>
         <ArrowLeft size={16} style={{ verticalAlign: "middle" }} /> Voltar ao painel
       </button>
-      <header style={{ margin: "14px 0 22px" }}>
+      <header className="admin-campaigns-header" style={{ margin: "14px 0 22px" }}>
         <p style={{ color: "#b18400", fontWeight: 800, letterSpacing: 1 }}>NOVASHOPP STORE</p>
         <h1 style={{ margin: "4px 0", fontSize: 30 }}>Publicidade e Promoções</h1>
         <p style={{ color: "#64748b" }}>Crie campanhas manualmente. A IA será uma assistente opcional, nunca publica sozinha.</p>
