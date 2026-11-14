@@ -146,15 +146,6 @@ export default function Home() {
           return;
         }
 
-        if (error) {
-          console.error("Falha ao registrar visualização da loja no Supabase:", {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-          });
-          return;
-        }
 
         console.info("Visualização da loja registrada:", window.location.pathname);
       } catch (error) {
