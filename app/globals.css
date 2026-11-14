@@ -4146,3 +4146,110 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transition-duration: .01ms !important;
   }
 }
+
+/* Central de cupons — identidade visual NovaShopp */
+.admin-coupons {
+  background: #f4f7fb !important;
+  color: #263b57 !important;
+  padding: 32px 24px 64px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+.admin-coupons > div {
+  width: min(100%, 1420px);
+  max-width: 1420px !important;
+}
+.admin-coupons .admin-coupons-header {
+  min-height: 178px;
+  padding: 30px 34px !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 23px !important;
+  background: linear-gradient(120deg, #091f43 0%, #123d70 58%, #1e5688 100%) !important;
+  box-shadow: 0 16px 38px rgba(9,31,67,.17) !important;
+}
+.admin-coupons .admin-coupons-header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(27px, 3vw, 36px) !important;
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+.admin-coupons .admin-coupons-header p { color: #d7e5f4 !important; }
+.admin-coupons .admin-back-button,
+.admin-coupons .admin-back-button:hover,
+.admin-coupons .admin-back-button:focus-visible,
+.admin-coupons .admin-back-button:active {
+  min-height: 46px !important;
+  padding: 10px 17px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-bottom: 4px solid #ffc928 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #102e58, #1c4c7d) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 5px 13px rgba(3,16,39,.18) !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+  filter: none !important;
+}
+.admin-coupons .admin-back-button:hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, #1a4777, #286397) !important;
+  box-shadow: 0 9px 18px rgba(3,16,39,.25) !important;
+}
+.admin-coupons section,
+.admin-coupons form {
+  border: 1px solid #e1e8f1 !important;
+  border-radius: 19px !important;
+  box-shadow: 0 9px 28px rgba(12,38,72,.055) !important;
+}
+.admin-coupons h2,
+.admin-coupons h3 {
+  color: #102b50;
+  font-family: 'Outfit', sans-serif;
+}
+.admin-coupons input:not([type="checkbox"]),
+.admin-coupons select {
+  min-height: 46px;
+  border: 1px solid #d6e0ec !important;
+  border-radius: 11px !important;
+  color: #183451 !important;
+  background-color: #fff !important;
+  outline-color: #e4b82f;
+}
+.admin-coupons input:focus,
+.admin-coupons select:focus {
+  border-color: #d4a91e !important;
+  box-shadow: 0 0 0 3px rgba(255,201,40,.18) !important;
+}
+.admin-coupons button {
+  min-height: 43px;
+  border-radius: 11px !important;
+  font-weight: 800 !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+}
+.admin-coupons button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(9,39,79,.13);
+}
+.admin-coupons button:focus-visible {
+  outline: 3px solid #f3c943 !important;
+  outline-offset: 3px;
+}
+.admin-coupons article {
+  border-color: #e1e8f1 !important;
+  border-radius: 17px !important;
+  box-shadow: 0 7px 22px rgba(12,38,72,.05) !important;
+}
+@media (max-width: 760px) {
+  .admin-coupons { padding: 18px 12px 44px !important; }
+  .admin-coupons .admin-coupons-header {
+    min-height: 0;
+    padding: 22px 18px !important;
+    border-radius: 18px !important;
+  }
+  .admin-coupons .admin-coupons-header h1 { font-size: 25px !important; }
+  .admin-coupons form { padding: 17px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-coupons *, .admin-coupons *::before, .admin-coupons *::after {
+    transition-duration: .01ms !important;
+  }
+}
