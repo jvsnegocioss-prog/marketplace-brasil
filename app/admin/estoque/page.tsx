@@ -143,7 +143,7 @@ export default function StockPage() {
   return (
     <main className="admin-stock" style={{ minHeight: "100vh", background: "#f3f6fb", padding: "24px 16px 48px", fontFamily: "Arial, sans-serif", color: "#14243a" }}>
       <div style={{ maxWidth: 1080, margin: "auto" }}>
-        <header style={{ background: "linear-gradient(125deg,#071b43,#173b68)", color: "#fff", padding: "25px 22px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.14)" }}>
+        <header className="admin-stock-header" style={{ background: "linear-gradient(125deg,#071b43,#173b68)", color: "#fff", padding: "25px 22px", borderRadius: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", boxShadow: "0 12px 28px rgba(16,43,80,.14)" }}>
           <div>
             <p style={{ margin: "0 0 8px", color: "#ffc928", fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>NOVASHOPP STORE · ADMINISTRAÇÃO</p>
             <h1 style={{ margin: 0, fontSize: 28, display: "flex", alignItems: "center", gap: 10 }}><Package size={27} /> Controle de estoque</h1>
@@ -151,7 +151,7 @@ export default function StockPage() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={() => void loadProducts()} style={{ padding: "11px 14px", border: 0, borderRadius: 8, background: "#fff", color: "#173b68", cursor: "pointer", fontWeight: 700 }}><RefreshCw size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />Atualizar</button>
-            <button type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 14px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}><ArrowLeft size={15} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />Voltar ao painel</button>
+            <button className="admin-back-button" type="button" onClick={() => router.push("/admin")} style={{ padding: "11px 14px", border: 0, borderRadius: 8, background: "#ffc928", color: "#173b68", cursor: "pointer", fontWeight: 800 }}><ArrowLeft size={15} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />Voltar ao painel</button>
           </div>
         </header>
 
