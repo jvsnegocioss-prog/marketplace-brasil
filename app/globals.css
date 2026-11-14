@@ -4998,624 +4998,171 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   border: 1px solid rgba(255,255,255,.25);
   border-radius: 999px !important;
   background: #102e58 !important;
-  color: #fff !important;
-  font-size: 10px !important;
-  font-weight: 850 !important;
-  box-shadow: 0 4px 12px rgba(7,27,67,.18);
-}
-.heart-button {
-  z-index: 3;
-  top: 12px !important;
-  right: 12px !important;
-  width: 39px !important;
-  height: 39px !important;
-  border: 1px solid #e1e8f1 !important;
-  border-radius: 50% !important;
-  background: rgba(255,255,255,.96) !important;
-  color: #52657d !important;
-  box-shadow: 0 4px 12px rgba(9,31,67,.1);
-  transition: transform .18s ease, color .18s ease, border-color .18s ease !important;
-}
-.heart-button:hover {
-  transform: scale(1.08);
-  border-color: #e7b92f !important;
-  color: #d52f55 !important;
-}
-.heart-button.is-favorite {
-  color: #d52f55 !important;
-}
-.product-info {
-  display: flex !important;
-  flex: 1 1 auto;
-  flex-direction: column !important;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 17px !important;
-}
-.product-category {
-  display: inline-flex;
-  align-items: center;
-  min-height: 23px;
-  padding: 4px 9px;
-  border: 1px solid #e7edf5;
-  border-radius: 999px;
-  background: #f4f7fb;
-  color: #536b87 !important;
-  font-size: 10px !important;
-  font-weight: 850 !important;
-  letter-spacing: .045em;
-  text-transform: uppercase;
-}
-.product-info h3 {
-  display: -webkit-box;
-  min-height: 2.7em;
-  margin: 2px 0 0 !important;
-  overflow: hidden;
-  color: #102b50 !important;
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(15px, 1.3vw, 18px) !important;
-  font-weight: 800 !important;
-  line-height: 1.35 !important;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.product-description {
-  display: -webkit-box;
-  min-height: 2.8em;
-  margin: 0 !important;
-  overflow: hidden;
-  color: #718096 !important;
-  font-size: 12px !important;
-  line-height: 1.45 !important;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.product-info > a {
-  margin: 1px 0 2px !important;
-  color: #315b88 !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  text-decoration: none !important;
-  text-underline-offset: 3px;
-}
-.product-info > a:hover {
-  color: #a77b05 !important;
-  text-decoration: underline !important;
-}
-.product-info .price {
-  display: block;
-  margin-top: auto;
-  padding-top: 8px;
-  color: #102e58 !important;
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(20px, 1.8vw, 25px) !important;
-  font-weight: 900 !important;
-  letter-spacing: -.035em;
-}
-.product-info .installments {
-  color: #718096 !important;
-  font-size: 10px !important;
-  font-weight: 650 !important;
-}
-.product-info .add-button {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 43px;
-  margin-top: 8px;
-  border: 1px solid #d9e1ec !important;
-  border-bottom: 3px solid #d5b34b !important;
-  border-radius: 11px !important;
-  background: linear-gradient(135deg, #edf2f8, #e5ebf3) !important;
-  color: #52657d !important;
-  font-size: 12px !important;
-  font-weight: 850 !important;
-  cursor: not-allowed !important;
-  opacity: .92;
-  box-shadow: none !important;
-}
-.product-info .add-button:disabled {
-  pointer-events: none;
-}
-.product-card:focus-visible {
-  outline: 3px solid #e6b82e !important;
-  outline-offset: 4px;
-}
+
+/* Controle de estoque — refinamento mobile NovaShopp */
 @media (max-width: 760px) {
-  .products-section {
-    padding-left: 13px;
-    padding-right: 13px;
+  .admin-stock {
+    padding: 13px 10px 34px !important;
+    overflow-x: hidden;
   }
-  .product-grid { gap: 12px !important; }
-  .product-card { border-radius: 16px !important; }
-  .product-image > a { padding: 10px; }
-  .product-info { gap: 7px; padding: 12px !important; }
-  .product-info h3 { font-size: 14px !important; }
-  .product-description { font-size: 11px !important; }
-  .product-info .price { font-size: 20px !important; }
-  .product-info .add-button { min-height: 40px; font-size: 11px !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .product-card, .product-photo, .heart-button {
-    transition: none !important;
+  .admin-stock > div {
+    width: 100%;
+    min-width: 0;
   }
-}
-
-
-/* Estados consistentes dos botões de categorias em mouse e toque */
-.navigation button,
-.navigation button:visited {
-  -webkit-tap-highlight-color: transparent !important;
-}
-.navigation button:hover,
-.navigation button:active,
-.navigation button:focus,
-.navigation button:focus-visible,
-.navigation button.nav-active,
-.navigation button.nav-active:hover,
-.navigation button.nav-active:active,
-.navigation button.nav-active:focus {
-  border-color: #d8ad28 !important;
-  border-bottom: 3px solid #d8ad28 !important;
-  background: linear-gradient(120deg, #071b43 0%, #173f75 100%) !important;
-  color: #fff !important;
-  box-shadow: 0 5px 14px rgba(7,27,67,.2) !important;
-}
-.navigation button:focus-visible {
-  outline: 2px solid #d8ad28 !important;
-  outline-offset: 3px;
-}
-.navigation button:focus:not(:focus-visible) {
-  outline: none !important;
-}
-.navigation button:hover .navigation-category-icon,
-.navigation button:active .navigation-category-icon,
-.navigation button:focus .navigation-category-icon,
-.navigation button.nav-active .navigation-category-icon {
-  color: #ffc928 !important;
-}
-.navigation button svg { color: inherit; }
-@media (hover: none) {
-  .navigation button:hover {
-    background: #071b43 !important;
-    color: #fff !important;
-  }
-}
-
-
-/* Banners mais compactos no celular — NovaShopp */
-@media (max-width: 700px) {
-  .hero-campaign-carousel {
-    width: calc(100% - 28px) !important;
-    margin: 10px auto !important;
-    border-radius: 15px !important;
-  }
-  .hero-campaign-slide {
-    gap: 11px !important;
-    padding: 15px 13px 57px !important;
-  }
-  .hero-campaign-slide > div:first-child {
-    padding: 0 !important;
-  }
-  .hero-campaign-slide h1 {
-    font-size: clamp(22px, 6.2vw, 29px) !important;
-    line-height: 1.08 !important;
-    margin: 8px 0 6px !important;
-  }
-  .hero-campaign-slide h2 {
-    font-size: 15px !important;
-    line-height: 1.25 !important;
-    margin: 0 0 6px !important;
-  }
-  .hero-campaign-slide p {
-    font-size: 11px !important;
-    line-height: 1.4 !important;
-    margin: 0 !important;
-  }
-  .hero-campaign-slide .hero-campaign-button {
-    min-height: 37px !important;
-    margin-top: 10px !important;
-    padding: 9px 13px !important;
-    font-size: 12px !important;
-  }
-  .hero-campaign-media {
-    min-height: 105px !important;
-    max-height: 125px !important;
-    border-radius: 11px !important;
-  }
-  .hero-campaign-media img,
-  .hero-campaign-media video {
-    min-height: 105px !important;
-    max-height: 125px !important;
-    height: 125px !important;
-  }
-  .hero-campaign-carousel > div > article > div:last-child > div {
-    bottom: 10px !important;
-  }
-  .hero {
+  .admin-stock .admin-stock-header {
     min-height: 0 !important;
-    padding: 24px 18px !important;
-    margin: 12px !important;
+    padding: 18px 15px !important;
+    align-items: stretch !important;
+    gap: 16px !important;
     border-radius: 16px !important;
   }
-  .hero-content h1 {
-    font-size: clamp(25px, 7vw, 32px) !important;
-    line-height: 1.12 !important;
-  }
-}
-
-
-/* Refinamento visual da página individual do produto — NovaShopp */
-.product-detail-page {
-  padding: 30px 20px 64px;
-  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 48%);
-}
-.product-detail-container {
-  max-width: 1220px;
-}
-.detail-overview {
-  align-items: start;
-  gap: clamp(26px, 4vw, 54px);
-  padding: clamp(22px, 3.2vw, 42px);
-  border-color: #e4eaf2;
-  border-radius: 25px;
-  box-shadow: 0 18px 48px rgba(9,31,67,.07);
-}
-.detail-photo-frame {
-  position: relative;
-  min-width: 0;
-  height: clamp(340px, 43vw, 510px);
-  padding: 18px;
-  border-color: #e6ebf2;
-  border-radius: 21px;
-  background: radial-gradient(circle at 50% 42%, #fff 0%, #f8fafd 75%, #f0f4f9 100%);
-}
-.detail-image-open {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: zoom-in;
-}
-.detail-product-photo {
-  border-radius: 12px;
-}
-.detail-media-thumbnails {
-  display: flex;
-  gap: 11px;
-  margin-top: 14px;
-  padding: 3px 2px 8px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.detail-media-thumb {
-  flex: 0 0 76px;
-  width: 76px;
-  height: 76px;
-  overflow: hidden;
-  border: 1px solid #e1e8f1;
-  border-radius: 12px;
-  background: #fff;
-  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
-}
-.detail-media-thumb.active {
-  border: 2px solid #d6ad32;
-  box-shadow: 0 0 0 3px rgba(214,173,50,.13);
-}
-.detail-media-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.detail-product-title {
-  margin-top: 10px;
-  color: #102b50;
-  font-size: clamp(29px, 3.1vw, 42px);
-  line-height: 1.12;
-}
-.detail-rating {
-  gap: 10px;
-  margin-top: 15px;
-}
-.detail-price {
-  margin-top: 20px;
-  color: #102e58;
-  font-size: clamp(31px, 3.2vw, 40px);
-}
-.detail-stock {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  margin-top: 10px;
-  padding: 7px 11px;
-  border: 1px solid #d9eee3;
-  border-radius: 999px;
-  background: #f0faf4;
-  color: #23754e;
-}
-.detail-description {
-  margin-top: 19px;
-  padding-top: 18px;
-  line-height: 1.75;
-}
-.product-share-panel {
-  margin-top: 22px;
-  padding: 17px;
-  border: 1px solid #e3eaf3;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #fbfcfe, #f4f7fb);
-}
-.product-share-heading h2 {
-  color: #102b50;
-  font-size: 15px;
-  font-weight: 850;
-}
-.product-share-heading p {
-  color: #718096;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.detail-buy-link {
-  min-height: 48px;
-  border: 1px solid #173b70;
-  border-bottom: 4px solid #d6a91d;
-  border-radius: 12px;
-  background: linear-gradient(115deg, #071b43, #17477f);
-  box-shadow: 0 7px 18px rgba(7,27,67,.13);
-}
-.detail-buy-link:disabled {
-  cursor: not-allowed;
-  opacity: .72;
-  transform: none;
-}
-.detail-overview > div:last-child > section[aria-label="Meu carrinho"] {
-  border-color: #e3eaf3 !important;
-  border-radius: 17px !important;
-  background: #f8fafd !important;
-}
-.detail-review-layout {
-  gap: 22px;
-  margin-top: 24px;
-}
-.detail-panel {
-  border-color: #e4eaf2;
-  border-radius: 20px;
-  box-shadow: 0 12px 34px rgba(9,31,67,.045);
-}
-.detail-panel-title {
-  color: #102b50;
-}
-@media (max-width: 760px) {
-  .product-detail-page {
-    padding: 16px 11px 42px;
-  }
-  .product-detail-container {
-    max-width: 100%;
-  }
-  .detail-overview {
-    gap: 18px;
-    padding: 13px;
-    border-radius: 18px;
-  }
-  .detail-photo-frame {
-    height: clamp(235px, 72vw, 330px);
-    padding: 12px;
-    border-radius: 15px;
-  }
-  .detail-media-thumbnails {
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .detail-media-thumb {
-    flex-basis: 64px;
-    width: 64px;
-    height: 64px;
-    border-radius: 10px;
-  }
-  .detail-product-title {
-    margin-top: 8px;
-    font-size: clamp(25px, 7vw, 31px);
-  }
-  .detail-rating {
-    margin-top: 11px;
-    font-size: 17px;
-  }
-  .detail-price {
-    margin-top: 15px;
-    font-size: 29px;
-  }
-  .detail-description {
-    margin-top: 15px;
-    padding-top: 14px;
-    font-size: 13px;
-    line-height: 1.65;
-  }
-  .product-share-panel {
-    margin-top: 17px;
-    padding: 14px;
-  }
-  .detail-buy-link {
-    min-height: 46px;
-    margin-top: 18px;
-  }
-  .detail-review-layout {
-    gap: 13px;
-    margin-top: 15px;
-  }
-  .detail-panel {
-    padding: 18px 15px;
-    border-radius: 16px;
-  }
-  .detail-panel-title {
-    font-size: 19px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .detail-media-thumb {
-    transition: none !important;
-  }
-}
-
-
-/* Mantém o selo de estoque esgotado ancorado sobre a foto do produto. */
-.detail-photo-frame {
-  position: relative;
-}
-
-/* Painel principal no celular — indicadores em duas colunas */
-@media (max-width: 760px) {
-  .admin-dashboard > section[style*="grid-template-columns: repeat(auto-fit"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-  }
-  .admin-dashboard .admin-stat-card {
+  .admin-stock .admin-stock-header > div:first-child {
+    width: 100%;
     min-width: 0;
-    min-height: 106px;
-    padding: 13px 12px !important;
-    border-radius: 14px !important;
   }
-  .admin-dashboard .admin-stat-title {
-    font-size: 11px !important;
-    line-height: 1.35;
+  .admin-stock .admin-stock-header h1 {
+    font-size: clamp(21px, 6vw, 26px) !important;
+    line-height: 1.2;
+    gap: 8px !important;
+  }
+  .admin-stock .admin-stock-header p {
+    line-height: 1.5;
     overflow-wrap: anywhere;
   }
-  .admin-dashboard .admin-stat-value {
-    margin: 9px 0 !important;
-    font-size: clamp(20px, 5.5vw, 26px) !important;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-  .admin-dashboard .admin-stat-detail {
-    display: block;
-    font-size: 10px !important;
-    line-height: 1.35;
-  }
-  .admin-dashboard > div[style*="grid-template-columns"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 11px !important;
-  }
-  .admin-dashboard > div[style*="grid-template-columns"] > section {
-    padding: 16px !important;
-    border-radius: 15px !important;
-  }
-  .admin-dashboard .admin-refresh-button {
-    width: 100%;
-    min-height: 48px !important;
-    margin: 14px 0 4px !important;
-  }
-}
-@media (max-width: 360px) {
-  .admin-dashboard > section[style*="grid-template-columns: repeat(auto-fit"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-}
-
-
-/* Pedidos e entregas — refinamento mobile */
-@media (max-width: 760px) {
-  .admin-orders {
-    padding: 14px 10px 36px !important;
-  }
-  .admin-orders .admin-orders-header {
-    align-items: stretch !important;
-    gap: 18px !important;
-    padding: 19px 16px !important;
-  }
-  .admin-orders .admin-orders-header > div:first-child {
-    min-width: 0;
-    width: 100%;
-  }
-  .admin-orders .admin-orders-header > div:last-child {
+  .admin-stock .admin-stock-header > div:last-child {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
     gap: 9px !important;
   }
-  .admin-orders .admin-orders-header button {
+  .admin-stock .admin-stock-header button {
     min-width: 0;
     min-height: 48px !important;
     padding: 10px 8px !important;
     font-size: 12px;
     white-space: normal;
   }
-  .admin-orders > div > section[style*="grid-template-columns"] article {
-    min-height: 0;
-    padding: 15px !important;
+  .admin-stock > div > section:first-of-type {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+    margin: 13px 0 !important;
   }
-  .admin-orders > div > section:not([style*="grid-template-columns"]) {
-    padding: 15px !important;
-  }
-  .admin-orders > div > section:not([style*="grid-template-columns"]) > div {
-    align-items: stretch !important;
-  }
-  .admin-orders > div > section:not([style*="grid-template-columns"]) input {
-    max-width: 100%;
-    min-height: 48px !important;
-    font-size: 16px;
-  }
-  .admin-orders > div > div[style*="display: grid"] > article {
+  .admin-stock > div > section:first-of-type article {
     min-width: 0;
-    padding: 14px !important;
+    padding: 13px 12px !important;
+    border-radius: 13px !important;
+  }
+  .admin-stock > div > section:first-of-type article p {
+    min-height: 30px;
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+  .admin-stock > div > section:first-of-type article strong {
+    margin-top: 6px !important;
+    font-size: 24px !important;
+    line-height: 1.15;
+  }
+  .admin-stock > div > section:last-of-type {
+    padding: 13px !important;
     border-radius: 15px !important;
   }
-  .admin-orders article > div[style*="grid-template-columns: repeat(auto-fit"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 14px !important;
+  .admin-stock > div > section:last-of-type > div:first-child {
+    align-items: stretch !important;
+    gap: 12px !important;
   }
-  .admin-orders article > div[style*="grid-template-columns: repeat(4"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 12px 10px !important;
-    margin-bottom: 16px !important;
+  .admin-stock > div > section:last-of-type h2 {
+    font-size: 18px !important;
+    line-height: 1.3;
   }
-  .admin-orders article > div[style*="grid-template-columns: repeat(4"] p {
-    min-height: 28px;
-    font-size: 11px !important;
-    line-height: 1.35 !important;
-  }
-  .admin-orders article select,
-  .admin-orders article input {
-    min-height: 49px !important;
-    width: 100%;
+  .admin-stock > div > section:last-of-type input {
+    min-height: 48px;
     font-size: 16px !important;
   }
-  .admin-orders article button:not(.admin-orders-header button),
-  .admin-orders article a[href^="https://wa.me/"] {
+  .admin-stock > div > section:last-of-type > div:first-child > div:last-child {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    width: 100%;
+  }
+  .admin-stock > div > section:last-of-type > div:first-child > div:last-child input {
+    width: 100% !important;
+  }
+  .admin-stock > div > section:last-of-type article {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 13px !important;
+    border-radius: 13px !important;
+  }
+  .admin-stock > div > section:last-of-type article > div:first-child {
+    min-width: 0;
+    align-items: flex-start !important;
+  }
+  .admin-stock > div > section:last-of-type article > div:first-child img,
+  .admin-stock > div > section:last-of-type article > div:first-child > div:first-child {
+    flex: 0 0 54px;
+    width: 54px !important;
+    height: 54px !important;
+  }
+  .admin-stock > div > section:last-of-type article > div:first-child > div:last-child {
+    min-width: 0;
+  }
+  .admin-stock > div > section:last-of-type article > div:last-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end !important;
+    justify-content: stretch !important;
+    gap: 8px !important;
+    width: 100%;
+  }
+  .admin-stock > div > section:last-of-type article > div:last-child label {
+    min-width: 0;
+    grid-column: 1 / -1;
+  }
+  .admin-stock > div > section:last-of-type article > div:last-child input {
+    width: 100% !important;
+    min-height: 49px !important;
+    font-size: 16px !important;
+  }
+  .admin-stock > div > section:last-of-type article > div:last-child button {
+    min-width: 0;
     min-height: 48px !important;
-    justify-content: center;
-    padding: 11px 12px !important;
-    font-size: 12px !important;
-    text-align: center;
+    padding: 10px 8px !important;
+    font-size: 12px;
+    white-space: normal;
   }
-  .admin-orders article a[href^="https://wa.me/"] {
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .admin-orders article > div[style*="display: flex"][style*="flex-wrap: wrap"] {
-    gap: 9px !important;
-  }
-  .admin-orders article > div[style*="display: flex"][style*="flex-wrap: wrap"] > button {
-    flex: 1 1 100%;
+  .admin-stock > div > section:last-of-type article > div:last-child button:last-child {
+    grid-column: 1 / -1;
     width: 100%;
   }
-  .admin-orders article p,
-  .admin-orders article span,
-  .admin-orders article strong {
-    overflow-wrap: anywhere;
+  .admin-stock > div > section:last-of-type article > div[style*="grid-column"] {
+    grid-column: 1 / -1 !important;
+    align-items: stretch !important;
+  }
+  .admin-stock > div > section:last-of-type article > div[style*="grid-column"] label {
+    width: 100%;
+  }
+  .admin-stock > div > section:last-of-type article > div[style*="grid-column"] input {
+    width: 100% !important;
+    min-height: 49px !important;
+    font-size: 16px !important;
+  }
+  .admin-stock > div > section:last-of-type article > div[style*="grid-column"] button {
+    width: 100%;
+    min-height: 48px !important;
+  }
+  .admin-stock > div > p:last-child {
+    line-height: 1.5;
+    padding: 0 5px;
   }
 }
 @media (max-width: 380px) {
-  .admin-orders .admin-orders-header > div:last-child {
-    grid-template-columns: minmax(0, 1fr);
+  .admin-stock .admin-stock-header > div:last-child,
+  .admin-stock > div > section:first-of-type {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
-  .admin-orders .admin-orders-header button {
+  .admin-stock .admin-stock-header button {
     width: 100%;
   }
-  .admin-orders > div > section[style*="grid-template-columns"] {
-    grid-template-columns: minmax(0, 1fr) !important;
+  .admin-stock > div > section:first-of-type article {
+    min-height: 0;
   }
 }
