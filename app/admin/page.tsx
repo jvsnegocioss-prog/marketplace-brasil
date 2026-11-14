@@ -261,7 +261,7 @@ export default function AdminPage() {
     // Atualização de segurança caso o Realtime não esteja habilitado para a tabela.
     const intervalId = window.setInterval(() => {
       void loadAnalytics();
-    }, 30000);
+    }, 5000);
 
     return () => {
       window.clearInterval(intervalId);
