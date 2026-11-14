@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Package, X, Trash2, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, X, Trash2, ZoomIn, ChevronLeft, ChevronRight, Share2, Instagram, Copy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 const SALES_ENABLED = process.env.NEXT_PUBLIC_STORE_SALES_ENABLED === "true";
