@@ -22,12 +22,14 @@ async function getAccount(request: Request) {
   return data.user;
 }
 
-async function validatePurchase(email: string, productId: string) {
-  const { data: orders, error } = await supabaseAdmin
+async function validatePurchase(email: string, productId: string, requiredOrderId?: string) {
+  let ordersQuery = supabaseAdmin
     .from("orders")
     .select("id,customer_name,status,delivery_status,customer_email")
     .ilike("customer_email", email)
     .order("created_at", { ascending: false });
+  if (requiredOrderId) ordersQuery = ordersQuery.eq("id", requiredOrderId);
+  const { data: orders, error } = await ordersQuery;
 
   if (error) throw new Error("Não foi possível localizar suas compras.");
   const eligibleOrders = (orders || []).filter((order) =>
@@ -131,6 +133,7 @@ export async function GET(request: Request) {
         .from("product_reviews")
         .select("id,rating,comment,photos,status,order_id")
         .eq("product_id", productId)
+        .eq("customer_phone_hash", user.id)
         .in("order_id", orderIds)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -199,7 +202,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Selecione sua nota de 1 a 5 estrelas." }, { status: 400 });
     }
 
-    const validation = await validatePurchase(user.email, productId);
+    const { data: ownedReview, error: ownedReviewError } = await supabaseAdmin
+      .from("product_reviews")
+      .select("order_id")
+      .eq("id", reviewId)
+      .eq("product_id", productId)
+      .eq("customer_phone_hash", user.id)
+      .maybeSingle();
+    if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
+    if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+
+    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
@@ -235,7 +248,19 @@ export async function DELETE(request: Request) {
     const body = await request.json();
     const reviewId = typeof body.reviewId === "string" ? body.reviewId.trim() : "";
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
-    const validation = await validatePurchase(user.email, productId);
+    if (!reviewId || !productId) return NextResponse.json({ error: "Informe a avaliação e o produto." }, { status: 400 });
+
+    const { data: ownedReview, error: ownedReviewError } = await supabaseAdmin
+      .from("product_reviews")
+      .select("order_id")
+      .eq("id", reviewId)
+      .eq("product_id", productId)
+      .eq("customer_phone_hash", user.id)
+      .maybeSingle();
+    if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
+    if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+
+    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const { data, error } = await supabaseAdmin
