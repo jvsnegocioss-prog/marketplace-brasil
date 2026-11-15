@@ -51,23 +51,57 @@ async function validatePurchase(email: string, productId: string) {
 }
 
 async function uploadReviewFiles(files: File[], userId: string) {
+  const allowedTypes: Record<string, { extension: string; maxBytes: number; kind: "image" | "video" }> = {
+    "image/jpeg": { extension: "jpg", maxBytes: 10 * 1024 * 1024, kind: "image" },
+    "image/png": { extension: "png", maxBytes: 10 * 1024 * 1024, kind: "image" },
+    "image/webp": { extension: "webp", maxBytes: 10 * 1024 * 1024, kind: "image" },
+    "image/gif": { extension: "gif", maxBytes: 10 * 1024 * 1024, kind: "image" },
+    "video/mp4": { extension: "mp4", maxBytes: 50 * 1024 * 1024, kind: "video" },
+    "video/webm": { extension: "webm", maxBytes: 50 * 1024 * 1024, kind: "video" },
+    "video/quicktime": { extension: "mov", maxBytes: 50 * 1024 * 1024, kind: "video" },
+  };
   const urls: string[] = [];
-  for (const file of files) {
-    const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
-    if (!isImage && !isVideo) throw new Error("Envie somente fotos ou vídeos.");
-    if (file.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
-    const extension = file.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
-    const path = `reviews/${userId}/${randomUUID()}.${extension}`;
-    const { error } = await supabaseAdmin.storage.from(mediaBucket).upload(path, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-    if (error) throw new Error("Não foi possível enviar as mídias. Tente novamente.");
-    const { data } = supabaseAdmin.storage.from(mediaBucket).getPublicUrl(path);
-    urls.push(data.publicUrl);
+  const paths: string[] = [];
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > 100 * 1024 * 1024) throw new Error("O tamanho total dos arquivos não pode ultrapassar 100 MB.");
+
+  try {
+    for (const file of files) {
+      const type = allowedTypes[file.type];
+      if (!type) throw new Error("Formato não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+      if (file.size > type.maxBytes) {
+        throw new Error(type.kind === "image" ? "Cada foto deve ter no máximo 10 MB." : "Cada vídeo deve ter no máximo 50 MB.");
+      }
+
+      const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+      const starts = (...values: number[]) => values.every((value, index) => header[index] === value);
+      const ascii = (offset: number, value: string) =>
+        value.split("").every((char, index) => header[offset + index] === char.charCodeAt(0));
+      const validSignature =
+        file.type === "image/jpeg" ? starts(0xff, 0xd8, 0xff) :
+        file.type === "image/png" ? starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a) :
+        file.type === "image/webp" ? ascii(0, "RIFF") && ascii(8, "WEBP") :
+        file.type === "image/gif" ? ascii(0, "GIF87a") || ascii(0, "GIF89a") :
+        file.type === "video/webm" ? starts(0x1a, 0x45, 0xdf, 0xa3) :
+        (file.type === "video/mp4" || file.type === "video/quicktime") ? ascii(4, "ftyp") :
+        false;
+      if (!validSignature) throw new Error("O conteúdo de um arquivo não corresponde ao formato informado.");
+
+      const path = `reviews/${userId}/${randomUUID()}.${type.extension}`;
+      const { error } = await supabaseAdmin.storage.from(mediaBucket).upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) throw new Error("Não foi possível enviar as mídias. Tente novamente.");
+      paths.push(path);
+      const { data } = supabaseAdmin.storage.from(mediaBucket).getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return { urls, paths };
+  } catch (error) {
+    if (paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(paths);
+    throw error;
   }
-  return urls;
 }
 
 export async function GET(request: Request) {
@@ -126,7 +160,7 @@ export async function POST(request: Request) {
     const validation = await validatePurchase(user.email, productId);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
-    const photos = await uploadReviewFiles(files, user.id);
+    const uploaded = await uploadReviewFiles(files, user.id);
     const { data, error } = await supabaseAdmin
       .from("product_reviews")
       .insert({
@@ -169,9 +203,9 @@ export async function PATCH(request: Request) {
 
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
     if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
-    const photos = files.length ? await uploadReviewFiles(files, user.id) : undefined;
+    const uploaded = files.length ? await uploadReviewFiles(files, user.id) : undefined;
     const update: Record<string, unknown> = { rating, status: "pending", updated_at: new Date().toISOString() };
-    if (photos) update.photos = photos;
+    if (uploaded) update.photos = uploaded.urls;
 
     const { data, error } = await supabaseAdmin
       .from("product_reviews")
