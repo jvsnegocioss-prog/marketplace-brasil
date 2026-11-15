@@ -7,6 +7,7 @@ import {
   getOrderPaymentDisposition,
   getWebhookNotificationId,
   isWebhookResourceMatch,
+  isWebhookNotificationResourceMatch,
 } from "@/lib/mercadopago-security.cjs";
 
 export const runtime = "nodejs";
@@ -105,12 +106,7 @@ export async function POST(request: Request) {
     }
     // A assinatura autentica o data.id da URL; confirme que o corpo aponta
     // para exatamente o mesmo recurso antes de registrar/processar o evento.
-    const bodyResourceId = notificationBody?.data?.id;
-    if (
-      notificationBody?.type !== "order" ||
-      (typeof bodyResourceId !== "string" && typeof bodyResourceId !== "number") ||
-      String(bodyResourceId) !== String(dataId)
-    ) {
+    if (!isWebhookNotificationResourceMatch(notificationBody, dataId)) {
       return NextResponse.json({ error: "O recurso do corpo não corresponde ao recurso assinado." }, { status: 400 });
     }
 
