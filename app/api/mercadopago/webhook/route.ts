@@ -89,18 +89,22 @@ export async function POST(request: Request) {
     const timestampValue = Number(ts);
     const timestampMs =
       ts.length >= 13 ? timestampValue : timestampValue * 1000;
-    const maxClockSkewMs = 5 * 60 * 1000;
+    const maxFutureClockSkewMs = 5 * 60 * 1000;
     if (
       !Number.isSafeInteger(timestampValue) ||
       !Number.isFinite(timestampMs) ||
-      Math.abs(Date.now() - timestampMs) > maxClockSkewMs
+      timestampMs > Date.now() + maxFutureClockSkewMs
     ) {
-      console.warn("[MP webhook] Notificação fora da janela temporal permitida.");
+      console.warn("[MP webhook] Timestamp inválido ou excessivamente futuro.");
       return NextResponse.json(
-        { error: "Notificação expirada ou com horário inválido." },
+        { error: "Timestamp inválido." },
         { status: 401 }
       );
     }
+
+    // Não rejeita assinaturas antigas válidas: o Mercado Pago pode reenviar
+    // notificações após 15 minutos ou mais. Replays não repetem efeitos porque
+    // o pedido só muda se ainda estiver aguardando, e o cancelamento é atômico.
 
     // O Mercado Pago exige data.id em letras minúsculas
     // para identificadores alfanuméricos.
@@ -121,7 +125,7 @@ export async function POST(request: Request) {
       hasRequestId: true,
       requestIdLength: requestId.length,
       hasTimestamp: true,
-      timestampFresh: true,
+      timestampNotTooFarInFuture: true,
       signatureMatches,
     });
     if (!signatureMatches) {
