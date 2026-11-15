@@ -5,7 +5,6 @@ import {
   verifyMercadoPagoSignature,
   isProcessedOrderPaymentMatching,
   getWebhookNotificationId,
-  isWebhookResourceMatch,
 } from "@/lib/mercadopago-security.cjs";
 
 export const runtime = "nodejs";
