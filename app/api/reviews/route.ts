@@ -52,25 +52,25 @@ async function validatePurchase(email: string, productId: string) {
 
 async function uploadReviewFiles(files: File[], userId: string) {
   const allowedTypes: Record<string, { extension: string; maxBytes: number; kind: "image" | "video" }> = {
-    "image/jpeg": { extension: "jpg", maxBytes: 10 * 1024 * 1024, kind: "image" },
+    "image/jpeg": { extension: "jpg", maxBytes: 4 * 1024 * 1024, kind: "image" },
     "image/png": { extension: "png", maxBytes: 10 * 1024 * 1024, kind: "image" },
     "image/webp": { extension: "webp", maxBytes: 10 * 1024 * 1024, kind: "image" },
     "image/gif": { extension: "gif", maxBytes: 10 * 1024 * 1024, kind: "image" },
-    "video/mp4": { extension: "mp4", maxBytes: 50 * 1024 * 1024, kind: "video" },
+    "video/mp4": { extension: "mp4", maxBytes: 4 * 1024 * 1024, kind: "video" },
     "video/webm": { extension: "webm", maxBytes: 50 * 1024 * 1024, kind: "video" },
     "video/quicktime": { extension: "mov", maxBytes: 50 * 1024 * 1024, kind: "video" },
   };
   const urls: string[] = [];
   const paths: string[] = [];
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-  if (totalBytes > 100 * 1024 * 1024) throw new Error("O tamanho total dos arquivos não pode ultrapassar 100 MB.");
+  if (totalBytes > 4 * 1024 * 1024) throw new Error("O tamanho total dos arquivos não pode ultrapassar 4 MB.");
 
   try {
     for (const file of files) {
       const type = allowedTypes[file.type];
       if (!type) throw new Error("Formato não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
       if (file.size > type.maxBytes) {
-        throw new Error(type.kind === "image" ? "Cada foto deve ter no máximo 10 MB." : "Cada vídeo deve ter no máximo 50 MB.");
+        throw new Error(type.kind === "image" ? "Cada foto deve ter no máximo 4 MB." : "Cada vídeo deve ter no máximo 4 MB.");
       }
 
       const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
@@ -217,8 +217,11 @@ export async function PATCH(request: Request) {
       .select("id,status")
       .maybeSingle();
 
-    if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
-    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+    if (error || !data) {
+      if (uploaded?.paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(uploaded.paths);
+      if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
+      return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+    }
     return NextResponse.json({ success: true, review: data, message: "Avaliação atualizada e enviada para nova aprovação." });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a alteração." }, { status: 500 });
