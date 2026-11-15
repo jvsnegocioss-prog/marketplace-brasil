@@ -3,3 +3,4 @@ export function verifyMercadoPagoSignature(secret: string, dataId: string, reque
 export function amountToCents(value: unknown): number | null;
 export function isProcessedOrderPaymentMatching(expectedTotal: unknown, mpOrder: any): boolean;
 export function getWebhookNotificationId(body: unknown): string | null;
+export function isWebhookResourceMatch(storedResourceId: unknown, incomingResourceId: unknown): boolean;
