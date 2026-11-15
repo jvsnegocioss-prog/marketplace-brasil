@@ -5787,3 +5787,121 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   -webkit-text-fill-color: #315783 !important;
   border-color: #dce6f2 !important;
 }
+
+
+/* Acessos rápidos — categorias da navegação (estados consistentes no iOS) */
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 18px 22px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 3.5%;
+  border-bottom: 1px solid #e5eaf2;
+}
+.navigation > button,
+.navigation > button:hover,
+.navigation > button:focus,
+.navigation > button:focus-visible,
+.navigation > button:active {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  min-height: 104px;
+  padding: 14px 24px;
+  border: 2px solid #e1e7f0 !important;
+  border-radius: 27px;
+  background: #fff !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(17px, 2.1vw, 25px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045);
+  transform: none !important;
+  transition: border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.navigation > button .navigation-category-icon {
+  display: inline-flex;
+  flex: 0 0 66px;
+  width: 66px;
+  height: 66px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 23px;
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button .navigation-category-icon svg {
+  width: 35px;
+  height: 35px;
+  stroke: currentColor;
+}
+.navigation > button.nav-active,
+.navigation > button.nav-active:hover,
+.navigation > button.nav-active:focus,
+.navigation > button.nav-active:focus-visible,
+.navigation > button.nav-active:active {
+  border-color: #d6b94f !important;
+  background: #fff !important;
+  color: #172f50 !important;
+  -webkit-text-fill-color: #172f50 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .06);
+}
+.navigation > button.nav-active .navigation-category-icon,
+.navigation > button.nav-active:hover .navigation-category-icon,
+.navigation > button.nav-active:focus .navigation-category-icon,
+.navigation > button.nav-active:focus-visible .navigation-category-icon,
+.navigation > button.nav-active:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #172f50 !important;
+}
+.navigation > button:not(.nav-active):hover,
+.navigation > button:not(.nav-active):focus-visible {
+  border-color: #cbd6e5 !important;
+  color: #29496e !important;
+  -webkit-text-fill-color: #29496e !important;
+}
+@media (max-width: 600px) {
+  .navigation,
+  .navigation.nav-open {
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 12px;
+  }
+  .navigation > button,
+  .navigation > button:hover,
+  .navigation > button:focus,
+  .navigation > button:focus-visible,
+  .navigation > button:active {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+    min-height: 76px;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 19px;
+    font-size: 15px;
+    white-space: normal;
+  }
+  .navigation > button .navigation-category-icon {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+  }
+  .navigation > button .navigation-category-icon svg {
+    width: 27px;
+    height: 27px;
+  }
+}
