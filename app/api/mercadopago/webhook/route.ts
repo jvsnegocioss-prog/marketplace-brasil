@@ -5,6 +5,7 @@ import {
   verifyMercadoPagoSignature,
   isProcessedOrderPaymentMatching,
   getWebhookNotificationId,
+  isWebhookResourceMatch,
 } from "@/lib/mercadopago-security.cjs";
 
 export const runtime = "nodejs";
@@ -222,12 +223,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
-    if (
-      storeOrder.mercado_pago_order_id &&
-      String(storeOrder.mercado_pago_order_id) !== String(dataId)
-    ) {
-      await finishEvent("ignored", "mercado_pago_order_id_mismatch");
-      return NextResponse.json({ received: true, ignored: true });
+    if (!isWebhookResourceMatch(storeOrder.mercado_pago_order_id, String(dataId))) {
+      await finishEvent("failed", "mercado_pago_order_id_missing_or_mismatch");
+      console.warn("[MP webhook] ID do pedido Mercado Pago ausente ou divergente.", {
+        orderId,
+      });
+      return NextResponse.json({ error: "O pagamento não está vinculado ao pedido esperado." }, { status: 409 });
     }
 
     if (String(mpOrder.id) !== String(dataId)) {
