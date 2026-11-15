@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const code = typeof body.code === "string"
-      ? body.code.trim().toUpperCase().replace(/\\s+/g, "")
+      ? body.code.trim().toUpperCase().replace(/\s+/g, "")
       : "";
     const items = body.items;
 
