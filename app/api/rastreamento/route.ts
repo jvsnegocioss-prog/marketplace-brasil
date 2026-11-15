@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin.rpc("track_customer_order", {
+    const { data, error } = await getSupabaseAdmin().rpc("track_customer_order", {
       p_order_number: orderNumber,
       p_phone: phone,
     });
