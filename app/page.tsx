@@ -20,6 +20,7 @@ type Product = {
   category: string | null;
   image_url: string | null;
   active: boolean;
+  free_shipping: boolean;
 };
 
 
@@ -188,7 +189,7 @@ export default function Home() {
 
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,description,price,stock,category,image_url,active")
+      .select("id,name,description,price,stock,category,image_url,active,free_shipping")
       .eq("active", true)
       .order("created_at", { ascending: false });
 
@@ -896,6 +897,10 @@ export default function Home() {
                 <div className="product-image">
                   {product.stock <= 0 && (
                     <span className="product-tag">Estoque esgotado</span>
+                  )}
+
+                  {product.free_shipping && product.stock > 0 && (
+                    <span className="product-tag" style={{ top: 10, background: "#15803d" }}>Frete grátis</span>
                   )}
 
                   <button
