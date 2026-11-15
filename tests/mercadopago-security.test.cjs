@@ -9,6 +9,7 @@ const {
   getOrderPaymentDisposition,
   getWebhookNotificationId,
   isWebhookResourceMatch,
+  isWebhookNotificationResourceMatch,
 } = require("../lib/mercadopago-security.cjs");
 
 test("aceita assinatura HMAC válida e normaliza data.id", () => {
@@ -64,6 +65,14 @@ test("aceita somente pedido pago integralmente em BRL", () => {
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, total_paid_amount: "100.00" }), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, transactions: { payments: [{ status: "pending" }] } }), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, transactions: { payments: [] } }), false);
+});
+
+test("exige que o corpo da notificação corresponda ao recurso assinado", () => {
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: "ORD-123" } }, "ORD-123"), true);
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: "ORD-456" } }, "ORD-123"), false);
+  assert.equal(isWebhookNotificationResourceMatch({ type: "payment", data: { id: "ORD-123" } }, "ORD-123"), false);
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: {} }, "ORD-123"), false);
+  assert.equal(isWebhookNotificationResourceMatch(null, "ORD-123"), false);
 });
 
 test("extrai ID de evento numérico ou textual do corpo", () => {
