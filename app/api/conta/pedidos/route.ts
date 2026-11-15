@@ -3,11 +3,24 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do Supabase indisponível.");
+  }
+
+  if (!supabaseAdmin) {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+
+  return supabaseAdmin;
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,14 +34,14 @@ export async function GET(request: Request) {
     }
 
     const { data: authData, error: authError } =
-      await supabaseAdmin.auth.getUser(token);
+      await getSupabaseAdmin().auth.getUser(token);
 
     const user = authData?.user;
     if (authError || !user?.email) {
       return NextResponse.json({ error: "Sessão inválida. Entre novamente." }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from("orders")
       .select(`
         id,
