@@ -269,13 +269,26 @@ export default function AdminDeliveriesPage() {
               <span style={{ fontSize: 12, color: region.active ? "#166534" : "#991b1b" }}>{region.active ? "Ativa" : "Inativa"}</span>
             </div>
             <label style={{ display: "block", margin: "12px 0 5px" }}>Taxa de entrega (R$)</label>
-            <input type="number" min="0" max="10000" step="0.01" value={regionValues[region.id] ?? ""} onChange={(e) => setRegionValues((old) => ({ ...old, [region.id]: e.target.value }))} style={inputStyle} />
-            <p style={{ color: "#64748b", fontSize: 12 }}>Taxa cadastrada: {money(region.fee_cents)}</p>
+            <input
+              type="number"
+              min="0"
+              max="10000"
+              step="0.01"
+              value={region.free_shipping ? "0.00" : (regionValues[region.id] ?? "")}
+              disabled={region.free_shipping}
+              onChange={(e) => setRegionValues((old) => ({ ...old, [region.id]: e.target.value }))}
+              style={{ ...inputStyle, background: region.free_shipping ? "#f0fdf4" : "#fff", color: region.free_shipping ? "#166534" : "#172033", fontWeight: region.free_shipping ? 700 : 400 }}
+            />
+            <p style={{ color: "#64748b", fontSize: 12 }}>
+              {region.free_shipping
+                ? `Frete grátis ativo. Última taxa cadastrada preservada: ${money(region.fee_cents)}`
+                : `Taxa cadastrada: ${money(region.fee_cents)}`}
+            </p>
             <p style={{ color: region.free_shipping ? "#166534" : "#64748b", fontSize: 13, fontWeight: 700 }}>
               {region.free_shipping ? "FRETE GRÁTIS ATIVADO" : "Frete pago conforme taxa cadastrada"}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button style={buttonStyle} disabled={savingId === region.id} onClick={() => void saveRegion(region)}>{savingId === region.id ? "Salvando..." : "Salvar taxa"}</button>
+              <button style={buttonStyle} disabled={savingId === region.id || region.free_shipping} onClick={() => void saveRegion(region)}>{savingId === region.id ? "Salvando..." : "Salvar taxa"}</button>
               <button
                 style={{ ...buttonStyle, background: region.free_shipping ? "#9f2d2d" : "#166534" }}
                 disabled={savingId === "free-" + region.id}
@@ -301,10 +314,10 @@ export default function AdminDeliveriesPage() {
       <div style={{ display: "grid", gap: 9 }}>
         {filteredNeighborhoods.map((item) => {
           const region = regions.find((r) => r.id === item.region_id);
-          const effectiveFee = item.fee_override_cents ?? region?.fee_cents ?? 0;
+          const effectiveFee = region?.free_shipping ? 0 : (item.fee_override_cents ?? region?.fee_cents ?? 0);
           return (
             <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10, alignItems: "center" }}>
-              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
+              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{region?.free_shipping ? " (frete grátis da região)" : item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
               <div style={{ display: "grid", gap: 6 }}>
                 <label style={{ fontSize: 12, color: "#475569" }}>Região de entrega</label>
                 <select aria-label={"Região de entrega de " + item.name} value={neighborhoodRegionValues[item.id] ?? ""} onChange={(e) => setNeighborhoodRegionValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle}>
