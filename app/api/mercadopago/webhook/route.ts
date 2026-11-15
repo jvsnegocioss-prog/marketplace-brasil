@@ -103,6 +103,17 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json({ error: "Corpo da notificação inválido." }, { status: 400 });
     }
+    // A assinatura autentica o data.id da URL; confirme que o corpo aponta
+    // para exatamente o mesmo recurso antes de registrar/processar o evento.
+    const bodyResourceId = notificationBody?.data?.id;
+    if (
+      notificationBody?.type !== "order" ||
+      (typeof bodyResourceId !== "string" && typeof bodyResourceId !== "number") ||
+      String(bodyResourceId) !== String(dataId)
+    ) {
+      return NextResponse.json({ error: "O recurso do corpo não corresponde ao recurso assinado." }, { status: 400 });
+    }
+
     notificationId = getWebhookNotificationId(notificationBody);
     if (!notificationId) {
       return NextResponse.json({ error: "ID único da notificação ausente ou inválido." }, { status: 400 });
