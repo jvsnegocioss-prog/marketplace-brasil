@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       deliveryAddress,
       items,
       couponCode,
+      deliveryNeighborhoodId,
     } = body;
 
     if (
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
       !customerPhone.trim() ||
       typeof deliveryAddress !== "string" ||
       !deliveryAddress.trim() ||
+      typeof deliveryNeighborhoodId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deliveryNeighborhoodId) ||
       !Array.isArray(items) ||
       items.length === 0 ||
       items.some(
@@ -101,12 +104,13 @@ export async function POST(request: Request) {
     }
 
     const { data: orderId, error: orderError } =
-      await supabaseAdmin.rpc("create_store_order_with_coupon", {
+      await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
         p_delivery_address: deliveryAddress.trim(),
         p_coupon_code: typeof couponCode === "string" ? couponCode : null,
+        p_delivery_neighborhood_id: deliveryNeighborhoodId,
         p_items: items.map(
           (item: { id: string; qty: number }) => ({
             id: item.id,
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
     const { data: order, error: fetchOrderError } =
       await supabaseAdmin
         .from("orders")
-        .select("id,total,discount_amount,coupon_code")
+        .select("id,total,discount_amount,coupon_code,shipping_fee")
         .eq("id", orderId)
         .single();
 
@@ -186,15 +190,20 @@ export async function POST(request: Request) {
       (sum, unit) => sum + unit.originalCents,
       0
     );
+    const discountCents = Math.round(Number(order.discount_amount) * 100);
+    const shippingCents = Math.round(Number(order.shipping_fee) * 100);
+    const productsFinalCents = originalTotalCents - discountCents;
     const finalTotalCents = Math.round(Number(order.total) * 100);
-    const discountCents = originalTotalCents - finalTotalCents;
 
     if (
       units.length === 0 ||
       finalTotalCents <= 0 ||
-      discountCents < 0
+      discountCents < 0 ||
+      discountCents > originalTotalCents ||
+      shippingCents < 0 ||
+      productsFinalCents + shippingCents !== finalTotalCents
     ) {
-      throw new Error("Os valores do pedido não conferem com os itens.");
+      throw new Error("Os valores do pedido não conferem com os itens e a entrega.");
     }
 
     const allocations = units.map((unit) => {
@@ -223,6 +232,14 @@ export async function POST(request: Request) {
       quantity: 1,
       unit_price: ((unit.originalCents - unit.discountCents) / 100).toFixed(2),
     }));
+
+    if (shippingCents > 0) {
+      paymentItems.push({
+        title: "Entrega",
+        quantity: 1,
+        unit_price: (shippingCents / 100).toFixed(2),
+      });
+    }
 
     const paymentBody: Record<string, unknown> = {
       type: "online",
