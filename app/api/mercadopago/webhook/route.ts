@@ -6,16 +6,24 @@ import {
   isProcessedOrderPaymentMatching,
 } from "@/lib/mercadopago-security.cjs";
 export const runtime = "nodejs";
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do Supabase indisponível.");
   }
-);
+  if (!getSupabaseAdmin()) {
+    getSupabaseAdmin() = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return getSupabaseAdmin();
+}
 export async function POST(request: Request) {
   try {
     const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
@@ -139,7 +147,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
-    const { data: storeOrder, error: orderLookupError } = await supabaseAdmin
+    const { data: storeOrder, error: orderLookupError } = await getSupabaseAdmin()
       .from("orders")
       .select("id, status, mercado_pago_order_id, total")
       .eq("id", orderId)
@@ -199,7 +207,7 @@ export async function POST(request: Request) {
     }
 
     if (mpStatus === "processed") {
-      const { error } = await supabaseAdmin
+      const { error } = await getSupabaseAdmin()
         .from("orders")
         .update({ status: "Pago" })
         .eq("id", orderId)
@@ -219,7 +227,7 @@ export async function POST(request: Request) {
       mpStatus === "canceled" ||
       mpStatus === "failed"
     ) {
-      const { error } = await supabaseAdmin.rpc(
+      const { error } = await getSupabaseAdmin().rpc(
         "cancel_unpaid_order_and_restore_stock",
         { p_order_id: orderId }
       );
