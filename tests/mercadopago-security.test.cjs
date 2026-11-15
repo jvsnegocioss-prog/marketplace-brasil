@@ -51,6 +51,13 @@ test("aceita somente pedido pago integralmente em BRL", () => {
     transactions: { payments: [{ status: "processed" }] },
   };
   assert.equal(isProcessedOrderPaymentMatching("129.90", order), true);
+  // A resposta GET de Orders API usa "currency"; payloads de notificação podem
+  // expor "currency_id". Ambos devem ser validados sem aceitar moeda ausente.
+  const getOrderShape = { ...order, currency: "BRL" };
+  delete getOrderShape.currency_id;
+  assert.equal(isProcessedOrderPaymentMatching("129.90", getOrderShape), true);
+  assert.equal(isProcessedOrderPaymentMatching("129.90", { ...getOrderShape, currency: "USD" }), false);
+  assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, currency_id: undefined, currency: undefined }), false);
   assert.equal(isProcessedOrderPaymentMatching("130.00", order), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, currency_id: "USD" }), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, total_paid_amount: "100.00" }), false);
