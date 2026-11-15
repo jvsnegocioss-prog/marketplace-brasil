@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     orderStatus?: string,
     allowedCurrentStatuses?: string[] | null
   ) => {
-    if (!notificationId || !eventClaimed || !claimToken) return false;
+    if (!notificationId || !eventClaimed || !claimToken) return null;
     const { data, error } = await getSupabaseAdmin().rpc(
       "finalize_mercado_pago_webhook_event",
       {
