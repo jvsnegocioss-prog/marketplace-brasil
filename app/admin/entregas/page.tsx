@@ -16,9 +16,10 @@ type Region = {
 type Neighborhood = {
   id: string;
   name: string;
-  region_id: string;
+  region_id: string | null;
   fee_override_cents: number | null;
   active: boolean;
+  record_type: "official" | "locality";
 };
 
 const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", {
@@ -51,7 +52,7 @@ export default function AdminDeliveriesPage() {
   async function loadData() {
     const [regionResult, neighborhoodResult] = await Promise.all([
       supabase.from("delivery_regions").select("id,code,name,fee_cents,active,sort_order").order("sort_order"),
-      supabase.from("delivery_neighborhoods").select("id,name,region_id,fee_override_cents,active").order("name"),
+      supabase.from("delivery_neighborhoods").select("id,name,region_id,fee_override_cents,active,record_type").order("name"),
     ]);
     if (regionResult.error || neighborhoodResult.error) {
       setMessage("Não foi possível carregar as configurações: " + (regionResult.error?.message || neighborhoodResult.error?.message));
@@ -215,12 +216,12 @@ export default function AdminDeliveriesPage() {
           const effectiveFee = item.fee_override_cents ?? region?.fee_cents ?? 0;
           return (
             <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "minmax(130px,1fr) minmax(130px,180px) auto", gap: 10, alignItems: "center" }}>
-              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{region?.name || "Região não definida"} · {money(effectiveFee)}{item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
+              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
               <input aria-label={"Taxa individual de " + item.name} type="number" min="0" max="10000" step="0.01" placeholder="Usar regional" value={neighborhoodValues[item.id] ?? ""} onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle} />
               <button style={buttonStyle} disabled={savingId === item.id} onClick={() => void saveNeighborhood(item)}>{savingId === item.id ? "Salvando..." : "Salvar"}</button>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <small style={{ color: item.active ? "#166534" : "#991b1b" }}>{item.active ? "Bairro atendido" : "Bairro sem atendimento"}</small>
-                <button style={{ ...buttonStyle, padding: "7px 11px", background: item.active ? "#9f2d2d" : "#166534" }} disabled={savingId === item.id} onClick={() => void toggleNeighborhood(item)}>{item.active ? "Desativar bairro" : "Ativar bairro"}</button>
+                <button style={{ ...buttonStyle, padding: "7px 11px", background: item.active ? "#9f2d2d" : "#166534" }} disabled={savingId === item.id || (!item.active && !item.region_id)} onClick={() => void toggleNeighborhood(item)}>{item.active ? "Desativar" : item.region_id ? "Ativar" : "Defina a região para ativar"}</button>
               </div>
             </article>
           );
