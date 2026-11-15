@@ -21,15 +21,15 @@ function getSupabaseAdmin() {
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("Configuração do Supabase indisponível.");
   }
-  if (!getSupabaseAdmin()) {
-    getSupabaseAdmin() = createClient(supabaseUrl, serviceRoleKey, {
+  if (!supabaseAdmin) {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
   }
-  return getSupabaseAdmin();
+  return supabaseAdmin;
 }
 
 async function cancelOrder(orderId: string) {
