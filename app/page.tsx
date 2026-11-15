@@ -676,7 +676,8 @@ export default function Home() {
         return;
       }
 
-      localStorage.removeItem(idempotencyStorageKey);
+      // Mantém a chave até haver resposta definitiva do fluxo.
+      // Se o redirecionamento falhar, a próxima tentativa reutiliza o mesmo pedido.
       window.location.href = result.checkoutUrl;
     } catch (error) {
       console.error("Erro ao iniciar checkout:", error);
