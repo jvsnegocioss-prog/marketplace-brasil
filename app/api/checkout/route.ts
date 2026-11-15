@@ -343,18 +343,33 @@ export async function POST(request: Request) {
 
     const mercadoPagoOrderId = String(paymentData.id);
 
-    const { error: savePaymentIdError } =
+    const { data: linkedOrder, error: savePaymentIdError } =
       await getSupabaseAdmin()
         .from("orders")
         .update({
           mercado_pago_order_id: mercadoPagoOrderId,
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select("id,mercado_pago_order_id")
+        .maybeSingle();
 
-    if (savePaymentIdError) {
+    if (
+      savePaymentIdError ||
+      !linkedOrder ||
+      linkedOrder.mercado_pago_order_id !== mercadoPagoOrderId
+    ) {
       console.error(
-        "ERRO AO SALVAR ID MERCADO PAGO:",
+        "ERRO AO CONFIRMAR VÍNCULO DO PEDIDO COM MERCADO PAGO:",
         savePaymentIdError
+      );
+
+      // Não liberar o checkout sem gravar o vínculo que o webhook exige.
+      // O pedido e a Order externa são preservados: a repetição usa a mesma
+      // chave idempotente e tenta salvar novamente o mesmo identificador.
+      createdOrderId = null;
+      return NextResponse.json(
+        { error: "O pagamento foi iniciado, mas a confirmação do vínculo está pendente. Tente novamente em instantes." },
+        { status: 503 }
       );
     }
 
