@@ -731,6 +731,7 @@ export default function AdminPage() {
           <p>Gerencie os produtos da sua loja.</p>
           <nav className="admin-nav" aria-label="Navegação administrativa">
             <button className="admin-nav-button" onClick={() => router.push("/admin/orders")} style={buttonStyle}>Pedidos e entregas</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/entregas")} style={buttonStyle}>Taxas por região</button>
             <button className="admin-nav-button" onClick={() => router.push("/admin/estoque")} style={buttonStyle}>Estoque</button>
             <button className="admin-nav-button" onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Gestão de avaliações</button>
             <button className="admin-nav-button" onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
