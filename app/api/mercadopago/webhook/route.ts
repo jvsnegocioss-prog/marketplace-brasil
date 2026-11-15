@@ -248,7 +248,7 @@ export async function POST(request: Request) {
 
     const disposition = getOrderPaymentDisposition(storeOrder.total, mpOrder);
 
-    if (disposition === "review") {
+    if (disposition === "review" || disposition === "chargeback_resolved") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (!["em contestação", "reembolsado"].includes(currentStatus)) {
         const { error: reviewError } = await supabase
