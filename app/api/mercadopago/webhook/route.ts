@@ -5,6 +5,7 @@ import {
   verifyMercadoPagoSignature,
   isProcessedOrderPaymentMatching,
   getWebhookNotificationId,
+  isWebhookResourceMatch,
 } from "@/lib/mercadopago-security.cjs";
 
 export const runtime = "nodejs";
@@ -117,13 +118,20 @@ export async function POST(request: Request) {
 
     const { data: existingEvent, error: eventLookupError } = await supabase
       .from("mercado_pago_webhook_events")
-      .select("processing_status")
+      .select("processing_status, resource_id")
       .eq("notification_id", notificationId)
       .maybeSingle();
 
     if (eventLookupError || !existingEvent) {
       console.error("[MP webhook] Erro ao consultar registro da notificação:", eventLookupError?.message);
       return NextResponse.json({ error: "Não foi possível validar a notificação." }, { status: 500 });
+    }
+
+    if (!isWebhookResourceMatch(existingEvent.resource_id, dataId)) {
+      console.warn("[MP webhook] ID de notificação reutilizado para recurso diferente.", {
+        notificationId,
+      });
+      return NextResponse.json({ error: "ID da notificação associado a outro recurso." }, { status: 409 });
     }
 
     if (existingEvent.processing_status === "processed" || existingEvent.processing_status === "ignored") {
