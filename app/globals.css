@@ -5998,3 +5998,46 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 .navigation > button.quick-access-category .navigation-category-icon svg {
   stroke: currentColor !important;
 }
+
+
+/* Acessos rápidos: inativo branco; selecionado azul-marinho e dourado */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  background: #ffffff !important;
+  border: 2px solid #e1e7f0 !important;
+  border-bottom: 2px solid #e1e7f0 !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:focus .navigation-category-icon,
+.navigation > button.quick-access-category:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border: 2px solid #f0cf55 !important;
+  border-bottom: 7px solid #f0cf55 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(6, 24, 61, .24), 0 0 0 1px rgba(240, 207, 85, .24) !important;
+}
+.navigation > button.quick-access-category[data-selected="true"] .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:hover .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #06183d !important;
+}
