@@ -6,7 +6,7 @@ import {
   isProcessedOrderPaymentMatching,
 } from "@/lib/mercadopago-security.cjs";
 export const runtime = "nodejs";
-let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
