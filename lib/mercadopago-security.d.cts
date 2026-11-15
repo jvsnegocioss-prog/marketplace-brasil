@@ -5,3 +5,4 @@ export function isProcessedOrderPaymentMatching(expectedTotal: unknown, mpOrder:
 export function getWebhookNotificationId(body: unknown): string | null;
 export function isWebhookResourceMatch(storedResourceId: unknown, incomingResourceId: unknown): boolean;
 export function getOrderPaymentDisposition(expectedTotal: unknown, mpOrder: any): "paid" | "not_paid" | "refunded" | "partial_refund" | "chargeback" | "chargeback_resolved" | "review";
+export function isWebhookNotificationResourceMatch(body: unknown, signedDataId: unknown): boolean;
