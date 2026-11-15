@@ -26,6 +26,7 @@ type Product = {
   stock: number;
   category: string | null;
   image_url: string | null;
+  free_shipping: boolean;
 };
 
 type ProductMedia = {
@@ -102,7 +103,7 @@ export default function ProductPage() {
 
       const { data, error } = await supabase
         .from("products")
-        .select("id,name,description,price,stock,category,image_url")
+        .select("id,name,description,price,stock,category,image_url,free_shipping")
         .in("id", ids)
         .eq("active", true);
       if (error) throw error;
@@ -591,6 +592,7 @@ export default function ProductPage() {
               </span>
             </div>
             <p className="detail-price">{money(product.price)}</p>
+            {product.free_shipping && <p style={{ color: "#15803d", fontWeight: 700, margin: "6px 0" }}>Frete grátis neste produto</p>}
             <p className="detail-stock">{product.stock > 0 ? `${product.stock} unidade(s) disponíveis` : "Estoque esgotado"}</p>
             {product.description && <p className="detail-description">{product.description}</p>}
             <section className="product-share-panel" aria-label="Compartilhar produto">
