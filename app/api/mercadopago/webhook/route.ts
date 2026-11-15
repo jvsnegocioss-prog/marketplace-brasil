@@ -291,7 +291,7 @@ export async function POST(request: Request) {
     }
 
     if (disposition === "not_paid") {
-      const cancelResult = await finishEvent("processed", null, "cancel_unpaid", orderId);
+      const cancelResult = await finishEvent("processed", undefined, "cancel_unpaid", orderId);
       if (cancelResult?.order_cancelled) {
         return NextResponse.json({ received: true });
       }
