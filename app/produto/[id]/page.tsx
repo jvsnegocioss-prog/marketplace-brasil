@@ -819,7 +819,7 @@ export default function ProductPage() {
               onChange={(event) => setReviewFiles(Array.from(event.target.files || []))}
               className="review-input"
             />
-            <p style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Até 5 arquivos: fotos de até 10 MB cada e vídeos de até 50 MB cada (limite total de 100 MB).</p>
+            <p style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Até 5 arquivos, com limite total de 4 MB por envio.</p>
             {reviewFiles.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(82px,1fr))", gap: 8, marginTop: 10 }}>
                 {reviewFiles.map((file, index) => (
