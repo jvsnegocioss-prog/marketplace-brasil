@@ -120,20 +120,38 @@ export default function AdminDeliveriesPage() {
       setMessage("Nenhuma região foi carregada.");
       return;
     }
-    const enable = !regions.every((region) => region.free_shipping);
+    if (regions.every((region) => region.free_shipping)) {
+      setMessage("Todas as regiões já estão com frete grátis. Para alterar, use o controle individual de cada região.");
+      return;
+    }
     setSavingId("all-regions");
     setMessage("");
     const { error } = await supabase.from("delivery_regions")
-      .update({ free_shipping: enable, updated_at: new Date().toISOString() })
+      .update({ free_shipping: true, updated_at: new Date().toISOString() })
       .not("id", "is", null);
     setSavingId("");
     if (error) {
-      setMessage("Erro ao atualizar o frete grátis global: " + error.message);
+      setMessage("Erro ao ativar frete grátis em todas as regiões: " + error.message);
       return;
     }
-    setMessage(enable
-      ? "Frete grátis ativado para todas as regiões. Os clientes verão a atualização automaticamente."
-      : "Frete grátis global desativado. As taxas regionais e os ajustes por bairro voltaram a valer.");
+    setMessage("Frete grátis ativado em todas as regiões. Cada região poderá ser alterada individualmente sem modificar as demais.");
+    await loadData();
+  }
+
+  async function toggleRegionFreeShipping(region: Region) {
+    setSavingId("free-" + region.id);
+    setMessage("");
+    const { error } = await supabase.from("delivery_regions")
+      .update({ free_shipping: !region.free_shipping, updated_at: new Date().toISOString() })
+      .eq("id", region.id);
+    setSavingId("");
+    if (error) {
+      setMessage("Erro ao alterar frete grátis da região: " + error.message);
+      return;
+    }
+    setMessage(region.free_shipping
+      ? `Frete grátis desativado somente em ${region.name}. As demais regiões permanecem como estavam.`
+      : `Frete grátis ativado somente em ${region.name}.`);
     await loadData();
   }
 
@@ -234,11 +252,11 @@ export default function AdminDeliveriesPage() {
           </p>
         </div>
         <button
-          style={{ ...buttonStyle, background: regions.length > 0 && regions.every((region) => region.free_shipping) ? "#9f2d2d" : "#166534" }}
-          disabled={savingId === "all-regions" || regions.length === 0}
+          style={{ ...buttonStyle, background: "#166534" }}
+          disabled={savingId === "all-regions" || regions.length === 0 || regions.every((region) => region.free_shipping)}
           onClick={() => void toggleAllRegionsFreeShipping()}
         >
-          {savingId === "all-regions" ? "Atualizando..." : regions.length > 0 && regions.every((region) => region.free_shipping) ? "Desativar frete grátis global" : "Ativar frete grátis em todas"}
+          {savingId === "all-regions" ? "Atualizando..." : regions.length > 0 && regions.every((region) => region.free_shipping) ? "Frete grátis ativo em todas" : "Ativar frete grátis em todas"}
         </button>
       </section>
 
@@ -252,10 +270,20 @@ export default function AdminDeliveriesPage() {
             </div>
             <label style={{ display: "block", margin: "12px 0 5px" }}>Taxa de entrega (R$)</label>
             <input type="number" min="0" max="10000" step="0.01" value={regionValues[region.id] ?? ""} onChange={(e) => setRegionValues((old) => ({ ...old, [region.id]: e.target.value }))} style={inputStyle} />
-            <p style={{ color: "#64748b", fontSize: 12 }}>Atual: {money(region.fee_cents)}</p>
+            <p style={{ color: "#64748b", fontSize: 12 }}>Taxa cadastrada: {money(region.fee_cents)}</p>
+            <p style={{ color: region.free_shipping ? "#166534" : "#64748b", fontSize: 13, fontWeight: 700 }}>
+              {region.free_shipping ? "FRETE GRÁTIS ATIVADO" : "Frete pago conforme taxa cadastrada"}
+            </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button style={buttonStyle} disabled={savingId === region.id} onClick={() => void saveRegion(region)}>{savingId === region.id ? "Salvando..." : "Salvar taxa"}</button>
-              <button style={{ ...buttonStyle, background: region.active ? "#9f2d2d" : "#166534" }} disabled={savingId === region.id} onClick={() => void toggleRegion(region)}>{region.active ? "Desativar" : "Ativar"}</button>
+              <button
+                style={{ ...buttonStyle, background: region.free_shipping ? "#9f2d2d" : "#166534" }}
+                disabled={savingId === "free-" + region.id}
+                onClick={() => void toggleRegionFreeShipping(region)}
+              >
+                {savingId === "free-" + region.id ? "Atualizando..." : region.free_shipping ? "Desativar frete grátis" : "Ativar frete grátis"}
+              </button>
+              <button style={{ ...buttonStyle, background: region.active ? "#9f2d2d" : "#166534" }} disabled={savingId === region.id} onClick={() => void toggleRegion(region)}>{region.active ? "Desativar região" : "Ativar região"}</button>
             </div>
           </article>
         ))}
