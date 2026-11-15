@@ -13,6 +13,7 @@ type Product = {
   category: string | null;
   image_url: string | null;
   active: boolean;
+  free_shipping: boolean;
 };
 
 type ProductMedia = {
@@ -166,6 +167,7 @@ export default function AdminPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
+  const [freeShipping, setFreeShipping] = useState(false);
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -351,6 +353,7 @@ export default function AdminPage() {
     setDescription("");
     setPrice("");
     setStock("0");
+    setFreeShipping(false);
     setCategory("");
     setCustomCategory("");
     setImage(null);
@@ -375,6 +378,7 @@ export default function AdminPage() {
     setDescription(product.description || "");
     setPrice(String(product.price));
     setStock(String(product.stock));
+    setFreeShipping(Boolean(product.free_shipping));
     setCategory(product.category || "");
     setCustomCategory("");
     setImage(null);
@@ -538,6 +542,7 @@ export default function AdminPage() {
         description,
         price: Number(price),
         stock: Number(stock),
+        free_shipping: freeShipping,
         category: category === "__custom__" ? customCategory.trim() : category,
         image_url: imageUrl,
         updated_at: new Date().toISOString(),
@@ -895,6 +900,11 @@ export default function AdminPage() {
           required
           style={inputStyle}
         />
+
+        <label style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, border: "1px solid #d1d5db", borderRadius: 8, marginBottom: 16 }}>
+          <input type="checkbox" checked={freeShipping} onChange={(e) => setFreeShipping(e.target.checked)} style={{ width: 20, height: 20 }} />
+          <span><strong>Este produto tem frete grátis</strong><small style={{ display: "block", color: "#64748b" }}>Quando todos os produtos do carrinho tiverem esta opção, a entrega será grátis.</small></span>
+        </label>
 
         <label>Categoria</label>
 
