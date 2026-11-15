@@ -7,6 +7,7 @@ const {
   amountToCents,
   isProcessedOrderPaymentMatching,
   getWebhookNotificationId,
+  isWebhookResourceMatch,
 } = require("../lib/mercadopago-security.cjs");
 
 test("aceita assinatura HMAC válida e normaliza data.id", () => {
@@ -68,4 +69,12 @@ test("rejeita ID de evento ausente, inseguro ou excessivamente longo", () => {
   assert.equal(getWebhookNotificationId({ id: Number.MAX_SAFE_INTEGER + 1 }), null);
   assert.equal(getWebhookNotificationId({ id: "x".repeat(201) }), null);
   assert.equal(getWebhookNotificationId(null), null);
+});
+
+
+test("confere o recurso vinculado ao ID da notificação", () => {
+  assert.equal(isWebhookResourceMatch("order-123", "order-123"), true);
+  assert.equal(isWebhookResourceMatch("order-123", "order-456"), false);
+  assert.equal(isWebhookResourceMatch(null, "order-123"), false);
+  assert.equal(isWebhookResourceMatch("order-123", ""), false);
 });
