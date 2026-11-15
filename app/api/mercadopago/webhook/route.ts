@@ -64,16 +64,33 @@ export async function POST(request: Request) {
     }
     const ts = parts.ts;
     const receivedHash = parts.v1;
-    if (!ts || !receivedHash) {
-      console.warn("[MP webhook] Assinatura sem ts ou v1:", {
-        hasTs: Boolean(ts),
-        hasV1: Boolean(receivedHash),
-      });
+    if (!ts || !receivedHash || !/^\d+$/.test(ts)) {
+      console.warn("[MP webhook] Assinatura sem timestamp/hash válido.");
       return NextResponse.json(
         { error: "Assinatura inválida." },
         { status: 401 }
       );
     }
+
+    // O Mercado Pago envia ts em milissegundos para notificações Orders.
+    // Aceitamos também o formato Unix em segundos para compatibilidade
+    // com outros formatos oficiais de notificação da plataforma.
+    const timestampValue = Number(ts);
+    const timestampMs =
+      ts.length >= 13 ? timestampValue : timestampValue * 1000;
+    const maxClockSkewMs = 5 * 60 * 1000;
+    if (
+      !Number.isSafeInteger(timestampValue) ||
+      !Number.isFinite(timestampMs) ||
+      Math.abs(Date.now() - timestampMs) > maxClockSkewMs
+    ) {
+      console.warn("[MP webhook] Notificação fora da janela temporal permitida.");
+      return NextResponse.json(
+        { error: "Notificação expirada ou com horário inválido." },
+        { status: 401 }
+      );
+    }
+
     // O Mercado Pago exige data.id em letras minúsculas
     // para identificadores alfanuméricos.
     const normalizedDataId = dataId.toLowerCase();
@@ -82,19 +99,8 @@ export async function POST(request: Request) {
     const normalizedHash = createHmac("sha256", secret)
       .update(normalizedManifest)
       .digest("hex");
-    // Comparação adicional somente para diagnóstico.
-    // Esta segunda comparação NÃO autoriza o processamento.
-    const originalManifest =
-      `id:${dataId};request-id:${requestId};ts:${ts};`;
-    const originalHash = createHmac("sha256", secret)
-      .update(originalManifest)
-      .digest("hex");
-    const normalizedMatches = compareSignatures(
+    const signatureMatches = compareSignatures(
       normalizedHash,
-      receivedHash
-    );
-    const originalMatches = compareSignatures(
-      originalHash,
       receivedHash
     );
     console.info("[MP webhook] Resultado da validação:", {
@@ -104,11 +110,10 @@ export async function POST(request: Request) {
       hasRequestId: true,
       requestIdLength: requestId.length,
       hasTimestamp: true,
-      hasSignatureHash: true,
-      normalizedMatches,
-      originalMatches,
+      timestampFresh: true,
+      signatureMatches,
     });
-    if (!normalizedMatches && !originalMatches) {
+    if (!signatureMatches) {
       console.error("[MP webhook] Assinatura não autorizada.");
       return NextResponse.json(
         { error: "Assinatura não autorizada." },
