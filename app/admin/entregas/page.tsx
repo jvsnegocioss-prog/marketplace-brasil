@@ -65,7 +65,9 @@ export default function AdminDeliveriesPage() {
     setRegions(nextRegions);
     setNeighborhoods(nextNeighborhoods);
     setRegionValues(Object.fromEntries(nextRegions.map((r) => [r.id, (r.fee_cents / 100).toFixed(2)])));
-    setNeighborhoodValues(Object.fromEntries(nextNeighborhoods.map((n) => [n.id, n.fee_override_cents === null ? "" : (n.fee_override_cents / 100).toFixed(2)])));
+    setNeighborhoodValues(Object.fromEntries(nextNeighborhoods
+      .filter((n) => n.fee_override_cents !== null)
+      .map((n) => [n.id, (n.fee_override_cents! / 100).toFixed(2)])));
     setNeighborhoodRegionValues(Object.fromEntries(nextNeighborhoods.map((n) => [n.id, n.region_id || ""])));
   }
 
@@ -168,12 +170,16 @@ export default function AdminDeliveriesPage() {
   }
 
   async function saveNeighborhood(item: Neighborhood) {
+    if (!Object.prototype.hasOwnProperty.call(neighborhoodValues, item.id)) {
+      setMessage("Este bairro já está usando automaticamente a taxa da região. Altere o campo para cadastrar uma taxa manual.");
+      return;
+    }
     const raw = (neighborhoodValues[item.id] ?? "").trim();
     let override: number | null = null;
     if (raw) {
       const parsed = Number(raw.replace(",", "."));
       if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10000) {
-        setMessage("Informe uma taxa individual válida ou deixe em branco para usar a taxa regional.");
+        setMessage("Informe uma taxa individual válida ou deixe o campo vazio para voltar à taxa regional.");
         return;
       }
       override = Math.round(parsed * 100);
@@ -185,7 +191,21 @@ export default function AdminDeliveriesPage() {
       .eq("id", item.id);
     setSavingId("");
     if (error) { setMessage("Erro ao salvar bairro: " + error.message); return; }
-    setMessage("Taxa individual do bairro atualizada.");
+    setMessage(override === null
+      ? "Taxa individual removida. O bairro voltou a acompanhar automaticamente a taxa da região."
+      : "Taxa manual do bairro salva. Ela será aplicada somente a este bairro.");
+    await loadData();
+  }
+
+  async function useNeighborhoodRegionFee(item: Neighborhood) {
+    setSavingId(item.id);
+    setMessage("");
+    const { error } = await supabase.from("delivery_neighborhoods")
+      .update({ fee_override_cents: null, updated_at: new Date().toISOString() })
+      .eq("id", item.id);
+    setSavingId("");
+    if (error) { setMessage("Erro ao restaurar taxa regional: " + error.message); return; }
+    setMessage("Taxa individual removida. O bairro voltou a acompanhar a taxa da região.");
     await loadData();
   }
 
@@ -303,7 +323,7 @@ export default function AdminDeliveriesPage() {
       </div>
 
       <h2 style={{ marginTop: 30 }}>Taxas individuais por bairro</h2>
-      <p style={{ color: "#64748b" }}>Deixe o campo vazio para herdar o valor da região. A taxa individual tem prioridade sobre a regional.</p>
+      <p style={{ color: "#64748b" }}>O campo mostra automaticamente a taxa da região selecionada. Se você alterar o valor e salvar, será criada uma taxa manual exclusiva para o bairro. Use “Usar taxa regional” para voltar a acompanhar futuras alterações da região.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 10, marginBottom: 14 }}>
         <input placeholder="Buscar bairro..." value={search} onChange={(e) => setSearch(e.target.value)} style={inputStyle} />
         <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={inputStyle}>
@@ -313,11 +333,22 @@ export default function AdminDeliveriesPage() {
       </div>
       <div style={{ display: "grid", gap: 9 }}>
         {filteredNeighborhoods.map((item) => {
-          const region = regions.find((r) => r.id === item.region_id);
-          const effectiveFee = region?.free_shipping ? 0 : (item.fee_override_cents ?? region?.fee_cents ?? 0);
+          const selectedRegionId = neighborhoodRegionValues[item.id] ?? item.region_id ?? "";
+          const region = regions.find((r) => r.id === selectedRegionId);
+          const isManualOverride = item.fee_override_cents !== null;
+          const hasRateDraft = Object.prototype.hasOwnProperty.call(neighborhoodValues, item.id);
+          const inheritedRate = region ? (region.fee_cents / 100).toFixed(2) : "";
+          const displayedRate = hasRateDraft
+            ? neighborhoodValues[item.id]
+            : isManualOverride
+              ? (item.fee_override_cents! / 100).toFixed(2)
+              : inheritedRate;
+          const effectiveFee = region?.free_shipping
+            ? 0
+            : (item.fee_override_cents ?? region?.fee_cents ?? 0);
           return (
             <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10, alignItems: "center" }}>
-              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{region?.free_shipping ? " (frete grátis da região)" : item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
+              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{region?.free_shipping ? " (frete grátis da região)" : isManualOverride ? " (taxa manual)" : " (taxa da região)"}</div></div>
               <div style={{ display: "grid", gap: 6 }}>
                 <label style={{ fontSize: 12, color: "#475569" }}>Região de entrega</label>
                 <select aria-label={"Região de entrega de " + item.name} value={neighborhoodRegionValues[item.id] ?? ""} onChange={(e) => setNeighborhoodRegionValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle}>
@@ -328,8 +359,39 @@ export default function AdminDeliveriesPage() {
               </div>
               <div style={{ display: "grid", gap: 6 }}>
                 <label style={{ fontSize: 12, color: "#475569" }}>Taxa individual (R$)</label>
-                <input aria-label={"Taxa individual de " + item.name} type="number" min="0" max="10000" step="0.01" placeholder="Usar regional" value={neighborhoodValues[item.id] ?? ""} onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle} />
-                <button style={buttonStyle} disabled={savingId === item.id} onClick={() => void saveNeighborhood(item)}>{savingId === item.id ? "Salvando..." : "Salvar taxa"}</button>
+                <input
+                  aria-label={"Taxa individual de " + item.name}
+                  type="number"
+                  min="0"
+                  max="10000"
+                  step="0.01"
+                  placeholder={region ? "Taxa da região" : "Defina uma região"}
+                  value={displayedRate}
+                  onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))}
+                  style={inputStyle}
+                />
+                <small style={{ color: "#64748b", fontSize: 11 }}>
+                  {isManualOverride || hasRateDraft
+                    ? "Valor manual: só este bairro será afetado"
+                    : region
+                      ? "Valor automático: acompanha a taxa cadastrada na região"
+                      : "Selecione uma região para carregar a taxa"}
+                  {region?.free_shipping ? " · Frete grátis ativo nesta região; esta taxa fica guardada." : ""}
+                </small>
+                <button
+                  style={buttonStyle}
+                  disabled={savingId === item.id || !hasRateDraft}
+                  onClick={() => void saveNeighborhood(item)}
+                >
+                  {savingId === item.id ? "Salvando..." : "Salvar taxa manual"}
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: "#475569" }}
+                  disabled={savingId === item.id || (!isManualOverride && !hasRateDraft)}
+                  onClick={() => void useNeighborhoodRegionFee(item)}
+                >
+                  Usar taxa regional
+                </button>
               </div>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <small style={{ color: item.active ? "#166534" : "#991b1b" }}>{item.active ? "Bairro atendido" : "Bairro sem atendimento"}</small>
