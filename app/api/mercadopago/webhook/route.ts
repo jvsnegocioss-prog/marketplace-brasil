@@ -148,11 +148,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
-    const { data: storeOrder, error: orderLookupError } = await getSupabaseAdmin()
+    const { data: storeOrderData, error: orderLookupError } = await getSupabaseAdmin()
       .from("orders")
       .select("id, status, mercado_pago_order_id, total")
       .eq("id", orderId)
       .maybeSingle();
+
+    // Mantém o formato mínimo esperado pelo webhook sem depender de inferência
+    // de tipos do schema gerado do Supabase neste ponto da rota.
+    const storeOrder = storeOrderData as {
+      id: string;
+      status: string;
+      mercado_pago_order_id: string | null;
+      total: number | string;
+    } | null;
 
     if (orderLookupError) {
       console.error(
