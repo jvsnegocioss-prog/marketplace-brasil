@@ -86,7 +86,7 @@ export default function OrdersPage() {
       setMessage("Erro ao carregar pedidos: " + error.message);
       setOrders([]);
     } else {
-      const loaded = ((data || []) as Order[]).filter((order) => isPaid(order.status));
+      const loaded = (data || []) as Order[];
       setOrders(loaded);
       const estimateDrafts: Record<string, string> = {};
       loaded.forEach((order) => {
@@ -202,12 +202,15 @@ export default function OrdersPage() {
     const labels: Record<string, string> = {
       aguardando: "Aguardando pagamento", pendente: "Aguardando pagamento", pending: "Aguardando pagamento",
       pago: "Pago", aprovado: "Aprovado", approved: "Aprovado", concluido: "Concluído", "concluído": "Concluído",
-      cancelado: "Cancelado", cancelada: "Cancelado", canceled: "Cancelado", cancelled: "Cancelado"
+      cancelado: "Cancelado", cancelada: "Cancelado", canceled: "Cancelado", cancelled: "Cancelado",
+      "reembolso parcial": "Reembolso parcial", reembolsado: "Reembolsado",
+      "em contestação": "Em contestação · revisão manual", "revisão necessária": "Revisão necessária · não despachar"
     };
     return labels[normalizedStatus(status)] || status;
   };
 
-  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const paidOrders = orders.filter((order) => isPaid(order.status));
+  const revenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const visibleOrders = orders.filter((order) => {
     const term = search.trim().toLowerCase();
     return !term || order.customer_name.toLowerCase().includes(term) ||
@@ -236,7 +239,7 @@ export default function OrdersPage() {
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
           {[
             { label: "Total vendido", value: money(revenue), note: "Somente pagamentos confirmados" },
-            { label: "Pedidos pagos", value: String(orders.length), note: "Pedidos aprovados" },
+            { label: "Pedidos pagos", value: String(paidOrders.length), note: "Pedidos aprovados" },
           ].map(item => (
             <article key={item.label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 18, boxShadow: "0 4px 14px rgba(15,23,42,.04)" }}>
               <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{item.label}</p>
