@@ -170,13 +170,14 @@ export async function POST(request: Request) {
         customer_phone_hash: user.id,
         rating,
         comment: "",
-        photos,
+        photos: uploaded.urls,
         status: "pending",
       })
       .select("id,status")
       .single();
 
     if (error) {
+      if (uploaded.paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(uploaded.paths);
       if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto nesta compra." }, { status: 409 });
       return NextResponse.json({ error: "Não foi possível salvar a avaliação." }, { status: 500 });
     }
