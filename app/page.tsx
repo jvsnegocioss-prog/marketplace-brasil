@@ -242,9 +242,8 @@ export default function Home() {
         setDeliveryNeighborhoods([]);
         return;
       }
-      const regionMap = new Map((regions || []).map((region) => [region.id, region]));
       setDeliveryNeighborhoods((neighborhoods || []).flatMap((item) => {
-        const region = regionMap.get(item.region_id);
+        const region = (regions || []).find((candidate) => candidate.id === item.region_id);
         return region ? [{
           id: item.id,
           name: item.name,
