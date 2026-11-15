@@ -3,9 +3,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let browserClient: SupabaseClient | null = null;
 
 function isBrowserEnvironment(): boolean {
-  // Edge Runtime pode expor um global `window` compatível; `document`
-  // existe somente no navegador real e evita inicialização durante o build.
-  return typeof document !== "undefined";
+  // A Vercel Edge/build runtime pode expor globals compatíveis com o browser.
+  // Exigimos um Document real associado à janela para inicializar o SDK.
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return false;
+  }
+  return document.nodeType === 9 && document.defaultView === window;
 }
 
 function getBrowserClient(): SupabaseClient {
@@ -26,9 +29,7 @@ function getBrowserClient(): SupabaseClient {
 
 // Durante a renderização no servidor, disponibiliza uma fachada inerte.
 // Ela permite que o Next.js avalie/importa páginas Client Component sem
-// tentar inicializar o SDK nem exigir credenciais no build do Preview.
-// Qualquer tentativa real de executar uma chamada Supabase no servidor falha
-// explicitamente; no navegador, todas as chamadas usam o cliente real.
+// inicializar o SDK nem exigir credenciais no build do Preview.
 const serverOnlySupabase = new Proxy(function serverOnlySupabaseCall() {}, {
   get(_target, property) {
     if (property === "then") return undefined;
