@@ -609,29 +609,57 @@ export default function Home() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
 
+      const checkoutPayload = {
+        customerName,
+        customerEmail,
+        customerPhone,
+        deliveryAddress,
+        couponCode: appliedCoupon?.code || null,
+        deliveryNeighborhoodId,
+        items: cart.map((item) => ({
+          id: item.id,
+          qty: item.qty,
+        })),
+      };
+      const checkoutFingerprint = JSON.stringify(checkoutPayload);
+      const idempotencyStorageKey = "novashopp_checkout_idempotency_v1";
+      let checkoutIdempotencyKey = "";
+      try {
+        const savedAttempt = JSON.parse(localStorage.getItem(idempotencyStorageKey) || "null");
+        if (
+          savedAttempt?.fingerprint === checkoutFingerprint &&
+          typeof savedAttempt?.key === "string" &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedAttempt.key)
+        ) {
+          checkoutIdempotencyKey = savedAttempt.key;
+        }
+      } catch {
+        // Uma entrada local inválida será substituída por uma nova tentativa.
+      }
+      if (!checkoutIdempotencyKey) {
+        checkoutIdempotencyKey = crypto.randomUUID();
+        localStorage.setItem(idempotencyStorageKey, JSON.stringify({
+          fingerprint: checkoutFingerprint,
+          key: checkoutIdempotencyKey,
+        }));
+      }
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Checkout-Idempotency-Key": checkoutIdempotencyKey,
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({
-          customerName,
-          customerEmail,
-          customerPhone,
-          deliveryAddress,
-          couponCode: appliedCoupon?.code || null,
-          deliveryNeighborhoodId,
-          items: cart.map((item) => ({
-            id: item.id,
-            qty: item.qty,
-          })),
-        }),
+        body: JSON.stringify(checkoutPayload),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
+        if (response.status === 409) {
+          localStorage.removeItem(idempotencyStorageKey);
+        }
         setCheckoutMessage(
           result.error || "Não foi possível iniciar o pagamento."
         );
@@ -648,6 +676,7 @@ export default function Home() {
         return;
       }
 
+      localStorage.removeItem(idempotencyStorageKey);
       window.location.href = result.checkoutUrl;
     } catch (error) {
       console.error("Erro ao iniciar checkout:", error);
