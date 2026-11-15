@@ -58,10 +58,10 @@ function paymentLabel(status: string) {
     cancelado: "Cancelado",
     cancelled: "Cancelado",
     canceled: "Cancelado",
-    "Reembolso parcial": "Reembolso parcial · pedido em revisão",
-    "Reembolsado": "Pagamento reembolsado",
-    "Em contestação": "Pagamento em contestação · em análise",
-    "Revisão necessária": "Pagamento em revisão manual",
+    "reembolso parcial": "Reembolso parcial · pedido em revisão",
+    "reembolsado": "Pagamento reembolsado",
+    "em contestação": "Pagamento em contestação · em análise",
+    "revisão necessária": "Pagamento em revisão manual",
   };
   return labels[(status || "").toLowerCase()] || status || "Não informado";
 }
