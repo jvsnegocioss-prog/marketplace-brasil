@@ -251,17 +251,41 @@ export async function POST(request: Request) {
     }
 
     if (mpStatus === "processed") {
-      const { error } = await supabase
+      const { data: paidOrder, error } = await supabase
         .from("orders")
         .update({ status: "Pago" })
         .eq("id", orderId)
-        .ilike("status", "aguardando");
+        .ilike("status", "aguardando")
+        .select("id")
+        .maybeSingle();
 
       if (error) {
         await finishEvent("failed", "store_order_payment_update_failed");
         console.error("[MP webhook] Erro ao atualizar pedido:", error.message);
         return NextResponse.json({ error: "Erro ao atualizar pedido." }, { status: 500 });
       }
+
+      if (!paidOrder) {
+        const { data: latestOrder, error: latestOrderError } = await supabase
+          .from("orders")
+          .select("status")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (latestOrderError) {
+          await finishEvent("failed", "store_order_payment_state_lookup_failed");
+          return NextResponse.json({ error: "Não foi possível confirmar o estado do pedido." }, { status: 500 });
+        }
+
+        if (!latestOrder || String(latestOrder.status).trim().toLowerCase() !== "aguardando") {
+          await finishEvent("ignored", "store_order_finalized_during_payment_update");
+          return NextResponse.json({ received: true, ignored: true });
+        }
+
+        await finishEvent("failed", "store_order_payment_update_not_applied");
+        return NextResponse.json({ error: "Atualização do pagamento não foi aplicada." }, { status: 503 });
+      }
+
       await finishEvent("processed");
       return NextResponse.json({ received: true });
     }
