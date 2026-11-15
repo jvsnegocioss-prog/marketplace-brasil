@@ -126,8 +126,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível validar a notificação." }, { status: 500 });
     }
 
-    if (existingEvent.processing_status === "processed") {
-      return NextResponse.json({ received: true, duplicate: true });
+    if (existingEvent.processing_status === "processed" || existingEvent.processing_status === "ignored") {
+      return NextResponse.json({ received: true, duplicate: true, ignored: existingEvent.processing_status === "ignored" });
     }
 
     // Claim atômico: apenas um processamento por evento. Um processamento
