@@ -56,6 +56,7 @@ function paymentLabel(status: string) {
     aprovado: "Pagamento aprovado",
     approved: "Pagamento aprovado",
     cancelado: "Cancelado",
+    cancelada: "Cancelado",
     cancelled: "Cancelado",
     canceled: "Cancelado",
     "reembolso parcial": "Reembolso parcial · pedido em revisão",
