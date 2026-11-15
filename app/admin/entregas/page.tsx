@@ -46,6 +46,7 @@ export default function AdminDeliveriesPage() {
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [regionValues, setRegionValues] = useState<Record<string, string>>({});
   const [neighborhoodValues, setNeighborhoodValues] = useState<Record<string, string>>({});
+  const [neighborhoodRegionValues, setNeighborhoodRegionValues] = useState<Record<string, string>>({});
   const [filterRegion, setFilterRegion] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -64,6 +65,7 @@ export default function AdminDeliveriesPage() {
     setNeighborhoods(nextNeighborhoods);
     setRegionValues(Object.fromEntries(nextRegions.map((r) => [r.id, (r.fee_cents / 100).toFixed(2)])));
     setNeighborhoodValues(Object.fromEntries(nextNeighborhoods.map((n) => [n.id, n.fee_override_cents === null ? "" : (n.fee_override_cents / 100).toFixed(2)])));
+    setNeighborhoodRegionValues(Object.fromEntries(nextNeighborhoods.map((n) => [n.id, n.region_id || ""])));
   }
 
   useEffect(() => {
@@ -146,6 +148,23 @@ export default function AdminDeliveriesPage() {
     await loadData();
   }
 
+  async function saveNeighborhoodRegion(item: Neighborhood) {
+    const regionId = neighborhoodRegionValues[item.id] || null;
+    if (regionId && !regions.some((region) => region.id === regionId)) {
+      setMessage("Selecione uma região válida.");
+      return;
+    }
+    setSavingId(item.id);
+    setMessage("");
+    const { error } = await supabase.from("delivery_neighborhoods")
+      .update({ region_id: regionId, updated_at: new Date().toISOString() })
+      .eq("id", item.id);
+    setSavingId("");
+    if (error) { setMessage("Erro ao salvar região do bairro: " + error.message); return; }
+    setMessage("Região do bairro atualizada. A ativação continua sendo uma ação separada.");
+    await loadData();
+  }
+
   async function toggleNeighborhood(item: Neighborhood) {
     setSavingId(item.id);
     setMessage("");
@@ -217,8 +236,19 @@ export default function AdminDeliveriesPage() {
           return (
             <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "minmax(130px,1fr) minmax(130px,180px) auto", gap: 10, alignItems: "center" }}>
               <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
-              <input aria-label={"Taxa individual de " + item.name} type="number" min="0" max="10000" step="0.01" placeholder="Usar regional" value={neighborhoodValues[item.id] ?? ""} onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle} />
-              <button style={buttonStyle} disabled={savingId === item.id} onClick={() => void saveNeighborhood(item)}>{savingId === item.id ? "Salvando..." : "Salvar"}</button>
+              <div style={{ display: "grid", gap: 6 }}>
+                <label style={{ fontSize: 12, color: "#475569" }}>Região de entrega</label>
+                <select aria-label={"Região de entrega de " + item.name} value={neighborhoodRegionValues[item.id] ?? ""} onChange={(e) => setNeighborhoodRegionValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle}>
+                  <option value="">Não definida</option>
+                  {regions.map((option) => <option key={option.id} value={option.id}>{option.name}{option.active ? "" : " (inativa)"}</option>)}
+                </select>
+                <button style={{ ...buttonStyle, padding: "8px 10px" }} disabled={savingId === item.id || (neighborhoodRegionValues[item.id] ?? "") === (item.region_id ?? "")} onClick={() => void saveNeighborhoodRegion(item)}>{savingId === item.id ? "Salvando..." : "Salvar região"}</button>
+              </div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <label style={{ fontSize: 12, color: "#475569" }}>Taxa individual (R$)</label>
+                <input aria-label={"Taxa individual de " + item.name} type="number" min="0" max="10000" step="0.01" placeholder="Usar regional" value={neighborhoodValues[item.id] ?? ""} onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle} />
+                <button style={buttonStyle} disabled={savingId === item.id} onClick={() => void saveNeighborhood(item)}>{savingId === item.id ? "Salvando..." : "Salvar taxa"}</button>
+              </div>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <small style={{ color: item.active ? "#166534" : "#991b1b" }}>{item.active ? "Bairro atendido" : "Bairro sem atendimento"}</small>
                 <button style={{ ...buttonStyle, padding: "7px 11px", background: item.active ? "#9f2d2d" : "#166534" }} disabled={savingId === item.id || (!item.active && !item.region_id)} onClick={() => void toggleNeighborhood(item)}>{item.active ? "Desativar" : item.region_id ? "Ativar" : "Defina a região para ativar"}</button>
