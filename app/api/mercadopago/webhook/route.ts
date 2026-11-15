@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const finishEvent = async (status: EventStatus, errorCode?: string) => {
     if (!notificationId || !eventClaimed) return;
     const now = new Date().toISOString();
-    const { error } = await getSupabaseAdmin()
+    const { data, error } = await getSupabaseAdmin()
       .from("mercado_pago_webhook_events")
       .update({
         processing_status: status,
