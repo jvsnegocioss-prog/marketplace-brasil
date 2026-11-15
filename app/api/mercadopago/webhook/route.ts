@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import {
   isValidWebhookTimestamp,
@@ -30,6 +31,7 @@ type EventStatus = "processed" | "ignored" | "failed";
 export async function POST(request: Request) {
   let notificationId: string | null = null;
   let eventClaimed = false;
+  let claimToken: string | null = null;
 
   const finishEvent = async (status: EventStatus, errorCode?: string) => {
     if (!notificationId || !eventClaimed) return;
@@ -41,10 +43,18 @@ export async function POST(request: Request) {
         processed_at: status === "processed" ? now : null,
         last_error_code: errorCode ?? null,
       })
-      .eq("notification_id", notificationId);
+      .eq("notification_id", notificationId)
+      .eq("last_error_code", claimToken)
+      .select("notification_id")
+      .maybeSingle();
     if (error) {
       console.error("[MP webhook] Não foi possível finalizar registro do evento:", error.message);
       throw new Error("Falha ao registrar resultado do evento.");
+    }
+    if (!data) {
+      console.warn("[MP webhook] Lease de processamento perdido; outro worker assumiu o evento.", { notificationId });
+      eventClaimed = false;
+      return;
     }
     eventClaimed = false;
   };
@@ -142,12 +152,13 @@ export async function POST(request: Request) {
     // Claim atômico: apenas um processamento por evento. Um processamento
     // abandonado pode ser retomado após cinco minutos sem atualização.
     const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    claimToken = `lease:${randomUUID()}`;
     const { data: claimedEvent, error: claimError } = await supabase
       .from("mercado_pago_webhook_events")
       .update({
         processing_status: "processing",
         last_received_at: new Date().toISOString(),
-        last_error_code: null,
+        last_error_code: claimToken,
       })
       .eq("notification_id", notificationId)
       .or(`processing_status.in.(received,failed),and(processing_status.eq.processing,last_received_at.lt.${staleBefore})`)
