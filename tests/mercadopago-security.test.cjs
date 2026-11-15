@@ -6,6 +6,7 @@ const {
   verifyMercadoPagoSignature,
   amountToCents,
   isProcessedOrderPaymentMatching,
+  getOrderPaymentDisposition,
   getWebhookNotificationId,
   isWebhookResourceMatch,
 } = require("../lib/mercadopago-security.cjs");
@@ -84,4 +85,50 @@ test("confere o recurso vinculado ao ID da notificação", () => {
   assert.equal(isWebhookResourceMatch("order-123", "order-456"), false);
   assert.equal(isWebhookResourceMatch(null, "order-123"), false);
   assert.equal(isWebhookResourceMatch("order-123", ""), false);
+});
+
+
+test("classifica reembolso integral e parcial somente com valores conferidos", () => {
+  const base = {
+    status: "processed",
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "100.00",
+    transactions: { payments: [{ status: "processed" }] },
+  };
+  assert.equal(getOrderPaymentDisposition("100.00", base), "paid");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status_detail: "partially_refunded",
+    transactions: { ...base.transactions, refunds: [{ status: "processed", amount: "25.00" }] },
+  }), "partial_refund");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "refunded",
+    status_detail: "refunded",
+    transactions: { refunds: [{ status: "processed", amount: "100.00" }] },
+  }), "refunded");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "refunded",
+    transactions: { refunds: [{ status: "processed", amount: "99.00" }] },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status_detail: "partially_refunded",
+    transactions: { refunds: [{ status: "processing", amount: "25.00" }] },
+  }), "review");
+});
+
+test("classifica chargeback e estados de pagamento não finais sem liberar entrega", () => {
+  const base = {
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "100.00",
+    transactions: { payments: [{ status: "processed" }] },
+  };
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "charged_back", status_detail: "in_process" }), "chargeback");
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "canceled" }), "not_paid");
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "processing" }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "charged_back", currency: "USD" }), "review");
 });
