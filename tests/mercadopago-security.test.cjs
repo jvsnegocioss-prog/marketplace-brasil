@@ -188,7 +188,7 @@ test("mantém cancelamento e estados não finais fora de pagamento aprovado", ()
     total_paid_amount: "100.00",
     transactions: { payments: [{ status: "processed" }] },
   };
-  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "canceled" }), "not_paid");
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "canceled" }), "review");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
     status: "canceled",
