@@ -36,6 +36,14 @@ type CartItem = {
   qty: number;
 };
 
+type DeliveryNeighborhood = {
+  id: string;
+  name: string;
+  fee_override_cents: number | null;
+  region_name: string;
+  region_fee_cents: number;
+};
+
 const baseCategories = [
   { name: "Todos", icon: Package },
   { name: "Eletrônicos", icon: Smartphone },
@@ -109,6 +117,8 @@ export default function Home() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryNeighborhoodId, setDeliveryNeighborhoodId] = useState("");
+  const [deliveryNeighborhoods, setDeliveryNeighborhoods] = useState<DeliveryNeighborhood[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const [couponInput, setCouponInput] = useState("");
@@ -213,6 +223,40 @@ export default function Home() {
       current.filter((item) => activeProductIds.has(item.id))
     );
   }, [loading, error, products]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDeliveryNeighborhoods() {
+      const [{ data: neighborhoods, error: neighborhoodsError }, { data: regions, error: regionsError }] = await Promise.all([
+        supabase.from("delivery_neighborhoods")
+          .select("id,name,fee_override_cents,region_id")
+          .eq("active", true)
+          .order("name"),
+        supabase.from("delivery_regions")
+          .select("id,name,fee_cents")
+          .eq("active", true),
+      ]);
+      if (cancelled) return;
+      if (neighborhoodsError || regionsError) {
+        console.error("Não foi possível carregar as opções de entrega:", neighborhoodsError || regionsError);
+        setDeliveryNeighborhoods([]);
+        return;
+      }
+      const regionMap = new Map((regions || []).map((region) => [region.id, region]));
+      setDeliveryNeighborhoods((neighborhoods || []).flatMap((item) => {
+        const region = regionMap.get(item.region_id);
+        return region ? [{
+          id: item.id,
+          name: item.name,
+          fee_override_cents: item.fee_override_cents,
+          region_name: region.name,
+          region_fee_cents: region.fee_cents,
+        }] : [];
+      }));
+    }
+    void loadDeliveryNeighborhoods();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     loadProducts();
@@ -562,6 +606,7 @@ export default function Home() {
           customerPhone,
           deliveryAddress,
           couponCode: appliedCoupon?.code || null,
+          deliveryNeighborhoodId,
           items: cart.map((item) => ({
             id: item.id,
             qty: item.qty,
@@ -607,6 +652,15 @@ export default function Home() {
     return sum + (product ? Number(product.price) * item.qty : 0);
   }, 0);
   const displayTotal = appliedCoupon ? appliedCoupon.total : total;
+  const allCartItemsHaveFreeShipping = cart.length > 0 && cart.every((item) =>
+    products.find((product) => product.id === item.id)?.free_shipping === true
+  );
+  const selectedDeliveryNeighborhood = deliveryNeighborhoods.find((item) => item.id === deliveryNeighborhoodId) || null;
+  const estimatedShippingFee = selectedDeliveryNeighborhood
+    ? allCartItemsHaveFreeShipping
+      ? 0
+      : (selectedDeliveryNeighborhood.fee_override_cents ?? selectedDeliveryNeighborhood.region_fee_cents) / 100
+    : null;
 
   return (
     <main>
@@ -1288,6 +1342,32 @@ export default function Home() {
                     </label>
 
                     <label style={{ fontSize: 14, fontWeight: 600 }}>
+                      Bairro de entrega *
+                      <select
+                        required
+                        value={deliveryNeighborhoodId}
+                        onChange={(e) => setDeliveryNeighborhoodId(e.target.value)}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: 12,
+                          marginTop: 6,
+                          border: "1px solid #ccc",
+                          borderRadius: 8,
+                          fontSize: 15,
+                          background: "#fff",
+                        }}
+                      >
+                        <option value="">Selecione seu bairro</option>
+                        {deliveryNeighborhoods.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} — {item.region_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label style={{ fontSize: 14, fontWeight: 600 }}>
                       Endereço completo de entrega *
                       <textarea
                         required
@@ -1309,16 +1389,25 @@ export default function Home() {
                     </label>
 
                     <div className="cart-total" style={{ flexDirection: "column", alignItems: "stretch", gap: 7 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                        <span>Subtotal dos produtos</span>
+                        <span>{money(total)}</span>
+                      </div>
                       {appliedCoupon && (
                         <div style={{ display: "flex", justifyContent: "space-between", color: "#15803d", fontSize: 14 }}>
                           <span>Desconto ({appliedCoupon.code})</span>
                           <strong>- {money(appliedCoupon.discount)}</strong>
                         </div>
                       )}
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span>Total do pedido</span>
-                        <strong>{money(displayTotal)}</strong>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                        <span>Entrega {selectedDeliveryNeighborhood ? `(${selectedDeliveryNeighborhood.name})` : ""}</span>
+                        <strong>{estimatedShippingFee === null ? "Selecione o bairro" : estimatedShippingFee === 0 ? "Grátis" : money(estimatedShippingFee)}</strong>
                       </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Total estimado</span>
+                        <strong>{estimatedShippingFee === null ? "—" : money(displayTotal + estimatedShippingFee)}</strong>
+                      </div>
+                      <small style={{ color: "#64748b" }}>O valor definitivo do frete é recalculado no servidor ao criar o pedido.</small>
                     </div>
 
                     {checkoutMessage && (
