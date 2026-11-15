@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import {
   isValidWebhookTimestamp,
   verifyMercadoPagoSignature,
-  isProcessedOrderPaymentMatching,
   getOrderPaymentDisposition,
   getWebhookNotificationId,
   isWebhookResourceMatch,
@@ -187,7 +186,6 @@ export async function POST(request: Request) {
 
     const mpOrder = await mpResponse.json();
     const orderId = mpOrder.external_reference;
-    const mpStatus = mpOrder.status;
 
     if (!orderId) {
       await finishEvent("ignored", "missing_external_reference");
