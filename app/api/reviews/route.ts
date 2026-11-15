@@ -27,7 +27,7 @@ async function getAccount(request: Request) {
 }
 
 async function validatePurchase(email: string, productId: string, requiredOrderId?: string) {
-  let ordersQuery = supabaseAdmin
+  let ordersQuery = getSupabaseAdmin()
     .from("orders")
     .select("id,customer_name,status,delivery_status,customer_email")
     .ilike("customer_email", email)
@@ -42,7 +42,7 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
   );
 
   for (const order of eligibleOrders) {
-    const { data: item, error: itemError } = await supabaseAdmin
+    const { data: item, error: itemError } = await getSupabaseAdmin()
       .from("order_items")
       .select("product_id")
       .eq("order_id", order.id)
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
   const productId = searchParams.get("productId");
   if (!productId) return NextResponse.json({ error: "Informe o produto." }, { status: 400 });
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("product_reviews")
     .select("id,product_id,reviewer_name,rating,comment,photos,created_at")
     .eq("product_id", productId)
@@ -127,13 +127,13 @@ export async function GET(request: Request) {
   const user = await getAccount(request);
   let ownReview = null;
   if (user?.email) {
-    const { data: orders } = await supabaseAdmin
+    const { data: orders } = await getSupabaseAdmin()
       .from("orders")
       .select("id")
       .ilike("customer_email", user.email);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
-      const { data: owned } = await supabaseAdmin
+      const { data: owned } = await getSupabaseAdmin()
         .from("product_reviews")
         .select("id,rating,comment,photos,status,order_id")
         .eq("product_id", productId)
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const uploaded = await uploadReviewFiles(files, user.id);
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from("product_reviews")
       .insert({
         product_id: productId,
@@ -206,7 +206,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Selecione sua nota de 1 a 5 estrelas." }, { status: 400 });
     }
 
-    const { data: ownedReview, error: ownedReviewError } = await supabaseAdmin
+    const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
       .select("order_id")
       .eq("id", reviewId)
@@ -225,7 +225,7 @@ export async function PATCH(request: Request) {
     const update: Record<string, unknown> = { rating, status: "pending", updated_at: new Date().toISOString() };
     if (uploaded) update.photos = uploaded.urls;
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from("product_reviews")
       .update(update)
       .eq("id", reviewId)
@@ -254,7 +254,7 @@ export async function DELETE(request: Request) {
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
     if (!reviewId || !productId) return NextResponse.json({ error: "Informe a avaliação e o produto." }, { status: 400 });
 
-    const { data: ownedReview, error: ownedReviewError } = await supabaseAdmin
+    const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
       .select("order_id")
       .eq("id", reviewId)
@@ -267,7 +267,7 @@ export async function DELETE(request: Request) {
     const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from("product_reviews")
       .delete()
       .eq("id", reviewId)
