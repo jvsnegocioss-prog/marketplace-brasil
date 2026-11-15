@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const orderNumber = typeof body.orderNumber === "string" ? body.orderNumber.trim().replace(/^#\\s*/, "") : "";
+    const orderNumber = typeof body.orderNumber === "string" ? body.orderNumber.trim().replace(/^#\s*/, "") : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
 
     if (!orderNumber || orderNumber.length > 120 || !phone || phone.length > 40) {
