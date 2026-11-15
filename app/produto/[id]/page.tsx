@@ -170,6 +170,7 @@ export default function ProductPage() {
   }
 
   async function loadReviews() {
+    try {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     const response = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`, {
@@ -184,8 +185,11 @@ export default function ProductPage() {
         setRating(result.ownReview.rating);
       }
     }
+    } catch (error) {
+      console.error("Não foi possível carregar as avaliações do produto:", error);
+      setReviews([]);
+    }
   }
-
   useEffect(() => {
     async function load() {
       const { data } = await supabase
