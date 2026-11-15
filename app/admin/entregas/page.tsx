@@ -222,7 +222,7 @@ export default function AdminDeliveriesPage() {
 
       <h2 style={{ marginTop: 30 }}>Taxas individuais por bairro</h2>
       <p style={{ color: "#64748b" }}>Deixe o campo vazio para herdar o valor da região. A taxa individual tem prioridade sobre a regional.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 10, marginBottom: 14 }}>
         <input placeholder="Buscar bairro..." value={search} onChange={(e) => setSearch(e.target.value)} style={inputStyle} />
         <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={inputStyle}>
           <option value="all">Todas as regiões</option>
@@ -234,7 +234,7 @@ export default function AdminDeliveriesPage() {
           const region = regions.find((r) => r.id === item.region_id);
           const effectiveFee = item.fee_override_cents ?? region?.fee_cents ?? 0;
           return (
-            <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "minmax(130px,1fr) minmax(130px,180px) auto", gap: 10, alignItems: "center" }}>
+            <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10, alignItems: "center" }}>
               <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{item.fee_override_cents !== null ? " (personalizado)" : " (regional)"}</div></div>
               <div style={{ display: "grid", gap: 6 }}>
                 <label style={{ fontSize: 12, color: "#475569" }}>Região de entrega</label>
