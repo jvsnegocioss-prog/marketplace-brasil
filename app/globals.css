@@ -5705,3 +5705,85 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
   border-radius: 5px;
 }
+
+
+/* Correção dos estados de toque dos botões na página de produto (iOS/mobile) */
+.product-detail-page .detail-back-link,
+.product-detail-page .detail-buy-link,
+.product-detail-page .product-share-button,
+.product-detail-page .review-submit-button,
+.product-detail-page .review-delete-button,
+.product-detail-page .review-secondary-button {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  background-clip: padding-box;
+}
+.product-detail-page a.detail-back-link,
+.product-detail-page a.detail-back-link:hover,
+.product-detail-page a.detail-back-link:focus,
+.product-detail-page a.detail-back-link:focus-visible,
+.product-detail-page a.detail-back-link:active {
+  background: linear-gradient(115deg, #071b43 0%, #17477f 100%) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: #173b70 !important;
+  text-decoration: none !important;
+}
+.product-detail-page .detail-buy-link,
+.product-detail-page .detail-buy-link:hover,
+.product-detail-page .detail-buy-link:focus,
+.product-detail-page .detail-buy-link:focus-visible,
+.product-detail-page .detail-buy-link:active,
+.product-detail-page .review-submit-button,
+.product-detail-page .review-submit-button:hover,
+.product-detail-page .review-submit-button:focus,
+.product-detail-page .review-submit-button:focus-visible,
+.product-detail-page .review-submit-button:active {
+  background: #071b43 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border: 1px solid #173b70 !important;
+}
+.product-detail-page .detail-buy-link:disabled,
+.product-detail-page .detail-buy-link:disabled:hover,
+.product-detail-page .detail-buy-link:disabled:active,
+.product-detail-page .review-submit-button:disabled {
+  background: #071b43 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  opacity: .58;
+}
+.product-detail-page .product-share-button,
+.product-detail-page .product-share-button:hover,
+.product-detail-page .product-share-button:focus,
+.product-detail-page .product-share-button:focus-visible,
+.product-detail-page .product-share-button:active {
+  background: #fff !important;
+  -webkit-text-fill-color: currentColor !important;
+  border-color: #dce5f0 !important;
+}
+.product-detail-page .product-share-button.share-facebook { color: #1877f2 !important; }
+.product-detail-page .product-share-button.share-whatsapp { color: #168b50 !important; }
+.product-detail-page .product-share-button.share-x { color: #111827 !important; }
+.product-detail-page .review-delete-button,
+.product-detail-page .review-delete-button:hover,
+.product-detail-page .review-delete-button:focus,
+.product-detail-page .review-delete-button:focus-visible,
+.product-detail-page .review-delete-button:active {
+  background: #fffafa !important;
+  color: #a83d3d !important;
+  -webkit-text-fill-color: #a83d3d !important;
+  border-color: #f1dada !important;
+}
+.product-detail-page .review-secondary-button,
+.product-detail-page .review-secondary-button:hover,
+.product-detail-page .review-secondary-button:focus,
+.product-detail-page .review-secondary-button:focus-visible,
+.product-detail-page .review-secondary-button:active {
+  background: #f7f9fc !important;
+  color: #315783 !important;
+  -webkit-text-fill-color: #315783 !important;
+  border-color: #dce6f2 !important;
+}
