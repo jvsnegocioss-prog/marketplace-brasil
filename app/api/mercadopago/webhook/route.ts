@@ -14,16 +14,17 @@ function getSupabaseAdmin() {
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("Configuração do Supabase indisponível.");
   }
-  if (!getSupabaseAdmin()) {
-    getSupabaseAdmin() = createClient(supabaseUrl, serviceRoleKey, {
+  if (!supabaseAdmin) {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
   }
-  return getSupabaseAdmin();
+  return supabaseAdmin;
 }
+
 export async function POST(request: Request) {
   try {
     const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
