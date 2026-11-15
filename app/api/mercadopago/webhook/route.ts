@@ -34,30 +34,40 @@ export async function POST(request: Request) {
   let eventClaimed = false;
   let claimToken: string | null = null;
 
-  const finishEvent = async (status: EventStatus, errorCode?: string) => {
-    if (!notificationId || !eventClaimed) return;
-    const now = new Date().toISOString();
-    const { data, error } = await getSupabaseAdmin()
-      .from("mercado_pago_webhook_events")
-      .update({
-        processing_status: status,
-        processed_at: status === "processed" ? now : null,
-        last_error_code: errorCode ?? null,
-      })
-      .eq("notification_id", notificationId)
-      .eq("last_error_code", claimToken)
-      .select("notification_id")
-      .maybeSingle();
+  const finishEvent = async (
+    status: EventStatus,
+    errorCode?: string,
+    orderAction: "none" | "set_status" | "cancel_unpaid" = "none",
+    orderId?: string,
+    orderStatus?: string,
+    allowedCurrentStatuses?: string[] | null
+  ) => {
+    if (!notificationId || !eventClaimed || !claimToken) return false;
+    const { data, error } = await getSupabaseAdmin().rpc(
+      "finalize_mercado_pago_webhook_event",
+      {
+        p_notification_id: notificationId,
+        p_processing_token: claimToken,
+        p_final_status: status,
+        p_error_code: errorCode ?? null,
+        p_order_id: orderId ?? null,
+        p_order_action: orderAction,
+        p_order_status: orderStatus ?? null,
+        p_allowed_current_statuses: allowedCurrentStatuses ?? null,
+      }
+    ).maybeSingle();
+
     if (error) {
-      console.error("[MP webhook] Não foi possível finalizar registro do evento:", error.message);
+      console.error("[MP webhook] Não foi possível finalizar atomicamente o evento:", error.message);
       throw new Error("Falha ao registrar resultado do evento.");
     }
-    if (!data) {
-      console.warn("[MP webhook] Lease de processamento perdido; outro worker assumiu o evento.", { notificationId });
-      eventClaimed = false;
-      return;
+    const result = data as { finalized: boolean; order_updated: boolean; order_cancelled: boolean } | null;
+    if (!result?.finalized) {
+      console.warn("[MP webhook] Reserva perdida ou alteração do pedido não aplicada.", { notificationId });
+      return false;
     }
     eventClaimed = false;
+    return result;
   };
 
   try {
@@ -156,33 +166,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, duplicate: true, ignored: existingEvent.processing_status === "ignored" });
     }
 
-    // Claim atômico: apenas um processamento por evento. Um processamento
-    // abandonado pode ser retomado após cinco minutos sem atualização.
-    const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    claimToken = `lease:${randomUUID()}`;
-    const { data: claimedEvent, error: claimError } = await supabase
-      .from("mercado_pago_webhook_events")
-      .update({
-        processing_status: "processing",
-        last_received_at: new Date().toISOString(),
-        last_error_code: claimToken,
+    // A reserva é controlada no banco e tem token próprio. Entregas
+    // repetidas não alteram o relógio da reserva em andamento.
+    claimToken = randomUUID();
+    const { data: claimData, error: claimError } = await supabase
+      .rpc("claim_mercado_pago_webhook_event", {
+        p_notification_id: notificationId,
+        p_processing_token: claimToken,
       })
-      .eq("notification_id", notificationId)
-      .or(`processing_status.in.(received,failed),and(processing_status.eq.processing,last_received_at.lt.${staleBefore})`)
-      .select("notification_id")
       .maybeSingle();
 
     if (claimError) {
       console.error("[MP webhook] Erro ao reivindicar evento:", claimError.message);
       return NextResponse.json({ error: "Não foi possível iniciar o processamento." }, { status: 500 });
     }
-    if (!claimedEvent) {
+    const claimedEvent = claimData as { claimed: boolean; processing_status: string | null } | null;
+    if (!claimedEvent?.claimed) {
       const { data: latestEvent } = await supabase
         .from("mercado_pago_webhook_events")
         .select("processing_status")
         .eq("notification_id", notificationId)
         .maybeSingle();
-      if (latestEvent?.processing_status === "processed") {
+      if (latestEvent?.processing_status === "processed" || latestEvent?.processing_status === "ignored") {
         return NextResponse.json({ received: true, duplicate: true });
       }
       return NextResponse.json({ error: "Notificação já está sendo processada; tente novamente." }, { status: 503 });
@@ -258,29 +263,17 @@ export async function POST(request: Request) {
     if (disposition === "review" || disposition === "chargeback_resolved") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (disposition === "chargeback_resolved" || !["em contestação", "reembolsado"].includes(currentStatus)) {
-        const { error: reviewError } = await supabase
-          .from("orders")
-          .update({ status: "Revisão necessária" })
-          .eq("id", orderId);
-        if (reviewError) {
-          await finishEvent("failed", "manual_review_status_update_failed");
-          return NextResponse.json({ error: "Não foi possível sinalizar o pedido para revisão manual." }, { status: 500 });
-        }
+        const result = await finishEvent("processed", "payment_state_requires_manual_review", "set_status", orderId, "Revisão necessária");
+        if (!result) return NextResponse.json({ error: "A reserva do evento expirou antes da atualização." }, { status: 503 });
+        return NextResponse.json({ received: true, reviewRequired: true });
       }
       await finishEvent("processed", "payment_state_requires_manual_review");
       return NextResponse.json({ received: true, reviewRequired: true });
     }
 
     if (disposition === "chargeback") {
-      const { error: chargebackError } = await supabase
-        .from("orders")
-        .update({ status: "Em contestação" })
-        .eq("id", orderId);
-      if (chargebackError) {
-        await finishEvent("failed", "chargeback_status_update_failed");
-        return NextResponse.json({ error: "Não foi possível atualizar a contestação." }, { status: 500 });
-      }
-      await finishEvent("processed", "chargeback_requires_manual_review");
+      const result = await finishEvent("processed", "chargeback_requires_manual_review", "set_status", orderId, "Em contestação");
+      if (!result) return NextResponse.json({ error: "A reserva do evento expirou antes da atualização." }, { status: 503 });
       return NextResponse.json({ received: true, reviewRequired: true });
     }
 
@@ -288,30 +281,18 @@ export async function POST(request: Request) {
       const refundStatus = disposition === "refunded" ? "Reembolsado" : "Reembolso parcial";
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (currentStatus !== "em contestação" && currentStatus !== "revisão necessária") {
-        const { error: refundError } = await supabase
-          .from("orders")
-          .update({ status: refundStatus })
-          .eq("id", orderId);
-        if (refundError) {
-          await finishEvent("failed", "refund_status_update_failed");
-          return NextResponse.json({ error: "Não foi possível atualizar o reembolso." }, { status: 500 });
-        }
+        const result = await finishEvent("processed", disposition === "refunded" ? "full_refund_recorded" : "partial_refund_recorded", "set_status", orderId, refundStatus, ["aguardando", "pago", "cancelado", "cancelada", "canceled"]);
+        if (!result) return NextResponse.json({ error: "A reserva do evento expirou ou o estado do pedido mudou." }, { status: 503 });
       }
-      await finishEvent("processed", disposition === "refunded" ? "full_refund_recorded" : "partial_refund_recorded");
+      if (currentStatus === "em contestação" || currentStatus === "revisão necessária") {
+        await finishEvent("processed", disposition === "refunded" ? "full_refund_recorded" : "partial_refund_recorded");
+      }
       return NextResponse.json({ received: true, reviewRequired: disposition === "partial_refund" });
     }
 
     if (disposition === "not_paid") {
-      const { data: canceled, error: cancelError } = await supabase.rpc("cancel_unpaid_order_and_restore_stock", {
-        p_order_id: orderId,
-      });
-      if (cancelError) {
-        await finishEvent("failed", "store_order_cancel_failed");
-        console.error("[MP webhook] Erro ao cancelar pedido:", cancelError.message);
-        return NextResponse.json({ error: "Erro ao cancelar pedido." }, { status: 500 });
-      }
-
-      if (canceled !== true) {
+      const cancelResult = await finishEvent("processed", null, "cancel_unpaid", orderId);
+      if (!cancelResult?.order_cancelled) {
         const { data: latestOrder, error: latestOrderError } = await supabase
           .from("orders")
           .select("status")
@@ -327,6 +308,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "O cancelamento ainda não foi aplicado." }, { status: 503 });
         }
       }
+      if (!eventClaimed) return NextResponse.json({ error: "A reserva do evento expirou." }, { status: 503 });
       await finishEvent("processed");
       return NextResponse.json({ received: true });
     }
@@ -334,16 +316,8 @@ export async function POST(request: Request) {
     if (disposition === "paid") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (currentStatus === "cancelado" || currentStatus === "cancelada" || currentStatus === "canceled") {
-        const { error: reviewError } = await supabase
-          .from("orders")
-          .update({ status: "Revisão necessária" })
-          .eq("id", orderId)
-          .in("status", ["Cancelado", "cancelada", "canceled"]);
-        if (reviewError) {
-          await finishEvent("failed", "late_payment_review_update_failed");
-          return NextResponse.json({ error: "Não foi possível sinalizar pagamento após cancelamento." }, { status: 500 });
-        }
-        await finishEvent("processed", "payment_received_after_order_cancel");
+        const result = await finishEvent("processed", "payment_received_after_order_cancel", "set_status", orderId, "Revisão necessária", ["Cancelado", "cancelada", "canceled"]);
+        if (!result) return NextResponse.json({ error: "A reserva expirou ou o estado do pedido mudou." }, { status: 503 });
         return NextResponse.json({ received: true, reviewRequired: true });
       }
 
@@ -352,21 +326,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true, ignored: true });
       }
 
-      const { data: paidOrder, error } = await supabase
-        .from("orders")
-        .update({ status: "Pago" })
-        .eq("id", orderId)
-        .ilike("status", "aguardando")
-        .select("id")
-        .maybeSingle();
+      const paidResult = await finishEvent("processed", null, "set_status", orderId, "Pago", ["aguardando"]);
 
-      if (error) {
-        await finishEvent("failed", "store_order_payment_update_failed");
-        console.error("[MP webhook] Erro ao atualizar pedido:", error.message);
-        return NextResponse.json({ error: "Erro ao atualizar pedido." }, { status: 500 });
-      }
-
-      if (!paidOrder) {
+      if (!paidResult?.order_updated) {
         const { data: latestOrder, error: latestOrderError } = await supabase
           .from("orders")
           .select("status")
@@ -380,16 +342,8 @@ export async function POST(request: Request) {
 
         const latestStatus = String(latestOrder.status).trim().toLowerCase();
         if (latestStatus === "cancelado" || latestStatus === "cancelada" || latestStatus === "canceled") {
-          const { error: reviewError } = await supabase
-            .from("orders")
-            .update({ status: "Revisão necessária" })
-            .eq("id", orderId)
-            .in("status", ["Cancelado", "cancelada", "canceled"]);
-          if (reviewError) {
-            await finishEvent("failed", "late_payment_review_update_failed");
-            return NextResponse.json({ error: "Não foi possível sinalizar pagamento após cancelamento." }, { status: 500 });
-          }
-          await finishEvent("processed", "payment_received_after_order_cancel");
+          const result = await finishEvent("processed", "payment_received_after_order_cancel", "set_status", orderId, "Revisão necessária", ["Cancelado", "cancelada", "canceled"]);
+          if (!result) return NextResponse.json({ error: "A reserva expirou ou o estado do pedido mudou." }, { status: 503 });
           return NextResponse.json({ received: true, reviewRequired: true });
         }
 
@@ -402,7 +356,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Atualização do pagamento não foi aplicada." }, { status: 503 });
       }
 
-      await finishEvent("processed");
+      if (eventClaimed) await finishEvent("ignored", "store_order_finalized_during_payment_update");
       return NextResponse.json({ received: true });
     }
 
