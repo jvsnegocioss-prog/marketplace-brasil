@@ -1,8 +1,17 @@
 
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
+
+function mercadoPagoIdempotencyKey(orderId: string) {
+  const hex = createHash("sha256").update(`novashopp-checkout:${orderId}`).digest("hex").slice(0, 32).split("");
+  hex[12] = "5";
+  hex[16] = ((parseInt(hex[16], 16) & 3) | 8).toString(16);
+  const value = hex.join("");
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+}
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -103,6 +112,28 @@ export async function POST(request: Request) {
       );
     }
 
+    const checkoutIdempotencyKey = request.headers.get("x-checkout-idempotency-key") || "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutIdempotencyKey)) {
+      return NextResponse.json(
+        { error: "Identificador da tentativa inválido. Atualize a página e tente novamente." },
+        { status: 400 }
+      );
+    }
+
+    const normalizedItems = items.map((item: { id: string; qty: number }) => ({
+      id: item.id,
+      qty: item.qty,
+    }));
+    const requestHash = createHash("sha256").update(JSON.stringify({
+      customerName: customerName.trim(),
+      customerEmail: verifiedCustomerEmail,
+      customerPhone: customerPhone.trim(),
+      deliveryAddress: deliveryAddress.trim(),
+      couponCode: typeof couponCode === "string" ? couponCode.trim().toUpperCase() : null,
+      deliveryNeighborhoodId,
+      items: normalizedItems,
+    })).digest("hex");
+
     const { data: orderId, error: orderError } =
       await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery", {
         p_customer_name: customerName.trim(),
@@ -111,12 +142,9 @@ export async function POST(request: Request) {
         p_delivery_address: deliveryAddress.trim(),
         p_coupon_code: typeof couponCode === "string" ? couponCode : null,
         p_delivery_neighborhood_id: deliveryNeighborhoodId,
-        p_items: items.map(
-          (item: { id: string; qty: number }) => ({
-            id: item.id,
-            qty: item.qty,
-          })
-        ),
+        p_items: normalizedItems,
+        p_checkout_idempotency_key: checkoutIdempotencyKey,
+        p_checkout_request_hash: requestHash,
       });
 
     if (orderError || !orderId) {
@@ -137,7 +165,7 @@ export async function POST(request: Request) {
     const { data: order, error: fetchOrderError } =
       await supabaseAdmin
         .from("orders")
-        .select("id,total,discount_amount,coupon_code,shipping_fee")
+        .select("id,status,total,discount_amount,coupon_code,shipping_fee")
         .eq("id", orderId)
         .single();
 
@@ -153,6 +181,14 @@ export async function POST(request: Request) {
           detalhe: fetchOrderError?.message || "Pedido não encontrado.",
         },
         { status: 500 }
+      );
+    }
+
+    if (order.status !== "aguardando") {
+      createdOrderId = null;
+      return NextResponse.json(
+        { error: "Este pedido já foi finalizado ou cancelado. Inicie uma nova tentativa de compra." },
+        { status: 409 }
       );
     }
 
@@ -266,7 +302,7 @@ export async function POST(request: Request) {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
-          "X-Idempotency-Key": crypto.randomUUID(),
+          "X-Idempotency-Key": mercadoPagoIdempotencyKey(orderId),
         },
         body: JSON.stringify(paymentBody),
       }
@@ -282,12 +318,13 @@ export async function POST(request: Request) {
     ) {
       console.error("ERRO MERCADO PAGO:", paymentData);
 
-      await cancelOrder(orderId);
+      // Mantém o pedido aguardando: a resposta pode ter sido perdida após
+      // o Mercado Pago aceitar a solicitação. A repetição usará a mesma chave.
       createdOrderId = null;
 
       return NextResponse.json(
         {
-          error: "Não foi possível gerar o pagamento.",
+          error: "Não foi possível confirmar a criação do pagamento. Tente novamente sem alterar o pedido.",
           detalhe: paymentData,
         },
         { status: 502 }
@@ -320,9 +357,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("ERRO GERAL NO CHECKOUT:", error);
 
-    if (createdOrderId) {
-      await cancelOrder(createdOrderId);
-    }
+    // Não cancela automaticamente após falha de rede: o Mercado Pago pode
+    // ter aceitado a ordem antes de a conexão cair. A repetição é idempotente.
 
     return NextResponse.json(
       {
