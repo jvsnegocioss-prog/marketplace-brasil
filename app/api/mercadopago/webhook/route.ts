@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     const ts = parts.ts;
     const receivedHash = parts.v1;
-    if (!ts || !receivedHash || !/^\\d+$/.test(ts) || !isValidWebhookTimestamp(ts)) {
+    if (!ts || !receivedHash || !/^\d+$/.test(ts) || !isValidWebhookTimestamp(ts)) {
       return NextResponse.json({ error: "Timestamp ou assinatura inválida." }, { status: 401 });
     }
 
