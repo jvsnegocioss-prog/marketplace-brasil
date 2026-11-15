@@ -98,7 +98,8 @@ export default function ContaClientePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -108,8 +109,15 @@ export default function ContaClientePage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset");
+        setPassword("");
+        setConfirmPassword("");
+        setError("");
+        setMessage("");
+      }
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -205,6 +213,60 @@ export default function ContaClientePage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível concluir. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (!email.trim()) {
+      setError("Informe o e-mail cadastrado para receber o link.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: `${window.location.origin}/conta` }
+      );
+      if (recoveryError) throw recoveryError;
+      setMessage("Se existir uma conta com esse e-mail, enviaremos um link para redefinir sua senha. Verifique também a caixa de spam.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível solicitar a recuperação. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUpdatePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (password.length < 8) {
+      setError("A nova senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("As senhas não conferem.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      await supabase.auth.signOut();
+      setUser(null);
+      setPassword("");
+      setConfirmPassword("");
+      setMode("login");
+      setMessage("Senha alterada com sucesso. Entre usando sua nova senha.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar a senha. Solicite um novo link.");
     } finally {
       setLoading(false);
     }
@@ -342,7 +404,25 @@ export default function ContaClientePage() {
         <a className="detail-back-link" href="/">← Voltar para a NOVASHOPP STORE</a>
         <div className="customer-account-brand">N</div>
         <p className="customer-account-eyebrow">ÁREA DO CLIENTE</p>
-        {user ? (
+        {mode === "reset" ? (
+          <>
+            <h1>Crie uma nova senha</h1>
+            <p className="customer-account-intro">Defina uma nova senha para acessar sua conta.</p>
+            <form onSubmit={handleUpdatePassword} className="customer-account-form">
+              <label>Nova senha
+                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={8} required placeholder="Mínimo de 8 caracteres" />
+              </label>
+              <label>Confirme a nova senha
+                <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required placeholder="Digite novamente a senha" />
+              </label>
+              <button className="customer-account-submit" type="submit" disabled={loading}>
+                {loading ? "Salvando..." : "Salvar nova senha"}
+              </button>
+            </form>
+            {message && <p className="customer-account-success">{message}</p>}
+            {error && <p className="customer-account-error">{error}</p>}
+          </>
+        ) : user ? (
           <>
             <h1>Bem-vindo à sua conta!</h1>
             <p className="customer-account-intro">Acesse seus pedidos e acompanhe suas compras na NOVASHOPP STORE.</p>
@@ -507,15 +587,17 @@ export default function ContaClientePage() {
           </>
         ) : (
           <>
-            <h1>{mode === "login" ? "Entre na sua conta" : "Crie sua conta"}</h1>
+            <h1>{mode === "login" ? "Entre na sua conta" : mode === "register" ? "Crie sua conta" : "Recuperar senha"}</h1>
             <p className="customer-account-intro">
-              {mode === "login" ? "Acesse sua área exclusiva de cliente." : "Cadastre-se para ter sua conta na NOVASHOPP STORE."}
+              {mode === "login" ? "Acesse sua área exclusiva de cliente." : mode === "register" ? "Cadastre-se para ter sua conta na NOVASHOPP STORE." : "Informe seu e-mail e enviaremos instruções para redefinir sua senha."}
             </p>
-            <div className="customer-account-tabs">
-              <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); setMessage(""); }}>Entrar</button>
-              <button type="button" className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); setMessage(""); }}>Criar conta</button>
-            </div>
-            <form onSubmit={handleSubmit} className="customer-account-form">
+            {mode !== "forgot" && (
+              <div className="customer-account-tabs">
+                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); setMessage(""); }}>Entrar</button>
+                <button type="button" className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); setMessage(""); }}>Criar conta</button>
+              </div>
+            )}
+            <form onSubmit={mode === "forgot" ? handleForgotPassword : handleSubmit} className="customer-account-form">
               {mode === "register" && (
                 <label>Nome completo
                   <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required placeholder="Seu nome" />
@@ -524,13 +606,25 @@ export default function ContaClientePage() {
               <label>E-mail
                 <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required placeholder="voce@email.com" />
               </label>
-              <label>Senha
-                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} required placeholder="Mínimo de 8 caracteres" />
-              </label>
+              {mode !== "forgot" && (
+                <label>Senha
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} required placeholder="Mínimo de 8 caracteres" />
+                </label>
+              )}
               <button className="customer-account-submit" type="submit" disabled={loading}>
-                {loading ? "Aguarde..." : mode === "login" ? "Entrar na minha conta" : "Criar minha conta"}
+                {loading ? "Aguarde..." : mode === "forgot" ? "Enviar link de recuperação" : mode === "login" ? "Entrar na minha conta" : "Criar minha conta"}
               </button>
             </form>
+            {mode === "login" && (
+              <button type="button" className="customer-account-recovery-link" onClick={() => { setMode("forgot"); setPassword(""); setError(""); setMessage(""); }}>
+                Esqueci minha senha
+              </button>
+            )}
+            {mode === "forgot" && (
+              <button type="button" className="customer-account-recovery-link" onClick={() => { setMode("login"); setError(""); setMessage(""); }}>
+                Voltar para entrar
+              </button>
+            )}
             {message && <p className="customer-account-success">{message}</p>}
             {error && <p className="customer-account-error">{error}</p>}
             <p className="customer-account-footnote">Seus dados de acesso são protegidos pelo sistema de autenticação da loja.</p>
