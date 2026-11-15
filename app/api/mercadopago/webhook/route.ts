@@ -250,7 +250,7 @@ export async function POST(request: Request) {
 
     if (disposition === "review" || disposition === "chargeback_resolved") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
-      if (!["em contestação", "reembolsado"].includes(currentStatus)) {
+      if (disposition === "chargeback_resolved" || !["em contestação", "reembolsado"].includes(currentStatus)) {
         const { error: reviewError } = await supabase
           .from("orders")
           .update({ status: "Revisão necessária" })
