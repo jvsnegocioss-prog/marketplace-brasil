@@ -9,6 +9,7 @@ type Region = {
   code: string;
   name: string;
   fee_cents: number;
+  free_shipping: boolean;
   active: boolean;
   sort_order: number;
 };
@@ -52,7 +53,7 @@ export default function AdminDeliveriesPage() {
 
   async function loadData() {
     const [regionResult, neighborhoodResult] = await Promise.all([
-      supabase.from("delivery_regions").select("id,code,name,fee_cents,active,sort_order").order("sort_order"),
+      supabase.from("delivery_regions").select("id,code,name,fee_cents,free_shipping,active,sort_order").order("sort_order"),
       supabase.from("delivery_neighborhoods").select("id,name,region_id,fee_override_cents,active,record_type").order("name"),
     ]);
     if (regionResult.error || neighborhoodResult.error) {
@@ -111,6 +112,28 @@ export default function AdminDeliveriesPage() {
     setSavingId("");
     if (error) { setMessage("Erro ao salvar região: " + error.message); return; }
     setMessage("Taxa regional atualizada.");
+    await loadData();
+  }
+
+  async function toggleAllRegionsFreeShipping() {
+    if (!regions.length) {
+      setMessage("Nenhuma região foi carregada.");
+      return;
+    }
+    const enable = !regions.every((region) => region.free_shipping);
+    setSavingId("all-regions");
+    setMessage("");
+    const { error } = await supabase.from("delivery_regions")
+      .update({ free_shipping: enable, updated_at: new Date().toISOString() })
+      .not("id", "is", null);
+    setSavingId("");
+    if (error) {
+      setMessage("Erro ao atualizar o frete grátis global: " + error.message);
+      return;
+    }
+    setMessage(enable
+      ? "Frete grátis ativado para todas as regiões. Os clientes verão a atualização automaticamente."
+      : "Frete grátis global desativado. As taxas regionais e os ajustes por bairro voltaram a valer.");
     await loadData();
   }
 
@@ -199,6 +222,24 @@ export default function AdminDeliveriesPage() {
       <section style={{ background: "#f8fafc", border: "1px solid #dbe3ef", borderRadius: 12, padding: 16, margin: "18px 0" }}>
         <strong>Valores provisórios — Manaus</strong>
         <p style={{ marginBottom: 0, color: "#475569" }}>As taxas abaixo ainda não são cobradas dos clientes. O checkout permanece bloqueado. Uma taxa individual de bairro substitui a taxa da região; em branco, vale a taxa regional.</p>
+      </section>
+
+      <section style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: 16, margin: "18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <strong>Frete grátis para todas as regiões</strong>
+          <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
+            {regions.length > 0 && regions.every((region) => region.free_shipping)
+              ? "Ativado: todos os bairros atendidos terão entrega grátis, inclusive quando houver taxa personalizada."
+              : "Desativado: serão aplicadas as taxas regionais ou personalizadas por bairro."}
+          </p>
+        </div>
+        <button
+          style={{ ...buttonStyle, background: regions.length > 0 && regions.every((region) => region.free_shipping) ? "#9f2d2d" : "#166534" }}
+          disabled={savingId === "all-regions" || regions.length === 0}
+          onClick={() => void toggleAllRegionsFreeShipping()}
+        >
+          {savingId === "all-regions" ? "Atualizando..." : regions.length > 0 && regions.every((region) => region.free_shipping) ? "Desativar frete grátis global" : "Ativar frete grátis em todas"}
+        </button>
       </section>
 
       <h2>Taxas por região</h2>
