@@ -4,11 +4,15 @@ import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Configuração do Supabase indisponível.");
+  if (!supabaseAdmin) supabaseAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabaseAdmin;
+}
 
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
 const mediaBucket = "products-media";
@@ -17,7 +21,7 @@ async function getAccount(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return null;
   const token = authorization.slice(7);
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
   if (error || !data.user?.email) return null;
   return data.user;
 }
@@ -90,18 +94,18 @@ async function uploadReviewFiles(files: File[], userId: string) {
       if (!validSignature) throw new Error("O conteúdo de um arquivo não corresponde ao formato informado.");
 
       const path = `reviews/${userId}/${randomUUID()}.${type.extension}`;
-      const { error } = await supabaseAdmin.storage.from(mediaBucket).upload(path, file, {
+      const { error } = await getSupabaseAdmin().storage.from(mediaBucket).upload(path, file, {
         contentType: file.type,
         upsert: false,
       });
       if (error) throw new Error("Não foi possível enviar as mídias. Tente novamente.");
       paths.push(path);
-      const { data } = supabaseAdmin.storage.from(mediaBucket).getPublicUrl(path);
+      const { data } = getSupabaseAdmin().storage.from(mediaBucket).getPublicUrl(path);
       urls.push(data.publicUrl);
     }
     return { urls, paths };
   } catch (error) {
-    if (paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(paths);
+    if (paths.length) await getSupabaseAdmin().storage.from(mediaBucket).remove(paths);
     throw error;
   }
 }
@@ -180,7 +184,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      if (uploaded.paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(uploaded.paths);
+      if (uploaded.paths.length) await getSupabaseAdmin().storage.from(mediaBucket).remove(uploaded.paths);
       if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto." }, { status: 409 });
       return NextResponse.json({ error: "Não foi possível salvar a avaliação." }, { status: 500 });
     }
@@ -231,7 +235,7 @@ export async function PATCH(request: Request) {
       .maybeSingle();
 
     if (error || !data) {
-      if (uploaded?.paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(uploaded.paths);
+      if (uploaded?.paths.length) await getSupabaseAdmin().storage.from(mediaBucket).remove(uploaded.paths);
       if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
       return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
     }
