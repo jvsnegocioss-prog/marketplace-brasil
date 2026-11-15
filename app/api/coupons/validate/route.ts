@@ -3,17 +3,30 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do Supabase indisponível.");
+  }
+
+  if (!supabaseAdmin) {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+
+  return supabaseAdmin;
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const code = typeof body.code === "string"
-      ? body.code.trim().toUpperCase().replace(/\s+/g, "")
+      ? body.code.trim().toUpperCase().replace(/\\s+/g, "")
       : "";
     const items = body.items;
 
@@ -31,6 +44,7 @@ export async function POST(request: Request) {
     }
 
     const ids = Array.from(quantities.keys());
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
       .select("id,price,stock")
