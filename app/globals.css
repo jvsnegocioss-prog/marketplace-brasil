@@ -5951,3 +5951,50 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 .navigation > button.quick-access-category:active {
   transform: none !important;
 }
+
+
+/* Acessos rápidos: mesmo padrão visual do botão "Voltar para a NOVASHOPP STORE" */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  position: relative !important;
+  overflow: hidden !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border: 2px solid #d6b94f !important;
+  border-bottom: 7px solid #d6b94f !important;
+  border-radius: 23px !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(6, 24, 61, .18) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border-color: #f0cf55 !important;
+  border-bottom-color: #f0cf55 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(6, 24, 61, .24), 0 0 0 1px rgba(240, 207, 85, .24) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:focus .navigation-category-icon,
+.navigation > button.quick-access-category:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #06183d !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon svg {
+  stroke: currentColor !important;
+}
