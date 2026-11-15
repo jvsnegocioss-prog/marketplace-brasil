@@ -2,8 +2,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let browserClient: SupabaseClient | null = null;
 
+function isBrowserEnvironment(): boolean {
+  // Edge Runtime pode expor um global `window` compatível; `document`
+  // existe somente no navegador real e evita inicialização durante o build.
+  return typeof document !== "undefined";
+}
+
 function getBrowserClient(): SupabaseClient {
-  if (typeof window === "undefined") {
+  if (!isBrowserEnvironment()) {
     throw new Error("O cliente Supabase só pode executar no navegador.");
   }
   if (browserClient) return browserClient;
@@ -36,7 +42,7 @@ const serverOnlySupabase = new Proxy(function serverOnlySupabaseCall() {}, {
 
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, property) {
-    if (typeof window === "undefined") {
+    if (!isBrowserEnvironment()) {
       if (property === "then") return undefined;
       if (property === Symbol.toStringTag) return "SupabaseClient";
       return serverOnlySupabase;
