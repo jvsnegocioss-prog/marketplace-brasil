@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       action: typeof notificationBody?.action === "string" ? notificationBody.action.slice(0, 100) : null,
     };
 
-    const { data: existingEvent, error: eventRegistrationError } = await supabase
+    const { data: existingEventData, error: eventRegistrationError } = await supabase
       .rpc("register_mercado_pago_webhook_delivery", {
         p_notification_id: eventRecord.notification_id,
         p_resource_id: eventRecord.resource_id,
@@ -115,6 +115,12 @@ export async function POST(request: Request) {
         p_action: eventRecord.action,
       })
       .maybeSingle();
+
+    const existingEvent = existingEventData as {
+      resource_id: string;
+      processing_status: string;
+      delivery_count: number;
+    } | null;
 
     if (eventRegistrationError) {
       console.error("[MP webhook] Erro ao registrar entrega da notificação:", eventRegistrationError.message);
