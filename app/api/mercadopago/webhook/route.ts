@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
-  createHmac,
-  timingSafeEqual,
-} from "node:crypto";
+  isValidWebhookTimestamp,
+  verifyMercadoPagoSignature,
+  isProcessedOrderPaymentMatching,
+} from "@/lib/mercadopago-security.cjs";
 export const runtime = "nodejs";
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,28 +16,6 @@ const supabaseAdmin = createClient(
     },
   }
 );
-function compareSignatures(expected: string, received: string) {
-  if (!/^[a-f0-9]{64}$/i.test(received)) {
-    return false;
-  }
-  const expectedBuffer = Buffer.from(expected, "hex");
-  const receivedBuffer = Buffer.from(received, "hex");
-  return (
-    expectedBuffer.length === receivedBuffer.length &&
-    timingSafeEqual(expectedBuffer, receivedBuffer)
-  );
-}
-
-function amountToCents(value: unknown): number | null {
-  if (typeof value !== "string" && typeof value !== "number") {
-    return null;
-  }
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount < 0) {
-    return null;
-  }
-  return Math.round(amount * 100);
-}
 export async function POST(request: Request) {
   try {
     const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
@@ -83,18 +62,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // O Mercado Pago envia ts em milissegundos para notificações Orders.
-    // Aceitamos também o formato Unix em segundos para compatibilidade
-    // com outros formatos oficiais de notificação da plataforma.
-    const timestampValue = Number(ts);
-    const timestampMs =
-      ts.length >= 13 ? timestampValue : timestampValue * 1000;
-    const maxFutureClockSkewMs = 5 * 60 * 1000;
-    if (
-      !Number.isSafeInteger(timestampValue) ||
-      !Number.isFinite(timestampMs) ||
-      timestampMs > Date.now() + maxFutureClockSkewMs
-    ) {
+    // Aceita reentregas antigas assinadas, mas rejeita timestamps inválidos
+    // ou excessivamente futuros (mais de cinco minutos).
+    if (!isValidWebhookTimestamp(ts)) {
       console.warn("[MP webhook] Timestamp inválido ou excessivamente futuro.");
       return NextResponse.json(
         { error: "Timestamp inválido." },
@@ -109,13 +79,11 @@ export async function POST(request: Request) {
     // O Mercado Pago exige data.id em letras minúsculas
     // para identificadores alfanuméricos.
     const normalizedDataId = dataId.toLowerCase();
-    const normalizedManifest =
-      `id:${normalizedDataId};request-id:${requestId};ts:${ts};`;
-    const normalizedHash = createHmac("sha256", secret)
-      .update(normalizedManifest)
-      .digest("hex");
-    const signatureMatches = compareSignatures(
-      normalizedHash,
+    const signatureMatches = verifyMercadoPagoSignature(
+      secret,
+      dataId,
+      requestId,
+      ts,
       receivedHash
     );
     console.info("[MP webhook] Resultado da validação:", {
@@ -212,30 +180,11 @@ export async function POST(request: Request) {
     }
 
     if (mpStatus === "processed") {
-      const expectedCents = amountToCents(storeOrder.total);
-      const orderAmountCents = amountToCents(mpOrder.total_amount);
-      const paidAmountCents = amountToCents(mpOrder.total_paid_amount);
-      const payments = mpOrder.transactions?.payments;
-      const paymentsAreProcessed =
-        Array.isArray(payments) &&
-        payments.length > 0 &&
-        payments.every((payment: { status?: unknown }) => payment?.status === "processed");
-
-      if (
-        mpOrder.currency_id !== "BRL" ||
-        expectedCents === null ||
-        orderAmountCents === null ||
-        paidAmountCents === null ||
-        orderAmountCents !== expectedCents ||
-        paidAmountCents !== expectedCents ||
-        !paymentsAreProcessed
-      ) {
+      if (!isProcessedOrderPaymentMatching(storeOrder.total, mpOrder)) {
         console.error("[MP webhook] Pagamento processado com valor, moeda ou transações divergentes.", {
           currencyMatches: mpOrder.currency_id === "BRL",
-          expectedCents,
-          orderAmountCents,
-          paidAmountCents,
-          paymentsAreProcessed,
+          expectedTotal: storeOrder.total,
+          currency: mpOrder.currency_id,
         });
         return NextResponse.json(
           { error: "Pagamento não corresponde integralmente ao pedido." },
