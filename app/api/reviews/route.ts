@@ -178,7 +178,7 @@ export async function POST(request: Request) {
 
     if (error) {
       if (uploaded.paths.length) await supabaseAdmin.storage.from(mediaBucket).remove(uploaded.paths);
-      if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto nesta compra." }, { status: 409 });
+      if (error.code === "23505") return NextResponse.json({ error: "Você já avaliou este produto." }, { status: 409 });
       return NextResponse.json({ error: "Não foi possível salvar a avaliação." }, { status: 500 });
     }
     return NextResponse.json({ success: true, review: data, message: "Avaliação enviada e aguardando aprovação da loja." }, { status: 201 });
