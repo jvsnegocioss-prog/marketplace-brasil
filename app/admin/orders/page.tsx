@@ -361,7 +361,15 @@ export default function OrdersPage() {
                       </div>
                     </>
                   ) : (
-                    <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}><CreditCard size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {["reembolso parcial", "reembolsado", "em contestação", "revisão necessária"].includes(normalizedStatus(order.status)) ? (
+                        <p role="alert" style={{ margin: 0, padding: 12, borderRadius: 9, background: "#fff1f0", border: "1px solid #f3c5c1", color: "#922b21", fontSize: 13, fontWeight: 700 }}>
+                          Pagamento reembolsado, contestado ou em revisão. Não iniciar novas etapas de entrega. Se o pedido já foi enviado ou entregue, verificar a situação física e tratar manualmente.
+                        </p>
+                      ) : (
+                        <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}><CreditCard size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
+                      )}
+                    </div>
                   )}
                 </div>
               </article>
