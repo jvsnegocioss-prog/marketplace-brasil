@@ -5684,3 +5684,24 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     padding: 14px 11px !important;
   }
 }
+
+.customer-account-recovery-link {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: #17477f;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.customer-account-recovery-link:focus-visible {
+  outline: 2px solid #315b91;
+  outline-offset: 3px;
+  border-radius: 5px;
+}
