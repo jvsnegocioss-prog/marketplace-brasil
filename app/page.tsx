@@ -774,7 +774,9 @@ export default function Home() {
           return (
             <button
               key={item.name}
-              className={category === item.name ? "nav-active" : ""}
+              type="button"
+              className={`quick-access-category ${category === item.name ? "nav-active" : ""}`}
+              data-selected={category === item.name ? "true" : "false"}
               aria-pressed={category === item.name}
               onClick={() => {
                 setCategory(item.name);
