@@ -1,17 +1,29 @@
 import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 type Props = {
   params: Promise<{ id: string }>;
 };
 
+const fallbackMetadata: Metadata = {
+  title: "NovaShopp Store",
+  description: "Confira nossos produtos na NovaShopp Store.",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
+
+  // Inicializa o Supabase somente quando a função de metadata for executada.
+  // Durante a coleta de configuração do Next.js, o Preview pode não ter
+  // credenciais públicas disponíveis; nesse caso, usa metadata genérica.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return fallbackMetadata;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
   const { data: product } = await supabase
     .from("products")
     .select("name,description,image_url")
