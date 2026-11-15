@@ -347,18 +347,21 @@ export default function AdminDeliveriesPage() {
             ? 0
             : (item.fee_override_cents ?? region?.fee_cents ?? 0);
           return (
-            <article key={item.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10, alignItems: "center" }}>
-              <div><strong>{item.name}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · {money(effectiveFee)}{region?.free_shipping ? " (frete grátis da região)" : isManualOverride ? " (taxa manual)" : " (taxa da região)"}</div></div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <label style={{ fontSize: 12, color: "#475569" }}>Região de entrega</label>
-                <select aria-label={"Região de entrega de " + item.name} value={neighborhoodRegionValues[item.id] ?? ""} onChange={(e) => setNeighborhoodRegionValues((old) => ({ ...old, [item.id]: e.target.value }))} style={inputStyle}>
+            <article key={item.id} style={{ border: "1px solid #dbe3ef", borderRadius: 12, padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: 14, alignItems: "start", minWidth: 0, background: "#fff" }}>
+              <div style={{ gridColumn: "1 / -1", minWidth: 0, paddingBottom: 10, borderBottom: "1px solid #edf2f7" }}>
+                <strong style={{ display: "block", fontSize: 16, marginBottom: 4 }}>{item.name}</strong>
+                <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>{item.record_type === "official" ? "Bairro oficial" : "Localidade / conjunto"} · {region?.name || "Região não definida"} · <strong style={{ color: "#172033" }}>{money(effectiveFee)}</strong>{region?.free_shipping ? " (frete grátis da região)" : isManualOverride ? " (taxa manual)" : " (taxa da região)"}</div>
+              </div>
+              <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+                <label style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>Região de entrega</label>
+                <select aria-label={"Região de entrega de " + item.name} value={neighborhoodRegionValues[item.id] ?? ""} onChange={(e) => setNeighborhoodRegionValues((old) => ({ ...old, [item.id]: e.target.value }))} style={{ ...inputStyle, minWidth: 0 }}>
                   <option value="">Não definida</option>
                   {regions.map((option) => <option key={option.id} value={option.id}>{option.name}{option.active ? "" : " (inativa)"}</option>)}
                 </select>
-                <button style={{ ...buttonStyle, padding: "8px 10px" }} disabled={savingId === item.id || (neighborhoodRegionValues[item.id] ?? "") === (item.region_id ?? "")} onClick={() => void saveNeighborhoodRegion(item)}>{savingId === item.id ? "Salvando..." : "Salvar região"}</button>
+                <button style={{ ...buttonStyle, width: "100%", padding: "10px 12px" }} disabled={savingId === item.id || (neighborhoodRegionValues[item.id] ?? "") === (item.region_id ?? "")} onClick={() => void saveNeighborhoodRegion(item)}>{savingId === item.id ? "Salvando..." : "Salvar região"}</button>
               </div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <label style={{ fontSize: 12, color: "#475569" }}>Taxa individual (R$)</label>
+              <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+                <label style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>Taxa individual (R$)</label>
                 <input
                   aria-label={"Taxa individual de " + item.name}
                   type="number"
@@ -368,9 +371,9 @@ export default function AdminDeliveriesPage() {
                   placeholder={region ? "Taxa da região" : "Defina uma região"}
                   value={displayedRate}
                   onChange={(e) => setNeighborhoodValues((old) => ({ ...old, [item.id]: e.target.value }))}
-                  style={inputStyle}
+                  style={{ ...inputStyle, minWidth: 0 }}
                 />
-                <small style={{ color: "#64748b", fontSize: 11 }}>
+                <small style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
                   {isManualOverride || hasRateDraft
                     ? "Valor manual: só este bairro será afetado"
                     : region
@@ -379,21 +382,21 @@ export default function AdminDeliveriesPage() {
                   {region?.free_shipping ? " · Frete grátis ativo nesta região; esta taxa fica guardada." : ""}
                 </small>
                 <button
-                  style={buttonStyle}
+                  style={{ ...buttonStyle, width: "100%", padding: "10px 12px" }}
                   disabled={savingId === item.id || !hasRateDraft}
                   onClick={() => void saveNeighborhood(item)}
                 >
                   {savingId === item.id ? "Salvando..." : "Salvar taxa manual"}
                 </button>
                 <button
-                  style={{ ...buttonStyle, background: "#475569" }}
+                  style={{ ...buttonStyle, background: "#475569", width: "100%", padding: "10px 12px" }}
                   disabled={savingId === item.id || (!isManualOverride && !hasRateDraft)}
                   onClick={() => void useNeighborhoodRegionFee(item)}
                 >
                   Usar taxa regional
                 </button>
               </div>
-              <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", paddingTop: 10, borderTop: "1px solid #edf2f7" }}>
                 <small style={{ color: item.active ? "#166534" : "#991b1b" }}>{item.active ? "Bairro atendido" : "Bairro sem atendimento"}</small>
                 <button style={{ ...buttonStyle, padding: "7px 11px", background: item.active ? "#9f2d2d" : "#166534" }} disabled={savingId === item.id || (!item.active && !item.region_id)} onClick={() => void toggleNeighborhood(item)}>{item.active ? "Desativar" : item.region_id ? "Ativar" : "Defina a região para ativar"}</button>
               </div>
