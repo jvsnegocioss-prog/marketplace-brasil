@@ -292,6 +292,12 @@ export async function POST(request: Request) {
 
     if (disposition === "not_paid") {
       const cancelResult = await finishEvent("processed", null, "cancel_unpaid", orderId);
+      if (cancelResult?.order_cancelled) {
+        return NextResponse.json({ received: true });
+      }
+      if (!eventClaimed) {
+        return NextResponse.json({ error: "A reserva do evento expirou." }, { status: 503 });
+      }
       if (!cancelResult?.order_cancelled) {
         const { data: latestOrder, error: latestOrderError } = await supabase
           .from("orders")
@@ -308,7 +314,6 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "O cancelamento ainda não foi aplicado." }, { status: 503 });
         }
       }
-      if (!eventClaimed) return NextResponse.json({ error: "A reserva do evento expirou." }, { status: 503 });
       await finishEvent("processed");
       return NextResponse.json({ received: true });
     }
