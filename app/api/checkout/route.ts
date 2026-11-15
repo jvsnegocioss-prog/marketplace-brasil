@@ -13,19 +13,27 @@ function mercadoPagoIdempotencyKey(orderId: string) {
   return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
 }
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do Supabase indisponível.");
   }
-);
+  if (!getSupabaseAdmin()) {
+    getSupabaseAdmin() = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return getSupabaseAdmin();
+}
 
 async function cancelOrder(orderId: string) {
-  const { error } = await supabaseAdmin.rpc(
+  const { error } = await getSupabaseAdmin().rpc(
     "cancel_unpaid_order_and_restore_stock",
     { p_order_id: orderId }
   );
@@ -91,7 +99,7 @@ export async function POST(request: Request) {
     if (authorization.startsWith("Bearer ")) {
       const customerAccessToken = authorization.slice(7);
       const { data: customerAuth, error: customerAuthError } =
-        await supabaseAdmin.auth.getUser(customerAccessToken);
+        await getSupabaseAdmin().auth.getUser(customerAccessToken);
 
       if (customerAuthError || !customerAuth.user?.email) {
         return NextResponse.json(
@@ -136,7 +144,7 @@ export async function POST(request: Request) {
     })).digest("hex");
 
     const { data: orderId, error: orderError } =
-      await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery", {
+      await getSupabaseAdmin().rpc("create_store_order_with_coupon_and_delivery", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
@@ -164,7 +172,7 @@ export async function POST(request: Request) {
     createdOrderId = orderId;
 
     const { data: order, error: fetchOrderError } =
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("orders")
         .select("id,status,total,discount_amount,coupon_code,shipping_fee")
         .eq("id", orderId)
@@ -194,7 +202,7 @@ export async function POST(request: Request) {
     }
 
     const { data: orderItems, error: itemsError } =
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("order_items")
         .select("product_name,quantity,unit_price")
         .eq("order_id", orderId);
@@ -336,7 +344,7 @@ export async function POST(request: Request) {
     const mercadoPagoOrderId = String(paymentData.id);
 
     const { error: savePaymentIdError } =
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("orders")
         .update({
           mercado_pago_order_id: mercadoPagoOrderId,
