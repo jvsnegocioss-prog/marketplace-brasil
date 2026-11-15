@@ -39,6 +39,7 @@ type CartItem = {
 type DeliveryNeighborhood = {
   id: string;
   name: string;
+  record_type: "official" | "locality";
   fee_override_cents: number | null;
   region_name: string;
   region_fee_cents: number;
@@ -229,7 +230,7 @@ export default function Home() {
     async function loadDeliveryNeighborhoods() {
       const [{ data: neighborhoods, error: neighborhoodsError }, { data: regions, error: regionsError }] = await Promise.all([
         supabase.from("delivery_neighborhoods")
-          .select("id,name,fee_override_cents,region_id")
+          .select("id,name,fee_override_cents,region_id,record_type")
           .eq("active", true)
           .order("name"),
         supabase.from("delivery_regions")
@@ -247,6 +248,7 @@ export default function Home() {
         return region ? [{
           id: item.id,
           name: item.name,
+          record_type: item.record_type,
           fee_override_cents: item.fee_override_cents,
           region_name: region.name,
           region_fee_cents: region.fee_cents,
@@ -1360,7 +1362,7 @@ export default function Home() {
                         <option value="">Selecione seu bairro</option>
                         {deliveryNeighborhoods.map((item) => (
                           <option key={item.id} value={item.id}>
-                            {item.name} — {item.region_name}
+                            {item.name}{item.record_type === "locality" ? " (localidade/conjunto)" : ""} — {item.region_name}
                           </option>
                         ))}
                       </select>
