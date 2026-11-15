@@ -6,6 +6,7 @@ const {
   verifyMercadoPagoSignature,
   amountToCents,
   isProcessedOrderPaymentMatching,
+  getWebhookNotificationId,
 } = require("../lib/mercadopago-security.cjs");
 
 test("aceita assinatura HMAC válida e normaliza data.id", () => {
@@ -54,4 +55,17 @@ test("aceita somente pedido pago integralmente em BRL", () => {
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, total_paid_amount: "100.00" }), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, transactions: { payments: [{ status: "pending" }] } }), false);
   assert.equal(isProcessedOrderPaymentMatching("129.90", { ...order, transactions: { payments: [] } }), false);
+});
+
+test("extrai ID de evento numérico ou textual do corpo", () => {
+  assert.equal(getWebhookNotificationId({ id: 987654321 }), "987654321");
+  assert.equal(getWebhookNotificationId({ id: " event-123 " }), "event-123");
+});
+
+test("rejeita ID de evento ausente, inseguro ou excessivamente longo", () => {
+  assert.equal(getWebhookNotificationId({}), null);
+  assert.equal(getWebhookNotificationId({ id: -1 }), null);
+  assert.equal(getWebhookNotificationId({ id: Number.MAX_SAFE_INTEGER + 1 }), null);
+  assert.equal(getWebhookNotificationId({ id: "x".repeat(201) }), null);
+  assert.equal(getWebhookNotificationId(null), null);
 });
