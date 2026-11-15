@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const result = data as { finalized: boolean; order_updated: boolean; order_cancelled: boolean } | null;
     if (!result?.finalized) {
       console.warn("[MP webhook] Reserva perdida ou alteração do pedido não aplicada.", { notificationId });
-      return false;
+      return null;
     }
     eventClaimed = false;
     return result;
