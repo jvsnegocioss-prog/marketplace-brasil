@@ -4,11 +4,15 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Configuração do Supabase indisponível.");
+  if (!supabaseAdmin) supabaseAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabaseAdmin;
+}
 
 function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const ipHash = createHash("sha256").update(secret + ":" + ip).digest("hex");
-    const { data: allowed, error: limitError } = await supabaseAdmin.rpc(
+    const { data: allowed, error: limitError } = await getSupabaseAdmin().rpc(
       "consume_order_tracking_attempt",
       { p_ip_hash: ipHash }
     );
