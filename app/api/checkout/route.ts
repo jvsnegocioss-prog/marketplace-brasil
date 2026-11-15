@@ -44,6 +44,7 @@ export async function POST(request: Request) {
   }
 
   let createdOrderId: string | null = null;
+  let mercadoPagoRequestStarted = false;
 
   try {
     const body = await request.json();
@@ -295,6 +296,7 @@ export async function POST(request: Request) {
       };
     }
 
+    mercadoPagoRequestStarted = true;
     const paymentResponse = await fetch(
       "https://api.mercadopago.com/v1/orders",
       {
@@ -357,8 +359,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("ERRO GERAL NO CHECKOUT:", error);
 
-    // Não cancela automaticamente após falha de rede: o Mercado Pago pode
-    // ter aceitado a ordem antes de a conexão cair. A repetição é idempotente.
+    // Antes de chamar o Mercado Pago, é seguro desfazer a reserva do pedido.
+    // Depois do início da chamada externa, preservamos o pedido para que uma
+    // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
+    if (createdOrderId && !mercadoPagoRequestStarted) {
+      await cancelOrder(createdOrderId);
+    }
 
     return NextResponse.json(
       {
