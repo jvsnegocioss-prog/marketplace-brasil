@@ -5905,3 +5905,49 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     height: 27px;
   }
 }
+
+
+/* Estado persistente dos Acessos rápidos: não depende do pseudo-estado :active do iOS */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  background: #ffffff !important;
+  border: 2px solid #e1e7f0 !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045) !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: #ffffff !important;
+  border: 2px solid #d6b94f !important;
+  color: #172f50 !important;
+  -webkit-text-fill-color: #172f50 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .06) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button.quick-access-category[data-selected="true"] .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:hover .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #172f50 !important;
+}
+.navigation > button.quick-access-category:active {
+  transform: none !important;
+}
