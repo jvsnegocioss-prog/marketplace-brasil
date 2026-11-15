@@ -131,7 +131,10 @@ test("classifica chargeback e estados de pagamento não finais sem liberar entre
     currency: "BRL",
     total_amount: "100.00",
     total_paid_amount: "100.00",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: {
+      payments: [{ status: "processed" }],
+      chargebacks: [{ status: "in_process", amount: "25.00" }],
+    },
   };
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "charged_back", status_detail: "in_process" }), "chargeback");
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, total_paid_amount: "50.00", status: "charged_back", status_detail: "settled" }), "chargeback");
