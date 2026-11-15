@@ -104,6 +104,12 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
   }), "partial_refund");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
+    total_paid_amount: "0.00",
+    status_detail: "partially_refunded",
+    transactions: { ...base.transactions, refunds: [{ status: "processed", amount: "25.00" }] },
+  }), "partial_refund");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
     status: "refunded",
     status_detail: "refunded",
     transactions: { refunds: [{ status: "processed", amount: "100.00" }] },
