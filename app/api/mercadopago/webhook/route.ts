@@ -26,6 +26,17 @@ function compareSignatures(expected: string, received: string) {
     timingSafeEqual(expectedBuffer, receivedBuffer)
   );
 }
+
+function amountToCents(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return null;
+  }
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return null;
+  }
+  return Math.round(amount * 100);
+}
 export async function POST(request: Request) {
   try {
     const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
@@ -158,7 +169,7 @@ export async function POST(request: Request) {
 
     const { data: storeOrder, error: orderLookupError } = await supabaseAdmin
       .from("orders")
-      .select("id, status, mercado_pago_order_id")
+      .select("id, status, mercado_pago_order_id, total")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -186,6 +197,47 @@ export async function POST(request: Request) {
     ) {
       console.warn("[MP webhook] Notificação ignorada: vínculo MP divergente.");
       return NextResponse.json({ received: true, ignored: true });
+    }
+
+    if (String(mpOrder.id) !== String(dataId)) {
+      console.error("[MP webhook] ID retornado pela API diverge do ID consultado.");
+      return NextResponse.json(
+        { error: "Identificador de pagamento divergente." },
+        { status: 409 }
+      );
+    }
+
+    if (mpStatus === "processed") {
+      const expectedCents = amountToCents(storeOrder.total);
+      const orderAmountCents = amountToCents(mpOrder.total_amount);
+      const paidAmountCents = amountToCents(mpOrder.total_paid_amount);
+      const payments = mpOrder.transactions?.payments;
+      const paymentsAreProcessed =
+        Array.isArray(payments) &&
+        payments.length > 0 &&
+        payments.every((payment: { status?: unknown }) => payment?.status === "processed");
+
+      if (
+        mpOrder.currency_id !== "BRL" ||
+        expectedCents === null ||
+        orderAmountCents === null ||
+        paidAmountCents === null ||
+        orderAmountCents !== expectedCents ||
+        paidAmountCents !== expectedCents ||
+        !paymentsAreProcessed
+      ) {
+        console.error("[MP webhook] Pagamento processado com valor, moeda ou transações divergentes.", {
+          currencyMatches: mpOrder.currency_id === "BRL",
+          expectedCents,
+          orderAmountCents,
+          paidAmountCents,
+          paymentsAreProcessed,
+        });
+        return NextResponse.json(
+          { error: "Pagamento não corresponde integralmente ao pedido." },
+          { status: 409 }
+        );
+      }
     }
 
     if (String(storeOrder.status).trim().toLowerCase() !== "aguardando") {
