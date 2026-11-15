@@ -4,7 +4,7 @@ let browserClient: SupabaseClient | null = null;
 
 function getBrowserClient(): SupabaseClient {
   if (typeof window === "undefined") {
-    throw new Error("O cliente Supabase do navegador só pode ser acessado no navegador.");
+    throw new Error("O cliente Supabase só pode executar no navegador.");
   }
   if (browserClient) return browserClient;
 
@@ -18,11 +18,30 @@ function getBrowserClient(): SupabaseClient {
   return browserClient;
 }
 
-// Inicializa o cliente somente quando uma tela realmente o utiliza.
-// Isso permite que previews sem credenciais de backend sejam compilados sem
-// criar um cliente inválido durante a avaliação dos módulos pelo Next.js.
+// Durante a renderização no servidor, disponibiliza uma fachada inerte.
+// Ela permite que o Next.js avalie/importa páginas Client Component sem
+// tentar inicializar o SDK nem exigir credenciais no build do Preview.
+// Qualquer tentativa real de executar uma chamada Supabase no servidor falha
+// explicitamente; no navegador, todas as chamadas usam o cliente real.
+const serverOnlySupabase = new Proxy(function serverOnlySupabaseCall() {}, {
+  get(_target, property) {
+    if (property === "then") return undefined;
+    if (property === Symbol.toStringTag) return "SupabaseClient";
+    return serverOnlySupabase;
+  },
+  apply() {
+    throw new Error("O cliente Supabase do navegador não pode ser executado no servidor.");
+  },
+});
+
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, property) {
+    if (typeof window === "undefined") {
+      if (property === "then") return undefined;
+      if (property === Symbol.toStringTag) return "SupabaseClient";
+      return serverOnlySupabase;
+    }
+
     const client = getBrowserClient();
     const value = Reflect.get(client, property, client);
     return typeof value === "function" ? value.bind(client) : value;
