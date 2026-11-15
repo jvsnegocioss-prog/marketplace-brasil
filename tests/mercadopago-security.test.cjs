@@ -126,43 +126,59 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
   }), "review");
 });
 
-test("classifica chargeback e estados de pagamento não finais sem liberar entrega", () => {
+test("classifica chargeback parcial conforme o payload documentado da Orders API", () => {
+  const base = {
+    currency: "BRL",
+    total_amount: "50.00",
+    total_paid_amount: "200.00",
+    status: "charged_back",
+    transactions: {
+      payments: [{ status: "charged_back" }],
+      chargebacks: [{
+        id: "CBK-1",
+        transaction_id: "PAY-1",
+        case_id: "CASE-1",
+        status: "in_process",
+        references: ["PAY-1"],
+      }],
+    },
+  };
+
+  // O objeto chargebacks pode não conter amount; o valor afetado vem de total_amount.
+  assert.equal(getOrderPaymentDisposition("200.00", { ...base, status_detail: "in_process" }), "chargeback");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "settled",
+    transactions: { ...base.transactions, chargebacks: [{ ...base.transactions.chargebacks[0], status: "settled" }] },
+  }), "chargeback_resolved");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "reimbursed",
+    transactions: { ...base.transactions, chargebacks: [{ ...base.transactions.chargebacks[0], status: "reimbursed" }] },
+  }), "chargeback_resolved");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    total_amount: "250.00",
+    status_detail: "in_process",
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "unknown",
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    currency: "USD",
+    status_detail: "in_process",
+  }), "review");
+});
+
+test("mantém cancelamento e estados não finais fora de pagamento aprovado", () => {
   const base = {
     currency: "BRL",
     total_amount: "100.00",
     total_paid_amount: "100.00",
-    transactions: {
-      payments: [{ status: "processed" }],
-      chargebacks: [{ id: "CBK-1", transaction_id: "PAY-1", case_id: "CASE-1", status: "in_process", references: ["PAY-1"] }],
-    },
+    transactions: { payments: [{ status: "processed" }] },
   };
-  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "charged_back", status_detail: "in_process" }), "chargeback");
-  assert.equal(getOrderPaymentDisposition("100.00", { ...base, total_paid_amount: "50.00", status: "charged_back", status_detail: "settled" }), "chargeback");
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "canceled" }), "not_paid");
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "processing" }), "review");
-  assert.equal(getOrderPaymentDisposition("200.00", {
-    currency: "BRL",
-    total_amount: "50.00",
-    total_paid_amount: "200.00",
-    status: "charged_back",
-    status_detail: "settled",
-    transactions: {
-      chargebacks: [{ status: "settled", amount: "50.00" }],
-    },
-  }), "chargeback");
-  assert.equal(getOrderPaymentDisposition("200.00", {
-    currency: "BRL",
-    total_amount: "50.00",
-    total_paid_amount: "200.00",
-    status: "charged_back",
-    status_detail: "in_process",
-    transactions: { chargebacks: [{ status: "in_process", amount: "250.00" }] },
-  }), "review");
-  assert.equal(getOrderPaymentDisposition("100.00", {
-    ...base,
-    status: "charged_back",
-    status_detail: "settled",
-    transactions: { chargebacks: [{ status: "settled", amount: "20.00" }] },
-  }), "chargeback");
-  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "charged_back", currency: "USD" }), "review");
 });
