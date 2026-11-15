@@ -43,6 +43,7 @@ type DeliveryNeighborhood = {
   fee_override_cents: number | null;
   region_name: string;
   region_fee_cents: number;
+  region_free_shipping: boolean;
 };
 
 const baseCategories = [
@@ -234,7 +235,7 @@ export default function Home() {
           .eq("active", true)
           .order("name"),
         supabase.from("delivery_regions")
-          .select("id,name,fee_cents")
+          .select("id,name,fee_cents,free_shipping")
           .eq("active", true),
       ]);
       if (cancelled) return;
@@ -252,11 +253,24 @@ export default function Home() {
           fee_override_cents: item.fee_override_cents,
           region_name: region.name,
           region_fee_cents: region.fee_cents,
+          region_free_shipping: region.free_shipping === true,
         }] : [];
       }));
     }
     void loadDeliveryNeighborhoods();
-    return () => { cancelled = true; };
+    const deliveryChannel = supabase
+      .channel("store-delivery-settings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_regions" }, () => {
+        void loadDeliveryNeighborhoods();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_neighborhoods" }, () => {
+        void loadDeliveryNeighborhoods();
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(deliveryChannel);
+    };
   }, []);
 
   useEffect(() => {
@@ -658,7 +672,7 @@ export default function Home() {
   );
   const selectedDeliveryNeighborhood = deliveryNeighborhoods.find((item) => item.id === deliveryNeighborhoodId) || null;
   const estimatedShippingFee = selectedDeliveryNeighborhood
-    ? allCartItemsHaveFreeShipping
+    ? allCartItemsHaveFreeShipping || selectedDeliveryNeighborhood.region_free_shipping
       ? 0
       : (selectedDeliveryNeighborhood.fee_override_cents ?? selectedDeliveryNeighborhood.region_fee_cents) / 100
     : null;
