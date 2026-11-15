@@ -36,9 +36,9 @@ as $$
         request_id = excluded.request_id
     where existing.resource_id = excluded.resource_id
   returning
-    mercado_pago_webhook_events.resource_id,
-    mercado_pago_webhook_events.processing_status,
-    mercado_pago_webhook_events.delivery_count;
+    existing.resource_id,
+    existing.processing_status,
+    existing.delivery_count;
 $$;
 
 revoke all on function public.register_mercado_pago_webhook_delivery(text, text, text, text, text)
