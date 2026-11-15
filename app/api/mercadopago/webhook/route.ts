@@ -107,27 +107,22 @@ export async function POST(request: Request) {
       action: typeof notificationBody?.action === "string" ? notificationBody.action.slice(0, 100) : null,
     };
 
-    const { error: insertError } = await supabase
-      .from("mercado_pago_webhook_events")
-      .insert(eventRecord);
+    const { data: existingEvent, error: eventRegistrationError } = await supabase
+      .rpc("register_mercado_pago_webhook_delivery", {
+        p_notification_id: eventRecord.notification_id,
+        p_resource_id: eventRecord.resource_id,
+        p_request_id: eventRecord.request_id,
+        p_notification_type: eventRecord.notification_type,
+        p_action: eventRecord.action,
+      })
+      .maybeSingle();
 
-    if (insertError && insertError.code !== "23505") {
-      console.error("[MP webhook] Erro ao registrar notificação:", insertError.message);
+    if (eventRegistrationError) {
+      console.error("[MP webhook] Erro ao registrar entrega da notificação:", eventRegistrationError.message);
       return NextResponse.json({ error: "Não foi possível registrar a notificação." }, { status: 500 });
     }
 
-    const { data: existingEvent, error: eventLookupError } = await supabase
-      .from("mercado_pago_webhook_events")
-      .select("processing_status, resource_id")
-      .eq("notification_id", notificationId)
-      .maybeSingle();
-
-    if (eventLookupError || !existingEvent) {
-      console.error("[MP webhook] Erro ao consultar registro da notificação:", eventLookupError?.message);
-      return NextResponse.json({ error: "Não foi possível validar a notificação." }, { status: 500 });
-    }
-
-    if (!isWebhookResourceMatch(existingEvent.resource_id, dataId)) {
+    if (!existingEvent) {
       console.warn("[MP webhook] ID de notificação reutilizado para recurso diferente.", {
         notificationId,
       });
