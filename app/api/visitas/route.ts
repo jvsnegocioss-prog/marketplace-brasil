@@ -3,17 +3,24 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+let supabasePublic: ReturnType<typeof createClient<any>> | null = null;
 
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Configuração do Supabase indisponível.");
+  if (!supabaseAdmin) supabaseAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabaseAdmin;
+}
+
+function getSupabasePublic() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("Configuração pública do Supabase indisponível.");
+  if (!supabasePublic) supabasePublic = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabasePublic;
+}
 
 // Limite por instância: proteção básica contra rajadas; não substitui rate limiting distribuído.
 const requestBuckets = new Map<string, { minute: number; count: number }>();
@@ -67,7 +74,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
       }
 
-      const { data: product, error: productError } = await supabasePublic
+      const { data: product, error: productError } = await getSupabasePublic()
         .from("products")
         .select("id,name")
         .eq("id", productId)
@@ -106,7 +113,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error } = await supabaseAdmin.rpc("record_store_page_view", {
+    const { error } = await getSupabaseAdmin().rpc("record_store_page_view", {
       p_visitor_id: visitorId,
       p_path: path,
       p_product_id: verifiedProductId,
