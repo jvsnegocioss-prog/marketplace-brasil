@@ -106,8 +106,8 @@ export default function OrdersPage() {
     }
     const currentIndex = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
     const nextIndex = deliverySteps.findIndex((step) => step.value === newStatus);
-    if (nextIndex < 0 || nextIndex < currentIndex) {
-      alert("Não é possível voltar para uma etapa anterior. O pedido só pode avançar.");
+    if (nextIndex < 0 || nextIndex < currentIndex || nextIndex > currentIndex + 1) {
+      alert("O pedido deve avançar uma etapa por vez, sem pular ou voltar etapas.");
       return;
     }
     if (newStatus === "entregue" && order.delivery_status !== "enviado" && order.delivery_status !== "entregue") {
@@ -336,7 +336,7 @@ export default function OrdersPage() {
                         <div>
                           <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Atualizar etapa</label>
                           <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={e => void updateDeliveryStatus(order, e.target.value)} style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", boxSizing: "border-box" }}>
-                            {deliverySteps.map((step, index) => <option key={step.value} value={step.value} disabled={index < currentStep}>{step.label}</option>)}
+                            {deliverySteps.map((step, index) => <option key={step.value} value={step.value} disabled={index < currentStep || index > currentStep + 1}>{step.label}</option>)}
                           </select>
                         </div>
                         <div>
