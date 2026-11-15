@@ -331,7 +331,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true, ignored: true });
       }
 
-      const paidResult = await finishEvent("processed", null, "set_status", orderId, "Pago", ["aguardando"]);
+      const paidResult = await finishEvent("processed", undefined, "set_status", orderId, "Pago", ["aguardando"]);
 
       if (!paidResult?.order_updated) {
         const { data: latestOrder, error: latestOrderError } = await supabase
