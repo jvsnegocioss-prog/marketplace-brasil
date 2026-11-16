@@ -17,18 +17,23 @@ export default function AdminLogin() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    if (error) {
-      setError("E-mail ou senha incorretos. Confira seus dados e tente novamente.");
+      if (error) {
+        setError("E-mail ou senha incorretos. Confira seus dados e tente novamente.");
+        return;
+      }
+
+      router.push("/admin");
+    } catch {
+      setError("Não foi possível conectar ao serviço de autenticação. Tente novamente.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/admin");
   }
 
   return (
