@@ -10,6 +10,34 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+async function readLimitedJson(request: Request): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 4000000) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function isAdmin(request: NextRequest) {
   const authorization = request.headers.get("authorization") || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
@@ -46,11 +74,21 @@ export async function POST(request: NextRequest) {
     imageUrl?: string;
   };
 
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse("Não foi possível ler os dados enviados.", 400);
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > 4000000) {
+    return errorResponse("Solicitação muito grande.", 413);
   }
+  const parsedBody = await readLimitedJson(request);
+  if (!parsedBody.ok) {
+    return errorResponse(
+      parsedBody.status === 413 ? "Solicitação muito grande." : "Não foi possível ler os dados enviados.",
+      parsedBody.status
+    );
+  }
+  if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+    return errorResponse("Dados inválidos.", 400);
+  }
+  body = parsedBody.value as typeof body;
 
   const name = String(body.name || "").trim().slice(0, 180);
   const description = String(body.description || "").trim().slice(0, 4000);
