@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { calculateCouponDiscount } from "../../../../lib/coupon-security.cjs";
 
 export const runtime = "nodejs";
 
@@ -144,18 +145,16 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    let discountCents = coupon.discount_type === "percent"
-      ? Math.round(subtotalCents * Number(coupon.discount_value) / 100)
-      : Math.round(Number(coupon.discount_value) * 100);
-
-    if (coupon.max_discount !== null) {
-      discountCents = Math.min(discountCents, Math.round(Number(coupon.max_discount) * 100));
-    }
-    discountCents = Math.min(discountCents, subtotalCents);
-
-    if (discountCents <= 0 || discountCents >= subtotalCents) {
+    const discount = calculateCouponDiscount({
+      subtotalCents,
+      discountType: coupon.discount_type,
+      discountValue: coupon.discount_value,
+      maxDiscount: coupon.max_discount,
+    });
+    if (!discount) {
       return NextResponse.json({ error: "Este cupom não gera um valor de compra válido." }, { status: 400 });
     }
+    const discountCents = discount.discountCents;
 
     return NextResponse.json({
       valid: true,
