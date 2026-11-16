@@ -86,7 +86,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível validar a origem da solicitação." }, { status: 503 });
     }
 
-    const body = await request.json();
     const visitorId = typeof body.visitorId === "string" ? body.visitorId.trim() : "";
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
 
