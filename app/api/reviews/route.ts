@@ -95,7 +95,8 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
     .from("orders")
     .select("id,customer_name,status,delivery_status,customer_email")
     .ilike("customer_email", email)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
   if (requiredOrderId) ordersQuery = ordersQuery.eq("id", requiredOrderId);
   const { data: orders, error } = await ordersQuery;
 
@@ -212,7 +213,8 @@ export async function GET(request: Request) {
     const { data: orders } = await getSupabaseAdmin()
       .from("orders")
       .select("id")
-      .ilike("customer_email", user.email);
+      .ilike("customer_email", user.email)
+      .limit(50);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
       const { data: owned } = await getSupabaseAdmin()
@@ -228,7 +230,10 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ reviews: data || [], ownReview });
+  return NextResponse.json(
+    { reviews: data || [], ownReview },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
 export async function POST(request: Request) {
