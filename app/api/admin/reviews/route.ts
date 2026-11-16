@@ -11,6 +11,34 @@ function responseError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+async function readLimitedJson(request: Request, maxBytes = 4096): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let source = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      source += decoder.decode(value, { stream: true });
+    }
+    source += decoder.decode();
+    return { ok: true, value: JSON.parse(source) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function getAdminClient(request: NextRequest) {
   const authorization = request.headers.get("authorization") || "";
   const token = authorization.startsWith("Bearer ")
@@ -78,11 +106,10 @@ export async function PATCH(request: NextRequest) {
   if (!supabase) return responseError("Acesso administrativo não autorizado.", 401);
 
   let body: { reviewId?: string; status?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return responseError("Dados inválidos.", 400);
-  }
+  const parsed = await readLimitedJson(request);
+  if (!parsed.ok) return responseError(parsed.status === 413 ? "Solicitação muito grande." : "Dados inválidos.", parsed.status);
+  if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return responseError("Dados inválidos.", 400);
+  body = parsed.value as typeof body;
 
   const reviewId = body.reviewId;
   const status = body.status;
