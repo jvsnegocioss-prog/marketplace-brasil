@@ -5,6 +5,34 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+async function readLimitedJson(request: Request, maxBytes = 32 * 1024): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let source = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      source += decoder.decode(value, { stream: true });
+    }
+    source += decoder.decode();
+    return { ok: true, value: JSON.parse(source) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 function mercadoPagoIdempotencyKey(orderId: string) {
   const hex = createHash("sha256").update(`novashopp-checkout:${orderId}`).digest("hex").slice(0, 32).split("");
   hex[12] = "5";
@@ -55,7 +83,21 @@ export async function POST(request: Request) {
   let mercadoPagoRequestStarted = false;
 
   try {
-    const body = await request.json();
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 32 * 1024) {
+      return NextResponse.json({ error: "Solicitação muito grande." }, { status: 413, headers: { "Cache-Control": "no-store" } });
+    }
+    const parsedBody = await readLimitedJson(request);
+    if (!parsedBody.ok) {
+      return NextResponse.json(
+        { error: parsedBody.status === 413 ? "Solicitação muito grande." : "Corpo da solicitação inválido." },
+        { status: parsedBody.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+      return NextResponse.json({ error: "Corpo da solicitação inválido." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+    const body = parsedBody.value;
 
     const {
       customerName,
@@ -78,6 +120,7 @@ export async function POST(request: Request) {
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deliveryNeighborhoodId) ||
       !Array.isArray(items) ||
       items.length === 0 ||
+      items.length > 100 ||
       items.some(
         (item: { id?: unknown; qty?: unknown }) =>
           typeof item.id !== "string" ||
