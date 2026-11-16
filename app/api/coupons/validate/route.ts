@@ -30,17 +30,23 @@ export async function POST(request: Request) {
       : "";
     const items = body.items;
 
-    if (!code || !Array.isArray(items) || items.length === 0 ||
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!code || code.length > 64 || !Array.isArray(items) ||
+        items.length === 0 || items.length > 100 ||
         items.some((item: any) =>
-          !item || typeof item.id !== "string" ||
-          !Number.isInteger(item.qty) || item.qty < 1
+          !item || typeof item.id !== "string" || !uuidPattern.test(item.id) ||
+          !Number.isSafeInteger(item.qty) || item.qty < 1 || item.qty > 1000
         )) {
-      return NextResponse.json({ error: "Informe um cupom e os produtos do carrinho." }, { status: 400 });
+      return NextResponse.json({ error: "Informe um cupom válido e até 100 itens válidos no carrinho." }, { status: 400 });
     }
 
     const quantities = new Map<string, number>();
     for (const item of items) {
-      quantities.set(item.id, (quantities.get(item.id) || 0) + item.qty);
+      const combinedQuantity = (quantities.get(item.id) || 0) + item.qty;
+      if (!Number.isSafeInteger(combinedQuantity)) {
+        return NextResponse.json({ error: "Quantidade inválida para um dos produtos." }, { status: 400 });
+      }
+      quantities.set(item.id, combinedQuantity);
     }
 
     const ids = Array.from(quantities.keys());
