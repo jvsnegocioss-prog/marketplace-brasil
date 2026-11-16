@@ -8,7 +8,7 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function responseError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
 async function readLimitedJson(request: Request, maxBytes = 4096): Promise<
@@ -93,12 +93,15 @@ export async function GET(request: NextRequest) {
   }
 
   const productNames = new Map((products || []).map((product) => [product.id, product.name]));
-  return NextResponse.json({
-    reviews: (reviews || []).map((review) => ({
-      ...review,
-      product_name: productNames.get(review.product_id) || "Produto",
-    })),
-  });
+  return NextResponse.json(
+    {
+      reviews: (reviews || []).map((review) => ({
+        ...review,
+        product_name: productNames.get(review.product_id) || "Produto",
+      })),
+    },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
 export async function PATCH(request: NextRequest) {
@@ -132,5 +135,8 @@ export async function PATCH(request: NextRequest) {
     return responseError("Não foi possível atualizar a avaliação: " + (error?.message || "registro não encontrado"), 500);
   }
 
-  return NextResponse.json({ success: true, review: data });
+  return NextResponse.json(
+    { success: true, review: data },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
