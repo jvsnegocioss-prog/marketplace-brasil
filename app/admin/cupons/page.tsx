@@ -40,7 +40,12 @@ export default function CouponsPage() {
       const { data, error } = await supabase.rpc("is_marketplace_admin");
       if (error || data !== true) { await supabase.auth.signOut(); router.replace("/admin/login"); return; }
       setAuthorized(true); await loadCoupons(); setLoading(false);
-    })().catch(() => { setMessage("Não foi possível verificar o acesso administrativo."); setLoading(false); });
+    })().catch(() => {
+      setAuthorized(false);
+      router.replace("/admin/login");
+      setMessage("Não foi possível confirmar seu acesso administrativo. Entre novamente.");
+      setLoading(false);
+    });
   }, [router]);
 
   async function loadCoupons() {
