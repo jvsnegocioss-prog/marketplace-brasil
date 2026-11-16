@@ -114,9 +114,9 @@ export default function OrdersPage() {
       alert("Registre o pedido como enviado antes de marcar como entregue.");
       return;
     }
+    // O banco registra shipped_at e delivered_at de forma transacional no trigger.
+    // O cliente envia somente a nova etapa e nunca define timestamps de entrega.
     const updates: Record<string, string> = { delivery_status: newStatus };
-    if (newStatus === "enviado" && !order.shipped_at) updates.shipped_at = new Date().toISOString();
-    if (newStatus === "entregue" && !order.delivered_at) updates.delivered_at = new Date().toISOString();
 
     setSavingDelivery(order.id);
     const { error } = await supabase.from("orders").update(updates).eq("id", order.id);
