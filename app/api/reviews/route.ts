@@ -17,6 +17,34 @@ function getSupabaseAdmin() {
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
 const mediaBucket = "products-media";
 
+async function readLimitedJson(request: Request, maxBytes = 4096): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let source = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      source += decoder.decode(value, { stream: true });
+    }
+    source += decoder.decode();
+    return { ok: true, value: JSON.parse(source) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function getAccount(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return null;
@@ -260,7 +288,10 @@ export async function DELETE(request: Request) {
   try {
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para excluir a avaliação." }, { status: 401 });
-    const body = await request.json();
+    const parsed = await readLimitedJson(request);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.status === 413 ? "Solicitação muito grande." : "Dados inválidos." }, { status: parsed.status });
+    if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+    const body = parsed.value as Record<string, unknown>;
     const reviewId = typeof body.reviewId === "string" ? body.reviewId.trim() : "";
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
     if (!reviewId || !productId) return NextResponse.json({ error: "Informe a avaliação e o produto." }, { status: 400 });
