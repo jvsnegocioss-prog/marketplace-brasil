@@ -249,24 +249,31 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authorized) return;
 
+    let refreshTimeout: number | null = null;
     const channel = supabase
       .channel("admin-store-page-views")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "store_page_views" },
         () => {
-          void loadAnalytics();
+          // Agrupa eventos próximos para evitar consultas repetidas em rajadas.
+          if (refreshTimeout !== null) return;
+          refreshTimeout = window.setTimeout(() => {
+            refreshTimeout = null;
+            void loadAnalytics();
+          }, 3000);
         }
       )
       .subscribe();
 
-    // Atualização de segurança caso o Realtime não esteja habilitado para a tabela.
+    // Fallback periódico sem consultas excessivas ao banco.
     const intervalId = window.setInterval(() => {
       void loadAnalytics();
-    }, 5000);
+    }, 30000);
 
     return () => {
       window.clearInterval(intervalId);
+      if (refreshTimeout !== null) window.clearTimeout(refreshTimeout);
       void supabase.removeChannel(channel);
     };
   }, [authorized, loadAnalytics]);
