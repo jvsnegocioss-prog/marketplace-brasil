@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Não foi possível carregar seu histórico agora." }, { status: 500 });
     }
 
-    return NextResponse.json({ orders: data || [] });
+    return NextResponse.json({ orders: data || [] }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("ERRO NO HISTÓRICO DO CLIENTE:", error);
     return NextResponse.json({ error: "Ocorreu um erro ao consultar seus pedidos." }, { status: 500 });
