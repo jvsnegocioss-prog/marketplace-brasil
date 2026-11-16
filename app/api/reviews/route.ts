@@ -17,6 +17,41 @@ function getSupabaseAdmin() {
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
 const mediaBucket = "products-media";
 
+async function readLimitedFormData(request: Request, maxBytes = 5 * 1024 * 1024): Promise<
+  { ok: true; value: FormData } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const headers = new Headers(request.headers);
+    headers.delete("content-length");
+    const boundedRequest = new Request(request.url, { method: "POST", headers, body: bytes });
+    return { ok: true, value: await boundedRequest.formData() };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function readLimitedJson(request: Request, maxBytes = 4096): Promise<
   { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
 > {
@@ -189,7 +224,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "O envio não pode ultrapassar 5 MB." }, { status: 413, headers: { "Cache-Control": "no-store" } });
     }
 
-    const form = await request.formData();
+    const parsedForm = await readLimitedFormData(request);
+    if (!parsedForm.ok) {
+      return NextResponse.json(
+        { error: parsedForm.status === 413 ? "O envio não pode ultrapassar 5 MB." : "Formulário inválido." },
+        { status: parsedForm.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    const form = parsedForm.value;
     const productId = String(form.get("productId") || "").trim();
     const rating = Number(form.get("rating"));
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
@@ -237,7 +279,14 @@ export async function PATCH(request: Request) {
     if (Number.isFinite(contentLength) && contentLength > 5 * 1024 * 1024) {
       return NextResponse.json({ error: "O envio não pode ultrapassar 5 MB." }, { status: 413, headers: { "Cache-Control": "no-store" } });
     }
-    const form = await request.formData();
+    const parsedForm = await readLimitedFormData(request);
+    if (!parsedForm.ok) {
+      return NextResponse.json(
+        { error: parsedForm.status === 413 ? "O envio não pode ultrapassar 5 MB." : "Formulário inválido." },
+        { status: parsedForm.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    const form = parsedForm.value;
     const reviewId = String(form.get("reviewId") || "").trim();
     const productId = String(form.get("productId") || "").trim();
     const rating = Number(form.get("rating"));
