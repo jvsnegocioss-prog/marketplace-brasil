@@ -526,13 +526,25 @@ export default function AdminPage() {
       }
 
       if (image) {
-        const extension = image.name.split(".").pop() || "jpg";
-        const fileName = `${crypto.randomUUID()}.${extension}`;
+        const imageExtensions: Record<string, string> = {
+          "image/jpeg": "jpg",
+          "image/png": "png",
+          "image/webp": "webp",
+        };
+        const extension = imageExtensions[image.type];
+        if (!extension) {
+          throw new Error("A foto principal deve estar em JPG, PNG ou WEBP.");
+        }
+        if (image.size > 3 * 1024 * 1024) {
+          throw new Error("A foto principal deve ter no máximo 3 MB.");
+        }
+        const fileName = crypto.randomUUID() + "." + extension;
 
         const { error: uploadError } = await supabase.storage
           .from("products-images")
           .upload(fileName, image, {
             upsert: false,
+            contentType: image.type,
           });
 
         if (uploadError) {
@@ -962,7 +974,7 @@ export default function AdminPage() {
         <input
           id="product-image"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           onChange={(e) =>
             setImage(e.target.files?.[0] || null)
           }
