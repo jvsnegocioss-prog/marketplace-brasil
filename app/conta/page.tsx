@@ -264,7 +264,11 @@ export default function ContaClientePage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      await supabase.auth.signOut();
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        setMessage("Senha alterada com sucesso, mas não foi possível encerrar a sessão automaticamente. Saia da conta antes de entrar novamente.");
+        return;
+      }
       setUser(null);
       setPassword("");
       setConfirmPassword("");
