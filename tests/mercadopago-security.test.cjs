@@ -227,3 +227,61 @@ test("mantém cancelamento e estados não finais fora de pagamento aprovado", ()
   }), "review");
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "processing" }), "review");
 });
+
+
+test("rejeita adulteração de cada componente da assinatura HMAC", () => {
+  const secret = "isolated-test-secret";
+  const dataId = "ORD-900";
+  const requestId = "req-900";
+  const ts = "1794700000";
+  const manifest = `id:ord-900;request-id:req-900;ts:${ts};`;
+  const signature = createHmac("sha256", secret).update(manifest).digest("hex");
+  assert.equal(verifyMercadoPagoSignature(secret, dataId, requestId, ts, signature), true);
+  assert.equal(verifyMercadoPagoSignature("wrong-secret", dataId, requestId, ts, signature), false);
+  assert.equal(verifyMercadoPagoSignature(secret, dataId, "req-other", ts, signature), false);
+  assert.equal(verifyMercadoPagoSignature(secret, "ORD-901", requestId, ts, signature), false);
+  assert.equal(verifyMercadoPagoSignature(secret, dataId, requestId, ts, signature.slice(0, 63) + "0"), false);
+});
+
+test("valida timestamps em segundos e milissegundos sem aceitar valores negativos", () => {
+  const now = 1_800_000_000_000;
+  assert.equal(isValidWebhookTimestamp("1800000000", now), true);
+  assert.equal(isValidWebhookTimestamp("1800000000000", now), true);
+  assert.equal(isValidWebhookTimestamp("1800000300", now), true);
+  assert.equal(isValidWebhookTimestamp("1800000300001", now), false);
+  assert.equal(isValidWebhookTimestamp("-1", now), false);
+  assert.equal(isValidWebhookTimestamp("", now), false);
+});
+
+test("falha fechada para estruturas de pagamento ausentes ou contraditórias", () => {
+  const base = {
+    status: "processed",
+    currency: "BRL",
+    total_amount: "75.00",
+    total_paid_amount: "75.00",
+    transactions: { payments: [{ status: "processed" }] },
+  };
+  assert.equal(getOrderPaymentDisposition("75.00", base), "paid");
+  assert.equal(getOrderPaymentDisposition("75.00", { ...base, transactions: undefined }), "review");
+  assert.equal(getOrderPaymentDisposition("75.00", { ...base, transactions: { payments: [] } }), "review");
+  assert.equal(getOrderPaymentDisposition("75.00", { ...base, transactions: { payments: [null] } }), "review");
+  assert.equal(getOrderPaymentDisposition("75.00", { ...base, total_paid_amount: "74.99" }), "review");
+  assert.equal(getOrderPaymentDisposition("75.00", { ...base, currency: undefined }), "review");
+  assert.equal(getOrderPaymentDisposition("75.00", null), "review");
+});
+
+test("não aceita IDs de notificação com tipos ou formatos inesperados", () => {
+  assert.equal(getWebhookNotificationId([]), null);
+  assert.equal(getWebhookNotificationId({ id: {} }), null);
+  assert.equal(getWebhookNotificationId({ id: "" }), null);
+  assert.equal(getWebhookNotificationId({ id: "   " }), null);
+  assert.equal(getWebhookNotificationId({ id: Number.POSITIVE_INFINITY }), null);
+  assert.equal(getWebhookNotificationId({ id: 0 }), "0");
+});
+
+test("corpo de notificação exige correspondência exata e formato de objeto", () => {
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: 123 } }, "123"), true);
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: "123" } }, "0123"), false);
+  assert.equal(isWebhookNotificationResourceMatch([], "123"), false);
+  assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: null } }, "123"), false);
+});
