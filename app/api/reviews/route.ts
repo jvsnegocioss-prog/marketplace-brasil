@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
+const { getOwnedReviewMediaPaths } = require("../../../lib/review-media-security.cjs");
 
 export const runtime = "nodejs";
 
@@ -117,6 +118,21 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
   }
 
   return { error: "A avaliação será liberada quando este produto de uma compra da sua conta estiver pago e entregue.", status: 403 as const };
+}
+
+async function removeOwnedReviewMedia(photos: unknown, userId: string) {
+  const paths = getOwnedReviewMediaPaths(
+    photos,
+    userId,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  );
+  if (!paths.length) return;
+  try {
+    const { error } = await getSupabaseAdmin().storage.from(mediaBucket).remove(paths);
+    if (error) console.error("Não foi possível limpar mídias antigas da avaliação:", error);
+  } catch (error) {
+    console.error("Falha ao limpar mídias antigas da avaliação:", error);
+  }
 }
 
 async function uploadReviewFiles(files: File[], userId: string) {
@@ -296,7 +312,7 @@ export async function PATCH(request: Request) {
 
     const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
-      .select("order_id")
+      .select("order_id,photos")
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("customer_phone_hash", user.id)
@@ -327,6 +343,7 @@ export async function PATCH(request: Request) {
       if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
       return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
     }
+    if (uploaded) await removeOwnedReviewMedia(ownedReview.photos, user.id);
     return NextResponse.json({ success: true, review: data, message: "Avaliação atualizada e enviada para nova aprovação." });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a alteração." }, { status: 500 });
@@ -368,6 +385,7 @@ export async function DELETE(request: Request) {
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Não foi possível excluir a avaliação." }, { status: 500 });
     if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+    await removeOwnedReviewMedia(ownedReview.photos, user.id);
     return NextResponse.json({ success: true, message: "Avaliação excluída." });
   } catch {
     return NextResponse.json({ error: "Não foi possível processar a exclusão." }, { status: 500 });
