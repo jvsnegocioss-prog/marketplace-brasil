@@ -113,7 +113,11 @@ export async function PATCH(request: NextRequest) {
 
   const reviewId = body.reviewId;
   const status = body.status;
-  if (!reviewId || !["pending", "approved", "hidden"].includes(status || "")) {
+  if (
+    typeof reviewId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId) ||
+    !["pending", "approved", "hidden"].includes(status || "")
+  ) {
     return responseError("Informe uma avaliação e uma situação válida.", 400);
   }
 
