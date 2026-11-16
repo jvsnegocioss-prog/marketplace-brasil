@@ -20,6 +20,34 @@ function getClientIp(request: Request) {
   return (forwarded?.split(",")[0] || realIp || "").trim();
 }
 
+async function readLimitedJson(request: Request): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 4000) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
@@ -30,7 +58,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 4000) {
+      return NextResponse.json({ error: "Solicitação muito grande." }, { status: 413, headers: { "Cache-Control": "no-store" } });
+    }
+    const parsedBody = await readLimitedJson(request);
+    if (!parsedBody.ok) {
+      return NextResponse.json(
+        { error: parsedBody.status === 413 ? "Solicitação muito grande." : "Corpo da solicitação inválido." },
+        { status: parsedBody.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+      return NextResponse.json({ error: "Corpo da solicitação inválido." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+    const body = parsedBody.value as Record<string, unknown>;
     const orderNumber = typeof body.orderNumber === "string" ? body.orderNumber.trim().replace(/^#\s*/, "") : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
 
