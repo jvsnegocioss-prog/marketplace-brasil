@@ -206,7 +206,9 @@ export default function AdminPage() {
           loadAnalytics(),
         ]);
       } catch {
-        setMessage("Erro ao verificar acesso ao painel.");
+        setAuthorized(false);
+        setMessage("Não foi possível confirmar seu acesso administrativo. Entre novamente.");
+        router.replace("/admin/login");
       } finally {
         setLoading(false);
       }
@@ -701,8 +703,15 @@ export default function AdminPage() {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
-    router.replace("/admin/login");
+    setMessage("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setAuthorized(false);
+      router.replace("/admin/login");
+    } catch {
+      setMessage("Não foi possível encerrar a sessão. Verifique sua conexão e tente novamente.");
+    }
   }
 
   if (loading) {
