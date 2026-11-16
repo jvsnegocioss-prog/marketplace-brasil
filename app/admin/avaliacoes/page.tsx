@@ -36,21 +36,26 @@ export default function AdminReviewsPage() {
 
   useEffect(() => {
     async function checkAdmin() {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) {
+          router.replace("/admin/login");
+          return;
+        }
+        const { data, error } = await supabase.rpc("is_marketplace_admin");
+        if (error || data !== true) {
+          await supabase.auth.signOut();
+          router.replace("/admin/login");
+          return;
+        }
+        setAuthorized(true);
+      } catch {
         router.replace("/admin/login");
-        return;
+      } finally {
+        setLoading(false);
       }
-      const { data, error } = await supabase.rpc("is_marketplace_admin");
-      if (error || data !== true) {
-        await supabase.auth.signOut();
-        router.replace("/admin/login");
-        return;
-      }
-      setAuthorized(true);
-      setLoading(false);
     }
-    checkAdmin();
+    void checkAdmin();
   }, [router]);
 
   useEffect(() => {
