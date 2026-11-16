@@ -113,14 +113,17 @@ async function uploadReviewFiles(files: File[], userId: string) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
-  if (!productId) return NextResponse.json({ error: "Informe o produto." }, { status: 400 });
+  if (!productId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
+    return NextResponse.json({ error: "Informe um produto válido." }, { status: 400 });
+  }
 
   const { data, error } = await getSupabaseAdmin()
     .from("product_reviews")
     .select("id,product_id,reviewer_name,rating,comment,photos,created_at")
     .eq("product_id", productId)
     .eq("status", "approved")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   if (error) return NextResponse.json({ error: "Não foi possível carregar as avaliações." }, { status: 500 });
 
@@ -153,6 +156,10 @@ export async function POST(request: Request) {
   try {
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para avaliar este produto." }, { status: 401 });
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "O envio não pode ultrapassar 5 MB." }, { status: 413, headers: { "Cache-Control": "no-store" } });
+    }
 
     const form = await request.formData();
     const productId = String(form.get("productId") || "").trim();
@@ -198,6 +205,10 @@ export async function PATCH(request: Request) {
   try {
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para editar a avaliação." }, { status: 401 });
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "O envio não pode ultrapassar 5 MB." }, { status: 413, headers: { "Cache-Control": "no-store" } });
+    }
     const form = await request.formData();
     const reviewId = String(form.get("reviewId") || "").trim();
     const productId = String(form.get("productId") || "").trim();
