@@ -113,8 +113,11 @@ export default function ContaClientePage() {
   const [ordersError, setOrdersError] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    let active = true;
+    let authEventReceived = false;
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      authEventReceived = true;
+      if (!active) return;
       setUser(session?.user ?? null);
       if (event === "PASSWORD_RECOVERY") {
         setMode("reset");
@@ -124,7 +127,28 @@ export default function ContaClientePage() {
         setMessage("");
       }
     });
-    return () => listener.subscription.unsubscribe();
+
+    void supabase.auth.getSession()
+      .then(({ data, error: sessionError }) => {
+        if (!active || authEventReceived) return;
+        if (sessionError) {
+          setUser(null);
+          setError("Não foi possível verificar sua sessão. Entre novamente.");
+          return;
+        }
+        setUser(data.session?.user ?? null);
+      })
+      .catch(() => {
+        if (active && !authEventReceived) {
+          setUser(null);
+          setError("Não foi possível verificar sua sessão. Entre novamente.");
+        }
+      });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
