@@ -19,6 +19,7 @@ test("ignora URLs inválidas, caminhos de traversal e entradas não textuais", (
     42,
     "not a url",
     "https://project.supabase.co/storage/v1/object/public/products-media/reviews/user-1/../other.jpg",
+    "https://project.supabase.co/storage/v1/object/public/products-media/reviews/user-1/folder%5C%5Cescape.jpg",
     "https://project.supabase.co/storage/v1/object/public/products-media/reviews/user-2/photo.jpg",
   ], "user-1", base), []);
 });

@@ -364,7 +364,7 @@ export async function DELETE(request: Request) {
 
     const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
-      .select("order_id")
+      .select("order_id,photos")
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("customer_phone_hash", user.id)
