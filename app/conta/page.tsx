@@ -399,11 +399,14 @@ export default function ContaClientePage() {
 
   async function handleLogout() {
     setError("");
-    const { error: authError } = await supabase.auth.signOut();
-    if (authError) setError("Não foi possível sair da conta. Tente novamente.");
-    else {
+    setMessage("");
+    try {
+      const { error: authError } = await supabase.auth.signOut();
+      if (authError) throw authError;
       setMessage("Você saiu da sua conta.");
       setOrders([]);
+    } catch {
+      setError("Não foi possível sair da conta. Verifique sua conexão e tente novamente.");
     }
   }
 
