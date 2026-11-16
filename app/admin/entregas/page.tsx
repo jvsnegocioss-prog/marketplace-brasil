@@ -90,7 +90,11 @@ export default function AdminDeliveriesPage() {
         setAuthorized(true);
         await loadData();
       } catch {
-        if (!cancelled) setMessage("Erro ao verificar acesso administrativo.");
+        if (!cancelled) {
+          setAuthorized(false);
+          setMessage("Não foi possível confirmar seu acesso administrativo. Entre novamente.");
+          router.replace("/admin/login");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
