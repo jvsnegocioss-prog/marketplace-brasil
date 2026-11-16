@@ -241,7 +241,7 @@ export default function ContaClientePage() {
         setMessage("Login realizado com sucesso.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível concluir. Tente novamente.");
+      setError(mode === "register" ? "Não foi possível concluir o cadastro. Confira os dados e tente novamente." : "Não foi possível entrar. Confira seu e-mail e senha e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -265,7 +265,7 @@ export default function ContaClientePage() {
       if (recoveryError) throw recoveryError;
       setMessage("Se existir uma conta com esse e-mail, enviaremos um link para redefinir sua senha. Verifique também a caixa de spam.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível solicitar a recuperação. Tente novamente.");
+      setError("Não foi possível solicitar a recuperação agora. Confira o e-mail e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -299,7 +299,7 @@ export default function ContaClientePage() {
       setMode("login");
       setMessage("Senha alterada com sucesso. Entre usando sua nova senha.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar a senha. Solicite um novo link.");
+      setError("Não foi possível atualizar a senha. Solicite um novo link e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -342,7 +342,7 @@ export default function ContaClientePage() {
       setEditingProfile(false);
       setMessage("Seus dados foram atualizados. Nome, telefone e endereço serão preenchidos nos próximos checkouts.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar seu nome.");
+      setError("Não foi possível atualizar seus dados. Confira os campos e tente novamente.");
     } finally {
       setSavingProfile(false);
     }
@@ -388,7 +388,7 @@ export default function ContaClientePage() {
       setAvatarUrl(publicData.publicUrl);
       setMessage("Foto de perfil atualizada com sucesso.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar a foto.");
+      setError("Não foi possível atualizar a foto. Confira o formato e o tamanho do arquivo e tente novamente.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -415,7 +415,7 @@ export default function ContaClientePage() {
       setAvatarUrl("");
       setMessage("Foto removida. Seu perfil voltou ao avatar padrão.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível remover a foto.");
+      setError("Não foi possível remover a foto agora. Tente novamente.");
     } finally {
       setUploadingAvatar(false);
     }
