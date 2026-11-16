@@ -202,7 +202,7 @@ export default function ContaClientePage() {
         if (!response.ok) throw new Error(result.error || `Não foi possível carregar os pedidos (HTTP ${response.status}).`);
         if (active) setOrders((result.orders || []) as CustomerOrder[]);
       } catch (err) {
-        if (active) setOrdersError(err instanceof Error ? err.message : "Erro ao consultar pedidos.");
+        if (active) setOrdersError(err instanceof Error && err.message === "Sua sessão expirou. Entre novamente." ? err.message : "Não foi possível carregar seu histórico agora. Atualize a página e tente novamente.");
       } finally {
         if (active) setOrdersLoading(false);
       }
