@@ -203,12 +203,8 @@ export async function POST(request: Request) {
       console.error("ERRO AO CRIAR PEDIDO:", orderError);
 
       return NextResponse.json(
-        {
-          error:
-            "Não foi possível registrar o pedido: " +
-            (orderError?.message || "erro desconhecido"),
-        },
-        { status: 400 }
+        { error: "Não foi possível registrar o pedido. Confira os dados e tente novamente." },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 
