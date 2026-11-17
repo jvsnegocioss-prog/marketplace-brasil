@@ -22,7 +22,6 @@ type ProductMedia = {
   media_type: "image" | "video";
   url: string;
   storage_path: string;
-  poster_url: string | null;
   sort_order: number;
 };
 
@@ -101,22 +100,6 @@ async function createVideoPoster(file: File): Promise<Blob> {
       canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao gerar a imagem de capa do vídeo.")), "image/jpeg", 0.82);
     });
   } finally { URL.revokeObjectURL(objectUrl); }
-}
-
-function getPublicBucketPath(value: string | null | undefined, bucket: string): string | null {
-  if (!value || !process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
-  try {
-    const url = new URL(value);
-    const projectOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
-    const marker = `/storage/v1/object/public/${bucket}/`;
-    if (url.origin !== projectOrigin || !url.pathname.startsWith(marker)) return null;
-    const path = decodeURIComponent(url.pathname.slice(marker.length));
-    const segments = path.split("/");
-    if (!path || segments.some((part) => !part || part === "." || part === ".." || part.includes("\\"))) return null;
-    return path;
-  } catch {
-    return null;
-  }
 }
 
 function formatCurrency(value: number) {
@@ -420,7 +403,7 @@ export default function AdminPage() {
   async function loadProductMedia(productId: string) {
     const { data, error } = await supabase
       .from("product_media")
-      .select("id,product_id,media_type,url,storage_path,poster_url,sort_order")
+      .select("id,product_id,media_type,url,storage_path,sort_order")
       .eq("product_id", productId)
       .order("sort_order", { ascending: true });
     if (error) {
@@ -432,28 +415,20 @@ export default function AdminPage() {
 
   async function removeProductMedia(media: ProductMedia) {
     if (!window.confirm("Remover esta foto ou vídeo do produto?")) return;
-    const { data, error } = await supabase.from("product_media")
-      .delete()
-      .eq("id", media.id)
-      .eq("product_id", media.product_id)
-      .select("id")
-      .maybeSingle();
-    if (error || !data) {
-      setMessage("Não foi possível atualizar o cadastro da mídia.");
+    const { error: storageError } = await supabase.storage
+      .from("products-media")
+      .remove([media.storage_path]);
+    if (storageError) {
+      setMessage("Erro ao remover arquivo: " + storageError.message);
       return;
     }
-
+    const { error } = await supabase.from("product_media").delete().eq("id", media.id);
+    if (error) {
+      setMessage("Arquivo removido, mas não foi possível atualizar o cadastro: " + error.message);
+      return;
+    }
     setExistingMedia((current) => current.filter((item) => item.id !== media.id));
-    const paths = [
-      media.storage_path,
-      getPublicBucketPath(media.poster_url, "products-media"),
-    ].filter((path): path is string => Boolean(path));
-    const { error: storageError } = paths.length
-      ? await supabase.storage.from("products-media").remove(paths)
-      : { error: null };
-    setMessage(storageError
-      ? "Mídia removida do cadastro. A limpeza do arquivo no armazenamento ficou pendente."
-      : "Mídia removida."); 
+    setMessage("Mídia removida.");
   }
 
   async function generateProductContent() {
@@ -670,37 +645,23 @@ export default function AdminPage() {
   }
 
   async function deleteProduct(id: string) {
-    if (!window.confirm("Deseja realmente excluir este produto?")) return;
-
-    const product = products.find((item) => item.id === id);
-    const { data: mediaRows, error: mediaQueryError } = await supabase
-      .from("product_media")
-      .select("storage_path,poster_url")
-      .eq("product_id", id);
-    if (mediaQueryError) {
-      setMessage("Não foi possível preparar a remoção das mídias do produto.");
+    if (
+      !window.confirm("Deseja realmente excluir este produto?")
+    ) {
       return;
     }
 
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
     if (error) {
-      setMessage("Não foi possível excluir o produto.");
+      setMessage("Erro ao excluir: " + error.message);
       return;
     }
 
-    const mediaPaths = (mediaRows || []).flatMap((media) => [
-      media.storage_path,
-      getPublicBucketPath(media.poster_url, "products-media"),
-    ]).filter((path): path is string => Boolean(path));
-    const imagePath = getPublicBucketPath(product?.image_url, "products-images");
-    const cleanupResults = await Promise.all([
-      mediaPaths.length ? supabase.storage.from("products-media").remove(mediaPaths) : Promise.resolve({ error: null }),
-      imagePath ? supabase.storage.from("products-images").remove([imagePath]) : Promise.resolve({ error: null }),
-    ]);
-    const cleanupFailed = cleanupResults.some((result) => result.error);
-    setMessage(cleanupFailed
-      ? "Produto excluído. Alguns arquivos não puderam ser removidos do armazenamento e precisam de limpeza."
-      : "Produto e mídias excluídos com sucesso.");
+    setMessage("Produto excluído com sucesso!");
     await loadProducts();
   }
 

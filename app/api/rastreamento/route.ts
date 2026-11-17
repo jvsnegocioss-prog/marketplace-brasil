@@ -15,9 +15,9 @@ function getSupabaseAdmin() {
 }
 
 function getClientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-  return (forwarded?.split(",")[0] || realIp || "").trim();
+  // Use only the platform-provided client IP header. Never trust the
+  // left-most x-forwarded-for value, which can contain client-supplied data.
+  return (request.headers.get("x-real-ip") || "").trim();
 }
 
 async function readLimitedJson(request: Request): Promise<
