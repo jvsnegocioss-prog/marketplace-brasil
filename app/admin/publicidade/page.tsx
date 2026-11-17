@@ -240,11 +240,23 @@ export default function AdminCampaignsPage() {
         if (error) throw error;
       }
       persisted = true;
+      let oldFileCleanupPending = false;
       if (previousStoragePath && previousStoragePath !== storagePath) {
-        const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
-        if (oldFileError) console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+        const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(previousStoragePath);
+        if (safePath) {
+          const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
+          if (oldFileError) {
+            oldFileCleanupPending = true;
+            console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+          }
+        } else {
+          oldFileCleanupPending = true;
+          console.warn("Caminho antigo da campanha não passou pela validação; arquivo preservado.");
+        }
       }
-      setMessage("Campanha salva. A publicação respeita o status e o período definidos.");
+      setMessage(oldFileCleanupPending
+        ? "Campanha salva, mas a limpeza da mídia anterior ficou pendente. O arquivo foi preservado para revisão."
+        : "Campanha salva. A publicação respeita o status e o período definidos.");
       resetForm();
       await loadCampaigns();
     } catch (err) {
@@ -267,9 +279,18 @@ export default function AdminCampaignsPage() {
   }
 
   async function toggleCampaign(campaign: Campaign) {
-    const { error } = await supabase.from("homepage_campaigns")
-      .update({ active: !campaign.active, updated_at: new Date().toISOString() }).eq("id", campaign.id);
+    const { data, error } = await supabase.from("homepage_campaigns")
+      .update({ active: !campaign.active, updated_at: new Date().toISOString() })
+      .eq("id", campaign.id)
+      .eq("active", campaign.active)
+      .select("id")
+      .maybeSingle();
     if (error) { setMessage(error.message); return; }
+    if (!data) {
+      setMessage("A campanha foi alterada por outra operação. Atualize a lista antes de tentar novamente.");
+      await loadCampaigns();
+      return;
+    }
     await loadCampaigns();
   }
 
@@ -277,11 +298,23 @@ export default function AdminCampaignsPage() {
     if (!window.confirm("Excluir esta campanha definitivamente?")) return;
     const { error } = await supabase.from("homepage_campaigns").delete().eq("id", campaign.id);
     if (error) { setMessage(error.message); return; }
+    let cleanupPending = false;
     if (campaign.storage_path) {
-      const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
-      if (storageError) console.warn("Arquivo mantido no armazenamento:", storageError.message);
+      const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(campaign.storage_path);
+      if (safePath) {
+        const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
+        if (storageError) {
+          cleanupPending = true;
+          console.warn("Arquivo mantido no armazenamento:", storageError.message);
+        }
+      } else {
+        cleanupPending = true;
+        console.warn("Caminho da mídia da campanha não passou pela validação; arquivo preservado.");
+      }
     }
-    setMessage("Campanha excluída.");
+    setMessage(cleanupPending
+      ? "Campanha excluída. A limpeza do arquivo no armazenamento ficou pendente e exige revisão."
+      : "Campanha excluída.");
     await loadCampaigns();
   }
 
