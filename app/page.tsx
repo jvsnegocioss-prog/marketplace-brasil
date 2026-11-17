@@ -206,7 +206,7 @@ export default function Home() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setError("Não foi possível carregar os produtos. " + error.message);
+      setError("Não foi possível carregar os produtos no momento. Tente novamente mais tarde.");
       setProducts([]);
     } else {
       setProducts((data || []) as Product[]);
