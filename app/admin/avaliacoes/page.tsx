@@ -88,7 +88,7 @@ export default function AdminReviewsPage() {
     }
   }
 
-  async function changeStatus(reviewId: string, status: Review["status"]) {
+  async function changeStatus(reviewId: string, status: Review["status"], expectedStatus: Review["status"]) {
     setSavingId(reviewId);
     setMessage("");
     try {
@@ -99,7 +99,7 @@ export default function AdminReviewsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ reviewId, status }),
+        body: JSON.stringify({ reviewId, status, expectedStatus }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Não foi possível atualizar.");
@@ -144,9 +144,9 @@ export default function AdminReviewsPage() {
           <p style={{whiteSpace:"pre-wrap",lineHeight:1.6,margin:"16px 0 8px",color:"#334155"}}>{review.comment}</p><small style={{color:"#64748b"}}>Enviada em {new Date(review.created_at).toLocaleString("pt-BR")}</small>
           {review.photos?.length?<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:14}}>{review.photos.map(media=>/\.(mp4|webm|mov)(\?|$)/i.test(media)?<video key={media} src={media} controls playsInline style={{width:180,maxHeight:140,borderRadius:8,background:"#0f172a"}}/>:<a key={media} href={media} target="_blank" rel="noreferrer"><img src={media} alt="Foto enviada pelo cliente" style={{width:100,height:100,objectFit:"cover",borderRadius:9,border:"1px solid #e2e8f0"}}/></a>)}</div>:null}
           <div style={{borderTop:"1px solid #edf1f5",marginTop:16,paddingTop:13,display:"flex",gap:8,flexWrap:"wrap"}}>
-            {review.status!=="approved"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"approved")} style={{...btn,background:"#16713b"}}>{savingId===review.id?"Salvando...":"Aprovar e publicar"}</button>}
-            {review.status!=="hidden"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"hidden")} style={{...btn,background:"#b42318"}}>Ocultar</button>}
-            {review.status!=="pending"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"pending")} style={{...btn,background:"#64748b"}}>Voltar para pendente</button>}
+            {review.status!=="approved"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"approved",review.status)} style={{...btn,background:"#16713b"}}>{savingId===review.id?"Salvando...":"Aprovar e publicar"}</button>}
+            {review.status!=="hidden"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"hidden",review.status)} style={{...btn,background:"#b42318"}}>Ocultar</button>}
+            {review.status!=="pending"&&<button disabled={savingId===review.id} onClick={()=>changeStatus(review.id,"pending",review.status)} style={{...btn,background:"#64748b"}}>Voltar para pendente</button>}
           </div>
         </article>)}</div>
       </div>
