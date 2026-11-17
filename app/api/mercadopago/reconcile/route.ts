@@ -51,6 +51,7 @@ async function findExternalOrder(token: string, orderId: string, createdAt: Date
     let response: Response;
     try {
       response = await fetch(url, {
+        method: "GET",
         headers: { Authorization: "Bearer " + token },
         cache: "no-store",
         signal: AbortSignal.timeout(10_000),
@@ -86,6 +87,7 @@ async function findExternalOrder(token: string, orderId: string, createdAt: Date
 async function fetchExternalOrder(token: string, id: string) {
   try {
     const response = await fetch("https://api.mercadopago.com/v1/orders/" + encodeURIComponent(id), {
+      method: "GET",
       headers: { Authorization: "Bearer " + token },
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
