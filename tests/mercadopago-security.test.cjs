@@ -109,7 +109,7 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
     currency: "BRL",
     total_amount: "100.00",
     total_paid_amount: "100.00",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: { payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }] },
   };
   assert.equal(getOrderPaymentDisposition("100.00", base), "paid");
   assert.equal(getOrderPaymentDisposition("100.00", {
@@ -121,7 +121,7 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
     ...base,
     total_paid_amount: "0.00",
     status_detail: "partially_refunded",
-    transactions: { ...base.transactions, refunds: [{ status: "processed", amount: "25.00" }] },
+    transactions: { ...base.transactions, refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "25.00" }] },
   }), "partial_refund");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
@@ -276,7 +276,7 @@ test("mantém cancelamento e estados não finais fora de pagamento aprovado", ()
     currency: "BRL",
     total_amount: "100.00",
     total_paid_amount: "100.00",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: { payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }] },
   };
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "canceled" }), "review");
   assert.equal(getOrderPaymentDisposition("100.00", {
@@ -303,7 +303,7 @@ test("mantém cancelamento e estados não finais fora de pagamento aprovado", ()
     ...base,
     status: "canceled",
     total_paid_amount: "0.00",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: { payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }] },
   }), "review");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
@@ -359,7 +359,7 @@ test("falha fechada para estruturas de pagamento ausentes ou contraditórias", (
     currency: "BRL",
     total_amount: "75.00",
     total_paid_amount: "75.00",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: { payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }] },
   };
   assert.equal(getOrderPaymentDisposition("75.00", base), "paid");
   assert.equal(getOrderPaymentDisposition("75.00", { ...base, transactions: undefined }), "review");
