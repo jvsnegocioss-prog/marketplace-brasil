@@ -187,6 +187,37 @@ test("classifica chargeback parcial conforme o payload documentado da Orders API
   }), "review");
 });
 
+test("mantém Orders em estados conhecidos de espera para reconciliação posterior", () => {
+  const base = {
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "0.00",
+    transactions: { payments: [{ status: "created" }] },
+  };
+  assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "created" }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "processing",
+    transactions: { payments: [{ status: "processing" }] },
+  }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "action_required",
+    transactions: { payments: [{ status: "action_required" }] },
+  }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "processing",
+    total_paid_amount: "10.00",
+    transactions: { payments: [{ status: "processing" }] },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status: "processing",
+    transactions: { payments: [{ status: "unknown" }] },
+  }), "review");
+});
+
 test("mantém cancelamento e estados não finais fora de pagamento aprovado", () => {
   const base = {
     currency: "BRL",
