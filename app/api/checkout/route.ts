@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       );
     }
 
+    let authenticatedCustomerId: string | null = null;
     let verifiedCustomerEmail =
       typeof customerEmail === "string" ? customerEmail.trim() : "";
 
@@ -156,6 +157,7 @@ export async function POST(request: Request) {
 
       // Usa o e-mail confirmado da sessão, nunca um e-mail enviado livremente pelo navegador.
       verifiedCustomerEmail = customerAuth.user.email;
+      authenticatedCustomerId = customerAuth.user.id;
     }
 
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -180,6 +182,7 @@ export async function POST(request: Request) {
       qty: item.qty,
     }));
     const requestHash = createHash("sha256").update(JSON.stringify({
+      customerUserId: authenticatedCustomerId,
       customerName: customerName.trim(),
       customerEmail: verifiedCustomerEmail,
       customerPhone: customerPhone.trim(),
@@ -212,6 +215,28 @@ export async function POST(request: Request) {
     }
 
     createdOrderId = orderId;
+
+    // Bind account ownership by the verified Supabase user ID, never by a supplied email.
+    // The request hash also includes this ID, preventing an idempotency-key reuse across accounts.
+    if (authenticatedCustomerId) {
+      const { data: ownership, error: ownershipError } = await getSupabaseAdmin()
+        .from("orders")
+        .update({ customer_user_id: authenticatedCustomerId })
+        .eq("id", orderId)
+        .or(`customer_user_id.is.null,customer_user_id.eq.${authenticatedCustomerId}`)
+        .select("customer_user_id")
+        .maybeSingle();
+
+      if (ownershipError || ownership?.customer_user_id !== authenticatedCustomerId) {
+        console.error("ERRO AO VINCULAR PEDIDO À CONTA:", ownershipError);
+        await cancelOrder(orderId);
+        createdOrderId = null;
+        return NextResponse.json(
+          { error: "Não foi possível vincular o pedido à sua conta. Nenhuma cobrança foi iniciada; atualize a página e tente novamente." },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+    }
 
     const { data: order, error: fetchOrderError } =
       await getSupabaseAdmin()
