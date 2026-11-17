@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type AccountUser = {
   email?: string;
@@ -351,12 +352,9 @@ export default function ContaClientePage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !user) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Escolha uma imagem JPG, PNG ou WEBP.");
-      return;
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      setError("A foto deve ter no máximo 3 MB.");
+    const avatarInfo = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 3 * 1024 * 1024);
+    if (!avatarInfo || avatarInfo.kind !== "image" || !["jpg", "png", "webp"].includes(avatarInfo.extension)) {
+      setError("Escolha uma imagem JPG, PNG ou WEBP válida, de até 3 MB.");
       return;
     }
 
