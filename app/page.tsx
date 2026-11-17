@@ -634,12 +634,32 @@ export default function Home() {
       let checkoutIdempotencyKey = "";
       try {
         const savedAttempt = JSON.parse(localStorage.getItem(idempotencyStorageKey) || "null");
-        if (
-          savedAttempt?.fingerprint === checkoutFingerprint &&
+        const validSavedKey =
           typeof savedAttempt?.key === "string" &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedAttempt.key)
-        ) {
-          checkoutIdempotencyKey = savedAttempt.key;
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedAttempt.key);
+
+        if (validSavedKey && typeof savedAttempt.fingerprint === "string") {
+          let savedFingerprint = savedAttempt.fingerprint;
+
+          // Migra registros antigos que continham o payload em texto puro,
+          // preservando a chave idempotente da tentativa já iniciada.
+          if (!/^[0-9a-f]{64}$/i.test(savedFingerprint)) {
+            const legacyBuffer = await crypto.subtle.digest(
+              "SHA-256",
+              new TextEncoder().encode(savedFingerprint)
+            );
+            savedFingerprint = Array.from(new Uint8Array(legacyBuffer))
+              .map((byte) => byte.toString(16).padStart(2, "0"))
+              .join("");
+            localStorage.setItem(idempotencyStorageKey, JSON.stringify({
+              fingerprint: savedFingerprint,
+              key: savedAttempt.key,
+            }));
+          }
+
+          if (savedFingerprint === checkoutFingerprint) {
+            checkoutIdempotencyKey = savedAttempt.key;
+          }
         }
       } catch {
         // Uma entrada local inválida será substituída por uma nova tentativa.
