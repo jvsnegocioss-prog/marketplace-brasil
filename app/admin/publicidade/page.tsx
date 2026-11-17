@@ -244,10 +244,22 @@ export default function AdminCampaignsPage() {
       if (previousStoragePath && previousStoragePath !== storagePath) {
         const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(previousStoragePath);
         if (safePath) {
-          const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
-          if (oldFileError) {
+          const { data: sharedReference, error: referenceError } = await supabase
+            .from("homepage_campaigns")
+            .select("id")
+            .eq("storage_path", previousStoragePath)
+            .neq("id", editingId)
+            .limit(1)
+            .maybeSingle();
+          if (referenceError || sharedReference) {
             cleanupPending = true;
-            console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+            console.warn("Arquivo antigo preservado porque a referência não pôde ser verificada ou ainda é compartilhada.");
+          } else {
+            const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
+            if (oldFileError) {
+              cleanupPending = true;
+              console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+            }
           }
         } else {
           cleanupPending = true;
@@ -308,10 +320,21 @@ export default function AdminCampaignsPage() {
     if (campaign.storage_path) {
       const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(campaign.storage_path);
       if (safePath) {
-        const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
-        if (storageError) {
+        const { data: sharedReference, error: referenceError } = await supabase
+          .from("homepage_campaigns")
+          .select("id")
+          .eq("storage_path", campaign.storage_path)
+          .limit(1)
+          .maybeSingle();
+        if (referenceError || sharedReference) {
           cleanupPending = true;
-          console.warn("Arquivo mantido no armazenamento:", storageError.message);
+          console.warn("Arquivo da campanha preservado porque a referência não pôde ser verificada ou ainda é compartilhada.");
+        } else {
+          const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
+          if (storageError) {
+            cleanupPending = true;
+            console.warn("Arquivo mantido no armazenamento:", storageError.message);
+          }
         }
       } else {
         cleanupPending = true;
