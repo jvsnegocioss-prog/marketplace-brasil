@@ -1121,7 +1121,35 @@ export default function Home() {
         <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, textAlign: "center" }}>
           <h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p>
           {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} />)}
-          <a className="campaign-bottom-button" href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a>
+          <button className="campaign-bottom-button" type="button" onClick={() => {
+            const target = (campaign.button_url || "").trim();
+            const label = (campaign.button_text || "").toLowerCase();
+            const isCatalogTarget = !target || target === "/" || target === "#produtos" || target === "/#produtos";
+            if (isCatalogTarget || label.includes("explorar")) {
+              document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+            if (target.startsWith("//")) {
+              console.warn("Destino externo inválido na campanha.");
+              return;
+            }
+            try {
+              const destination = /^https:\/\//i.test(target)
+                ? new URL(target)
+                : new URL(target.startsWith("/") ? target : `/${target}`, window.location.origin);
+              if (
+                (destination.protocol !== "https:" && destination.origin !== window.location.origin) ||
+                destination.username ||
+                destination.password
+              ) {
+                console.warn("Destino da campanha bloqueado por validação.");
+                return;
+              }
+              window.location.assign(destination.toString());
+            } catch {
+              console.warn("Destino inválido na campanha.");
+            }
+          }} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, border: 0, cursor: "pointer", background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</button>
         </section>
       ))}
       <footer className="footer">
