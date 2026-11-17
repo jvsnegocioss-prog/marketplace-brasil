@@ -400,17 +400,21 @@ export default function ContaClientePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       if (!userId) throw new Error("Entre novamente na sua conta.");
-      const { error: removeError } = await supabase.storage
-        .from("avatars")
-        .remove([`${userId}/avatar`]);
-      if (removeError) throw removeError;
+      // Primeiro remove a referência do perfil; se a limpeza do Storage falhar,
+      // a conta não continuará publicando uma URL de foto que o usuário removeu.
       const { data, error: updateError } = await supabase.auth.updateUser({
         data: { avatar_url: null },
       });
       if (updateError) throw updateError;
       if (data.user) setUser(data.user);
       setAvatarUrl("");
-      setMessage("Foto removida. Seu perfil voltou ao avatar padrão.");
+
+      const { error: removeError } = await supabase.storage
+        .from("avatars")
+        .remove([`${userId}/avatar`]);
+      setMessage(removeError
+        ? "Foto removida do perfil. A limpeza do arquivo no armazenamento ficou pendente."
+        : "Foto removida. Seu perfil voltou ao avatar padrão.");
     } catch (err) {
       setError("Não foi possível remover a foto agora. Tente novamente.");
     } finally {
