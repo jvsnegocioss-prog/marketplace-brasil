@@ -55,6 +55,10 @@ jobs:
           sudo apt-get install --yes postgresql-client
       - name: Create disposable schema fixture
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres/fixture.sql
+      - name: Apply authenticated order ownership migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117190000_bind_orders_to_authenticated_customer.sql
+      - name: Verify authenticated order ownership constraints
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/order-ownership-integration.sql
       - name: Run actual webhook migrations and database assertions
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres/webhook-integration.sql
       - name: Verify concurrent claims serialize to one active worker
