@@ -24,6 +24,53 @@ jobs:
       - name: Run isolated tests
         run: npm test
 
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: webhook_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d webhook_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: webhook_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Create disposable schema fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/fixture.sql
+      - name: Run actual webhook migrations and database assertions
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/webhook-integration.sql
+      - name: Verify concurrent claims serialize to one active worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "select * from public.register_mercado_pago_webhook_delivery('integration-concurrent', 'mp-concurrent', 'req-a', 'order', 'created')"
+          psql -Atq -c "begin; select claimed, processing_status from public.claim_mercado_pago_webhook_event('integration-concurrent', '33333333-3333-4333-8333-333333333333'::uuid); select pg_sleep(2); commit" > /tmp/worker-a.txt &
+          worker_a=$!
+          sleep 0.25
+          psql -Atq -c "select claimed, processing_status from public.claim_mercado_pago_webhook_event('integration-concurrent', '44444444-4444-4444-8444-444444444444'::uuid)" > /tmp/worker-b.txt
+          wait "$worker_a"
+          grep -qx 't|processing' /tmp/worker-a.txt
+          grep -qx 'f|processing' /tmp/worker-b.txt
+          echo "concurrent claim test passed: exactly one worker acquired the lease"
+
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
