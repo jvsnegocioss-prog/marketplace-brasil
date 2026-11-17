@@ -65,20 +65,3 @@ test("processamento por lotes oferece cursor e limite explícito", () => {
   assert.match(route, /searchParams\.get\("cursor"\)/);
   assert.match(route, /nextCursor/);
 });
-
-  assert.match(route, /if \(disposition === "pending"\)[\s\S]*?result\.waiting \+= 1;\s*continue;/);
-});
-
-test("reconciliação usa leases existentes e não cria pedidos nem pagamentos", () => {
-  assert.match(route, /register_mercado_pago_webhook_delivery/);
-  assert.match(route, /claim_mercado_pago_webhook_event/);
-  assert.match(route, /finalize_mercado_pago_webhook_event/);
-  assert.doesNotMatch(route, /method:\s*"POST"[\s\S]*?api\.mercadopago\.com/);
-  assert.doesNotMatch(route, /\.from\("orders"\)\s*\.insert\(/);
-});
-
-test("processamento por lotes oferece cursor e limite explícito", () => {
-  assert.match(route, /MAX_ORDERS\s*=\s*25/);
-  assert.match(route, /searchParams\.get\("cursor"\)/);
-  assert.match(route, /nextCursor/);
-});
