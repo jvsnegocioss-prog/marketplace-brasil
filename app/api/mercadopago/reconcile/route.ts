@@ -281,11 +281,12 @@ export async function POST(request: Request) {
         result.waiting += 1;
         continue;
       }
+      const action = transition.action as "none" | "set_status" | "cancel_unpaid";
       const applied = await finalize(
         db,
         claim,
         id,
-        transition.action,
+        action,
         transition.status,
         transition.failed,
         transition.allowedCurrentStatuses
