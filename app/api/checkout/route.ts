@@ -229,8 +229,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         {
-          error: "Falha ao consultar o pedido.",
-          detalhe: fetchOrderError?.message || "Pedido não encontrado.",
+          error: "Não foi possível confirmar os dados do pedido. Tente novamente.",
         },
         { status: 500 }
       );
@@ -258,8 +257,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         {
-          error: "Falha ao consultar os itens do pedido.",
-          detalhe: itemsError?.message || "Nenhum item encontrado.",
+          error: "Não foi possível confirmar os itens do pedido. Tente novamente.",
         },
         { status: 500 }
       );
@@ -378,7 +376,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Não foi possível confirmar a criação do pagamento. Tente novamente sem alterar o pedido.",
-          detalhe: paymentData,
         },
         { status: 502 }
       );
@@ -433,12 +430,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      {
-        error: "Ocorreu um erro ao iniciar o pagamento.",
-        detalhe:
-          error instanceof Error ? error.message : "Erro desconhecido.",
-      },
-      { status: 500 }
+      { error: "Ocorreu um erro ao iniciar o pagamento. Tente novamente." },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }
