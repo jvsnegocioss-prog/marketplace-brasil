@@ -147,15 +147,30 @@ export default function CouponsPage() {
   }
   async function deleteCoupon(c: Coupon) {
     if (!window.confirm("Excluir o cupom " + c.code + "?")) return;
-    const { data, error } = await supabase.from("discount_coupons").delete()
+    let deleteQuery = supabase.from("discount_coupons").delete()
       .eq("id", c.id)
       .eq("code", c.code)
       .eq("active", c.active)
-      .select("id")
-      .maybeSingle();
+      .eq("discount_type", c.discount_type)
+      .eq("discount_value", c.discount_value)
+      .eq("min_order_amount", c.min_order_amount)
+      .eq("usage_count", c.usage_count);
+    deleteQuery = c.max_discount === null
+      ? deleteQuery.is("max_discount", null)
+      : deleteQuery.eq("max_discount", c.max_discount);
+    deleteQuery = c.starts_at === null
+      ? deleteQuery.is("starts_at", null)
+      : deleteQuery.eq("starts_at", c.starts_at);
+    deleteQuery = c.expires_at === null
+      ? deleteQuery.is("expires_at", null)
+      : deleteQuery.eq("expires_at", c.expires_at);
+    deleteQuery = c.usage_limit === null
+      ? deleteQuery.is("usage_limit", null)
+      : deleteQuery.eq("usage_limit", c.usage_limit);
+    const { data, error } = await deleteQuery.select("id").maybeSingle();
     if (error) { setMessage("Erro ao excluir cupom: " + error.message); return; }
     if (!data) {
-      setMessage("Este cupom foi alterado por outra operação. Atualize a lista antes de excluir.");
+      setMessage("Este cupom foi alterado ou utilizado por outra operação. Atualize a lista antes de excluir.");
       await loadCoupons();
       return;
     }
