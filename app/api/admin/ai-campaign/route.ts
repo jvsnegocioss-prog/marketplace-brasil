@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
+const { isValidImageBase64 } = require("../../../../lib/image-validation.cjs");
 
 export const runtime = "nodejs";
 
@@ -130,8 +131,8 @@ export async function POST(request: NextRequest) {
   if (!customPrompt && !objective && !product && !offer && !hasImage) {
     return errorResponse("Preencha os detalhes da campanha ou envie uma imagem para a IA analisar.", 400);
   }
-  if (hasImage && (!allowedImageTypes.includes(imageMimeType) || imageBase64.length > 11_200_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64))) {
-    return errorResponse("Imagem inválida ou muito grande. Envie JPG, PNG, WEBP ou GIF de até 8 MB.", 400);
+  if (hasImage && !isValidImageBase64(imageBase64, imageMimeType, allowedImageTypes, 8 * 1024 * 1024)) {
+    return errorResponse("Imagem inválida ou muito grande. Envie um arquivo JPG, PNG, WEBP ou GIF legítimo de até 8 MB.", 400);
   }
 
   const prompt = `Você é o assistente de marketing da NOVASHOPP STORE, uma loja virtual brasileira.
