@@ -136,10 +136,7 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
 }
 
 async function removeOwnedReviewMedia(photos: unknown, userId: string) {
-  const paths = getOwnedReviewMediaPaths(
-    photos,
-    userId,
-  );
+  const paths = getOwnedReviewMediaPaths(photos, userId);
   if (!paths.length) return;
   try {
     const { error } = await getSupabaseAdmin().storage.from(mediaBucket).remove(paths);
