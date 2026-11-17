@@ -181,7 +181,7 @@ test("classifica chargeback parcial conforme o payload documentado da Orders API
     total_paid_amount: "200.00",
     status: "charged_back",
     transactions: {
-      payments: [{ status: "charged_back" }],
+      payments: [{ id: "PAY-1", status: "charged_back" }],
       chargebacks: [{
         id: "CBK-1",
         transaction_id: "PAY-1",
@@ -217,6 +217,38 @@ test("classifica chargeback parcial conforme o payload documentado da Orders API
     ...base,
     currency: "USD",
     status_detail: "in_process",
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "in_process",
+    transactions: {
+      ...base.transactions,
+      chargebacks: [{ ...base.transactions.chargebacks[0], transaction_id: "PAY-UNKNOWN" }],
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "in_process",
+    transactions: {
+      payments: [{ id: "PAY-1", status: "processed" }],
+      chargebacks: base.transactions.chargebacks,
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "in_process",
+    transactions: {
+      ...base.transactions,
+      chargebacks: [{ ...base.transactions.chargebacks[0], status: "settled" }],
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("200.00", {
+    ...base,
+    status_detail: "in_process",
+    transactions: {
+      payments: [{ status: "charged_back" }],
+      chargebacks: base.transactions.chargebacks,
+    },
   }), "review");
 });
 
