@@ -12,6 +12,10 @@ const leaseSql = fs.readFileSync(
   path.join(migrationDir, "20261115234248_protect_mercado_pago_webhook_processing_leases.sql"),
   "utf8"
 );
+const hardeningSql = fs.readFileSync(
+  path.join(migrationDir, "20261117020000_harden_mercado_pago_webhook_finalization.sql"),
+  "utf8"
+);
 const webhookRoute = fs.readFileSync(
   path.join(__dirname, "..", "app", "api", "mercadopago", "webhook", "route.ts"),
   "utf8"
@@ -57,13 +61,25 @@ test("finalização valida token e lease antes de alterar pedido ou evento", () 
   assert.match(body, /if v_rows = 0 then return query select false, false, false/i);
 });
 
-test("funções críticas não são executáveis por anon ou authenticated", () => {
-  assert.match(leaseSql, /revoke all on function public\.claim_mercado_pago_webhook_event\(text, uuid\) from public, anon, authenticated/i);
-  assert.match(leaseSql, /revoke all on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) from public, anon, authenticated/i);
-  assert.match(leaseSql, /grant execute on function public\.claim_mercado_pago_webhook_event\(text, uuid\) to service_role, postgres/i);
-  assert.match(leaseSql, /grant execute on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) to service_role, postgres/i);
+test("migration de endurecimento rejeita parâmetros nulos e status update sem allowlist", () => {
+  const body = functionBody(hardeningSql, "finalize_mercado_pago_webhook_event");
+  assert.match(body, /p_notification_id is null/i);
+  assert.match(body, /p_processing_token is null/i);
+  assert.match(body, /p_final_status is null/i);
+  assert.match(body, /p_order_action is null/i);
+  assert.match(body, /p_allowed_current_statuses is null/i);
+  assert.match(body, /cardinality\(p_allowed_current_statuses\) = 0/i);
+  assert.match(body, /allowed_status is null or length\(btrim\(allowed_status\)\) = 0/i);
+  assert.doesNotMatch(body, /if p_allowed_current_statuses is null then\s*update public\.orders/i);
+  assert.match(body, /lower\(trim\(status\)\) = any/i);
 });
 
+test("funções críticas não são executáveis por anon ou authenticated", () => {
+  assert.match(leaseSql, /revoke all on function public\.claim_mercado_pago_webhook_event\(text, uuid\) from public, anon, authenticated/i);
+  assert.match(hardeningSql, /revoke all on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) from public, anon, authenticated/i);
+  assert.match(leaseSql, /grant execute on function public\.claim_mercado_pago_webhook_event\(text, uuid\) to service_role, postgres/i);
+  assert.match(hardeningSql, /grant execute on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) to service_role, postgres/i);
+});
 
 test("atualizações de revisão e chargeback usam compare-and-set do status observado", () => {
   assert.match(
