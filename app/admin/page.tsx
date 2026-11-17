@@ -540,6 +540,12 @@ export default function AdminPage() {
     setSaving(true);
     setMessage("");
 
+    let uploadedProductImagePath: string | null = null;
+    const uploadedMediaPaths: string[] = [];
+    const insertedMediaIds: string[] = [];
+    let savedProductId: string | null = editingId;
+    let productWriteSucceeded = false;
+
     try {
       const mainImageInfo = image
         ? inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 3 * 1024 * 1024)
@@ -556,30 +562,21 @@ export default function AdminPage() {
       let imageUrl: string | null = null;
 
       if (editingId) {
-        imageUrl =
-          products.find((p) => p.id === editingId)?.image_url || null;
+        imageUrl = products.find((p) => p.id === editingId)?.image_url || null;
       }
 
       if (image && mainImageInfo) {
-        const extension = mainImageInfo.extension;
-        const fileName = crypto.randomUUID() + "." + extension;
-
+        const fileName = crypto.randomUUID() + "." + mainImageInfo.extension;
         const { error: uploadError } = await supabase.storage
           .from("products-images")
           .upload(fileName, image, {
             upsert: false,
             contentType: image.type,
           });
+        if (uploadError) throw uploadError;
 
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        const { data } = supabase.storage
-          .from("products-images")
-          .getPublicUrl(fileName);
-
-        imageUrl = data.publicUrl;
+        uploadedProductImagePath = fileName;
+        imageUrl = supabase.storage.from("products-images").getPublicUrl(fileName).data.publicUrl;
       }
 
       const productData = {
@@ -592,8 +589,6 @@ export default function AdminPage() {
         image_url: imageUrl,
         updated_at: new Date().toISOString(),
       };
-
-      let savedProductId = editingId;
 
       if (editingId) {
         const existingProduct = products.find((product) => product.id === editingId);
@@ -612,6 +607,7 @@ export default function AdminPage() {
         if (!updated) {
           throw new Error("O estoque deste produto foi alterado por outra operação. Atualize a lista antes de salvar novamente.");
         }
+        productWriteSucceeded = true;
         setMessage("Produto atualizado com sucesso!");
       } else {
         const { data: insertedProduct, error } = await supabase
@@ -621,6 +617,7 @@ export default function AdminPage() {
           .single();
         if (error) throw error;
         savedProductId = insertedProduct.id;
+        productWriteSucceeded = true;
         setMessage("Produto cadastrado com sucesso!");
       }
 
@@ -629,48 +626,97 @@ export default function AdminPage() {
           const { file, info: mediaInfo } = validatedMediaFiles[index];
           const isImage = mediaInfo.kind === "image";
           const isVideo = mediaInfo.kind === "video";
-          const extension = mediaInfo.extension;
-          const storagePath = `${savedProductId}/${crypto.randomUUID()}.${extension}`;
+          const storagePath = `${savedProductId}/${crypto.randomUUID()}.${mediaInfo.extension}`;
           const { error: uploadError } = await supabase.storage
             .from("products-media")
             .upload(storagePath, file, { upsert: false, contentType: file.type });
           if (uploadError) throw uploadError;
+          uploadedMediaPaths.push(storagePath);
 
-          const { data: publicData } = supabase.storage
-            .from("products-media")
-            .getPublicUrl(storagePath);
-
+          const publicUrl = supabase.storage.from("products-media").getPublicUrl(storagePath).data.publicUrl;
           let posterUrl: string | null = null;
+
           if (isVideo) {
             const posterBlob = await createVideoPoster(file);
-            const posterPath = savedProductId + "/posters/" + crypto.randomUUID() + ".jpg";
+            const posterPath = `${savedProductId}/posters/${crypto.randomUUID()}.jpg`;
             const { error: posterUploadError } = await supabase.storage
               .from("products-media")
               .upload(posterPath, posterBlob, { upsert: false, contentType: "image/jpeg" });
             if (posterUploadError) throw posterUploadError;
+            uploadedMediaPaths.push(posterPath);
             posterUrl = supabase.storage.from("products-media").getPublicUrl(posterPath).data.publicUrl;
           }
 
-          const { error: mediaError } = await supabase.from("product_media").insert({
+          const { data: insertedMedia, error: mediaError } = await supabase.from("product_media").insert({
             product_id: savedProductId,
             media_type: isImage ? "image" : "video",
-            url: publicData.publicUrl,
+            url: publicUrl,
             storage_path: storagePath,
             poster_url: posterUrl,
             sort_order: existingMedia.length + index,
-          });
+          }).select("id").single();
           if (mediaError) throw mediaError;
+          insertedMediaIds.push(insertedMedia.id);
         }
       }
 
       clearForm();
       await loadProducts();
     } catch (error) {
+      let cleanupPending = false;
+
+      // Remove only media rows/files created by this attempt. If row deletion fails,
+      // keep its files to avoid leaving database records pointing at missing objects.
+      if (insertedMediaIds.length) {
+        const { error: rowsError } = await supabase
+          .from("product_media")
+          .delete()
+          .in("id", insertedMediaIds);
+        if (rowsError) {
+          cleanupPending = true;
+        } else if (uploadedMediaPaths.length) {
+          const { error: filesError } = await supabase.storage
+            .from("products-media")
+            .remove(uploadedMediaPaths);
+          if (filesError) cleanupPending = true;
+        }
+      } else if (uploadedMediaPaths.length) {
+        const { error: filesError } = await supabase.storage
+          .from("products-media")
+          .remove(uploadedMediaPaths);
+        if (filesError) cleanupPending = true;
+      }
+
+      // An image uploaded before a failed product write is safe to remove.
+      // Once the product row references it, preserve the file.
+      if (uploadedProductImagePath && !productWriteSucceeded) {
+        const { error: imageCleanupError } = await supabase.storage
+          .from("products-images")
+          .remove([uploadedProductImagePath]);
+        if (imageCleanupError) cleanupPending = true;
+      }
+
+      // A newly created product whose media setup failed is retained but hidden,
+      // avoiding an incomplete item becoming visible in the storefront.
+      if (productWriteSucceeded && !editingId && savedProductId) {
+        const { error: deactivateError } = await supabase
+          .from("products")
+          .update({ active: false, updated_at: new Date().toISOString() })
+          .eq("id", savedProductId);
+        if (deactivateError) cleanupPending = true;
+      }
+
+      const originalMessage = error instanceof Error ? error.message : "Erro ao salvar produto.";
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Erro ao salvar produto."
+        originalMessage +
+        (productWriteSucceeded && !editingId
+          ? " O produto foi mantido inativo porque a conclusão do cadastro falhou."
+          : "") +
+        (cleanupPending
+          ? " A limpeza de alguns arquivos ou registros ficou pendente e exige revisão administrativa."
+          : " Os arquivos enviados nesta tentativa foram limpos quando não estavam vinculados a um produto.")
       );
+      await loadProducts();
     } finally {
       setSaving(false);
     }
