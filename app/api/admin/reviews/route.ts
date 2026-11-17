@@ -81,7 +81,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: reviews, error } = await query;
-  if (error) return responseError("Não foi possível carregar as avaliações: " + error.message, 500);
+  if (error) {
+    console.error("Falha ao carregar avaliações administrativas:", error);
+    return responseError("Não foi possível carregar as avaliações.", 500);
+  }
 
   const productIds = [...new Set((reviews || []).map((review) => review.product_id))];
   const { data: products, error: productsError } = productIds.length
@@ -132,7 +135,8 @@ export async function PATCH(request: NextRequest) {
     .single();
 
   if (error || !data) {
-    return responseError("Não foi possível atualizar a avaliação: " + (error?.message || "registro não encontrado"), 500);
+    console.error("Falha ao atualizar avaliação administrativa:", error);
+    return responseError("Não foi possível atualizar a avaliação.", 500);
   }
 
   return NextResponse.json(
