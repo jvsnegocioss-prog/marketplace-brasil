@@ -541,6 +541,18 @@ export default function AdminPage() {
     setMessage("");
 
     try {
+      const mainImageInfo = image
+        ? inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 3 * 1024 * 1024)
+        : null;
+      if (image && (!mainImageInfo || mainImageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(mainImageInfo.extension))) {
+        throw new Error("A foto principal deve ser um arquivo JPG, PNG ou WEBP válido, de até 3 MB.");
+      }
+      const validatedMediaFiles = await Promise.all(mediaFiles.map(async (file) => {
+        const info = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 50 * 1024 * 1024);
+        if (!info) throw new Error(file.name + ": formato, conteúdo ou tamanho não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV, até 50 MB.");
+        return { file, info };
+      }));
+
       let imageUrl: string | null = null;
 
       if (editingId) {
@@ -548,12 +560,8 @@ export default function AdminPage() {
           products.find((p) => p.id === editingId)?.image_url || null;
       }
 
-      if (image) {
-        const imageInfo = inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 3 * 1024 * 1024);
-        if (!imageInfo || imageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(imageInfo.extension)) {
-          throw new Error("A foto principal deve ser um arquivo JPG, PNG ou WEBP válido, de até 3 MB.");
-        }
-        const extension = imageInfo.extension;
+      if (image && mainImageInfo) {
+        const extension = mainImageInfo.extension;
         const fileName = crypto.randomUUID() + "." + extension;
 
         const { error: uploadError } = await supabase.storage
@@ -606,10 +614,8 @@ export default function AdminPage() {
       }
 
       if (savedProductId && mediaFiles.length) {
-        for (let index = 0; index < mediaFiles.length; index++) {
-          const file = mediaFiles[index];
-          const mediaInfo = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 50 * 1024 * 1024);
-          if (!mediaInfo) throw new Error(`${file.name}: formato, conteúdo ou tamanho não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV, até 50 MB.`);
+        for (let index = 0; index < validatedMediaFiles.length; index++) {
+          const { file, info: mediaInfo } = validatedMediaFiles[index];
           const isImage = mediaInfo.kind === "image";
           const isVideo = mediaInfo.kind === "video";
           const extension = mediaInfo.extension;
