@@ -189,6 +189,7 @@ export default function AdminCampaignsPage() {
     setMessage("");
     let newlyUploadedPath: string | null = null;
     let persisted = false;
+    let cleanupPending = false;
     const previousStoragePath = editingId
       ? campaigns.find((campaign) => campaign.id === editingId)?.storage_path || null
       : null;
@@ -240,21 +241,20 @@ export default function AdminCampaignsPage() {
         if (error) throw error;
       }
       persisted = true;
-      let oldFileCleanupPending = false;
       if (previousStoragePath && previousStoragePath !== storagePath) {
         const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(previousStoragePath);
         if (safePath) {
           const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
           if (oldFileError) {
-            oldFileCleanupPending = true;
+            cleanupPending = true;
             console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
           }
         } else {
-          oldFileCleanupPending = true;
+          cleanupPending = true;
           console.warn("Caminho antigo da campanha não passou pela validação; arquivo preservado.");
         }
       }
-      setMessage(oldFileCleanupPending
+      setMessage(cleanupPending
         ? "Campanha salva, mas a limpeza da mídia anterior ficou pendente. O arquivo foi preservado para revisão."
         : "Campanha salva. A publicação respeita o status e o período definidos.");
       resetForm();
@@ -262,7 +262,10 @@ export default function AdminCampaignsPage() {
     } catch (err) {
       if (!persisted && newlyUploadedPath) {
         const { error: cleanupError } = await supabase.storage.from("campaign-media").remove([newlyUploadedPath]);
-        if (cleanupError) console.warn("Não foi possível limpar o novo arquivo da campanha:", cleanupError.message);
+        if (cleanupError) {
+          cleanupPending = true;
+          console.warn("Não foi possível limpar o novo arquivo da campanha:", cleanupError.message);
+        }
       }
       const details = err && typeof err === "object" && "message" in err
         ? String((err as { message?: unknown }).message || "")
@@ -270,9 +273,12 @@ export default function AdminCampaignsPage() {
       const code = err && typeof err === "object" && "code" in err
         ? String((err as { code?: unknown }).code || "")
         : "";
-      setMessage(details
-        ? `Falha ao salvar campanha: ${details}${code ? ` (código: ${code})` : ""}`
-        : "Não foi possível salvar a campanha. Verifique os dados e tente novamente.");
+      setMessage(
+        (details
+          ? `Falha ao salvar campanha: ${details}${code ? ` (código: ${code})` : ""}`
+          : "Não foi possível salvar a campanha. Verifique os dados e tente novamente.") +
+        (cleanupPending ? " A limpeza de um arquivo enviado ficou pendente e exige revisão." : "")
+      );
     } finally {
       setSaving(false);
     }
