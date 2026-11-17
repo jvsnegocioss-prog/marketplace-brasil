@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
+const { isValidImageBase64 } = require("../../../../lib/image-validation.cjs");
 
 export const runtime = "nodejs";
 
@@ -223,11 +224,8 @@ Informações e características fornecidas: ${description || "Não informado"}`
   }
 
   if (imageData) {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
-      return errorResponse("Formato de foto não permitido. Use JPG, PNG ou WEBP.", 400);
-    }
-    if (imageData.length > 3_500_000) {
-      return errorResponse("A foto deve ter no máximo 2,5 MB.", 413);
+    if (!isValidImageBase64(imageData, mimeType, ["image/jpeg", "image/png", "image/webp"], Math.floor(2.5 * 1024 * 1024))) {
+      return errorResponse("Imagem inválida. Envie um arquivo JPG, PNG ou WEBP legítimo de até 2,5 MB.", 400);
     }
     parts.push({ inline_data: { mime_type: mimeType, data: imageData } });
   }
