@@ -138,23 +138,71 @@ Informações e características fornecidas: ${description || "Não informado"}`
   if (!imageData && body.imageUrl) {
     try {
       const imageUrl = new URL(body.imageUrl);
-      const trustedHost = new URL(supabaseUrl).host;
+      const trustedUrl = new URL(supabaseUrl);
+      let decodedPath = "";
+      try {
+        decodedPath = decodeURIComponent(imageUrl.pathname);
+      } catch {
+        return errorResponse("Endereço da foto inválido.", 400);
+      }
       if (
-        imageUrl.host !== trustedHost ||
-        !imageUrl.pathname.includes("/storage/v1/object/public/products-images/")
+        imageUrl.protocol !== "https:" ||
+        imageUrl.origin !== trustedUrl.origin ||
+        imageUrl.username ||
+        imageUrl.password ||
+        imageUrl.pathname.includes("\\\\") ||
+        decodedPath.includes("\\\\") ||
+        decodedPath.split("/").some((segment) => segment === "." || segment === "..") ||
+        !decodedPath.startsWith("/storage/v1/object/public/products-images/")
       ) {
         return errorResponse("A imagem informada não pertence ao armazenamento público de produtos da loja.", 400);
       }
-      const imageResponse = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(12000) });
-      if (!imageResponse.ok) return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
-      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-      if (imageBuffer.byteLength > 2.5 * 1024 * 1024) {
+
+      const imageResponse = await fetch(imageUrl.toString(), {
+        redirect: "manual",
+        signal: AbortSignal.timeout(12000),
+        headers: { Accept: "image/jpeg,image/png,image/webp" },
+      });
+      if (!imageResponse.ok || imageResponse.status >= 300) {
+        return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
+      }
+
+      const declaredLength = Number(imageResponse.headers.get("content-length") || 0);
+      const maxImageBytes = Math.floor(2.5 * 1024 * 1024);
+      if (Number.isFinite(declaredLength) && declaredLength > maxImageBytes) {
+        await imageResponse.body?.cancel();
         return errorResponse("A foto deve ter no máximo 2,5 MB para análise.", 413);
       }
-      mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
-      if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+
+      const responseMimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!["image/jpeg", "image/png", "image/webp"].includes(responseMimeType)) {
+        await imageResponse.body?.cancel();
         return errorResponse("A foto deve estar em JPG, PNG ou WEBP.", 400);
       }
+      if (!imageResponse.body) {
+        return errorResponse("Não foi possível ler a foto atual do produto.", 400);
+      }
+
+      const reader = imageResponse.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let receivedBytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          receivedBytes += value.byteLength;
+          if (receivedBytes > maxImageBytes) {
+            await reader.cancel();
+            return errorResponse("A foto deve ter no máximo 2,5 MB para análise.", 413);
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      const imageBuffer = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
+      mimeType = responseMimeType;
       imageData = imageBuffer.toString("base64");
     } catch {
       return errorResponse("Não foi possível carregar a foto atual do produto.", 400);
