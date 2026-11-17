@@ -7,9 +7,15 @@ begin
 end
 $$;
 
+create schema if not exists auth;
+create table auth.users (
+  id uuid primary key
+);
+
 create table public.orders (
   id uuid primary key,
-  status text not null
+  status text not null,
+  created_at timestamptz not null default now()
 );
 
 create or replace function public.cancel_unpaid_order_and_restore_stock(p_order_id uuid)
