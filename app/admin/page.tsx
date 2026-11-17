@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type Product = {
   id: string;
@@ -471,11 +472,9 @@ export default function AdminPage() {
       let imageMimeType = "";
 
       if (image) {
-        if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) {
-          throw new Error("Para a análise com IA, use uma foto JPG, PNG ou WEBP.");
-        }
-        if (image.size > 2.5 * 1024 * 1024) {
-          throw new Error("A foto deve ter no máximo 2,5 MB para análise.");
+        const aiImageInfo = inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 2.5 * 1024 * 1024);
+        if (!aiImageInfo || aiImageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(aiImageInfo.extension)) {
+          throw new Error("Para a análise com IA, use uma imagem JPG, PNG ou WEBP válida, de até 2,5 MB.");
         }
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -550,18 +549,11 @@ export default function AdminPage() {
       }
 
       if (image) {
-        const imageExtensions: Record<string, string> = {
-          "image/jpeg": "jpg",
-          "image/png": "png",
-          "image/webp": "webp",
-        };
-        const extension = imageExtensions[image.type];
-        if (!extension) {
-          throw new Error("A foto principal deve estar em JPG, PNG ou WEBP.");
+        const imageInfo = inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 3 * 1024 * 1024);
+        if (!imageInfo || imageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(imageInfo.extension)) {
+          throw new Error("A foto principal deve ser um arquivo JPG, PNG ou WEBP válido, de até 3 MB.");
         }
-        if (image.size > 3 * 1024 * 1024) {
-          throw new Error("A foto principal deve ter no máximo 3 MB.");
-        }
+        const extension = imageInfo.extension;
         const fileName = crypto.randomUUID() + "." + extension;
 
         const { error: uploadError } = await supabase.storage
@@ -616,12 +608,11 @@ export default function AdminPage() {
       if (savedProductId && mediaFiles.length) {
         for (let index = 0; index < mediaFiles.length; index++) {
           const file = mediaFiles[index];
-          const isImage = file.type.startsWith("image/");
-          const isVideo = file.type.startsWith("video/");
-          if (!isImage && !isVideo) throw new Error(`Formato não permitido: ${file.name}`);
-          if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name}: o limite é 50 MB por arquivo.`);
-
-          const extension = file.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
+          const mediaInfo = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 50 * 1024 * 1024);
+          if (!mediaInfo) throw new Error(`${file.name}: formato, conteúdo ou tamanho não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV, até 50 MB.`);
+          const isImage = mediaInfo.kind === "image";
+          const isVideo = mediaInfo.kind === "video";
+          const extension = mediaInfo.extension;
           const storagePath = `${savedProductId}/${crypto.randomUUID()}.${extension}`;
           const { error: uploadError } = await supabase.storage
             .from("products-media")
