@@ -35,7 +35,7 @@ test("claim bloqueia a linha e permite apenas uma reserva ativa por lease", () =
   const body = functionBody(leaseSql, "claim_mercado_pago_webhook_event");
   assert.match(body, /for update/i);
   assert.match(body, /processing_token\s*=\s*p_processing_token/i);
-  assert.match(body, /processing_started_at\s*<=\s*now\(\)\s*-\s*interval\s+'5 minutes'/i);
+  assert.match(body, /v_started_at\s*<=\s*now\(\)\s*-\s*interval\s+'5 minutes'/i);
   assert.match(body, /v_status in \('received', 'failed'\)/i);
 });
 
