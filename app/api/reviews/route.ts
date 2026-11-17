@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
-const { getOwnedReviewMediaPaths } = require("../../../lib/review-media-security.cjs");
+const { getOwnedReviewMediaPaths, isReviewMediaPath } = require("../../../lib/review-media-security.cjs");
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,21 @@ function getSupabaseAdmin() {
 }
 
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
-const mediaBucket = "products-media";
+const mediaBucket = "review-media";
+const signedUrlLifetimeSeconds = 600;
+
+async function signReviewPhotos(photos: unknown): Promise<string[]> {
+  if (!Array.isArray(photos)) return [];
+  const paths = [...new Set(photos.filter((value): value is string => isReviewMediaPath(value)))];
+  if (!paths.length) return [];
+  const { data, error } = await getSupabaseAdmin().storage.from(mediaBucket).createSignedUrls(paths, signedUrlLifetimeSeconds);
+  if (error || !data) {
+    console.error("Não foi possível gerar URLs temporárias para as mídias das avaliações.");
+    return [];
+  }
+  const signed = new Map(data.filter((item) => item.path && item.signedUrl).map((item) => [item.path, item.signedUrl]));
+  return paths.map((path) => signed.get(path)).filter((url): url is string => Boolean(url));
+}
 
 async function readLimitedFormData(request: Request, maxBytes = 5 * 1024 * 1024): Promise<
   { ok: true; value: FormData } | { ok: false; status: 400 | 413 }
@@ -125,7 +139,6 @@ async function removeOwnedReviewMedia(photos: unknown, userId: string) {
   const paths = getOwnedReviewMediaPaths(
     photos,
     userId,
-    process.env.NEXT_PUBLIC_SUPABASE_URL || ""
   );
   if (!paths.length) return;
   try {
@@ -146,7 +159,6 @@ async function uploadReviewFiles(files: File[], userId: string) {
     "video/webm": { extension: "webm", maxBytes: 50 * 1024 * 1024, kind: "video" },
     "video/quicktime": { extension: "mov", maxBytes: 50 * 1024 * 1024, kind: "video" },
   };
-  const urls: string[] = [];
   const paths: string[] = [];
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
   if (totalBytes > 4 * 1024 * 1024) throw new Error("O tamanho total dos arquivos não pode ultrapassar 4 MB.");
@@ -180,10 +192,9 @@ async function uploadReviewFiles(files: File[], userId: string) {
       });
       if (error) throw new Error("Não foi possível enviar as mídias. Tente novamente.");
       paths.push(path);
-      const { data } = getSupabaseAdmin().storage.from(mediaBucket).getPublicUrl(path);
-      urls.push(data.publicUrl);
+
     }
-    return { urls, paths };
+    return { paths };
   } catch (error) {
     if (paths.length) await getSupabaseAdmin().storage.from(mediaBucket).remove(paths);
     throw error;
@@ -231,7 +242,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json(
-    { reviews: data || [], ownReview },
+    {\n      reviews: await Promise.all((data || []).map(async (review) => ({ ...review, photos: await signReviewPhotos(review.photos) }))),\n      ownReview: ownReview ? { ...ownReview, photos: await signReviewPhotos(ownReview.photos) } : null,\n    },
     { headers: { "Cache-Control": "private, no-store" } }
   );
 }
@@ -275,7 +286,7 @@ export async function POST(request: Request) {
         customer_phone_hash: user.id,
         rating,
         comment: "",
-        photos: uploaded.urls,
+        photos: uploaded.paths,
         status: "pending",
       })
       .select("id,status")
@@ -333,7 +344,7 @@ export async function PATCH(request: Request) {
     if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
     const uploaded = files.length ? await uploadReviewFiles(files, user.id) : undefined;
     const update: Record<string, unknown> = { rating, status: "pending", updated_at: new Date().toISOString() };
-    if (uploaded) update.photos = uploaded.urls;
+    if (uploaded) update.photos = uploaded.paths;
 
     const { data, error } = await getSupabaseAdmin()
       .from("product_reviews")
