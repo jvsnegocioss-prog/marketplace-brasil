@@ -150,8 +150,6 @@ Informações e características fornecidas: ${description || "Não informado"}`
         imageUrl.origin !== trustedUrl.origin ||
         imageUrl.username ||
         imageUrl.password ||
-        imageUrl.pathname.includes("\\\\") ||
-        decodedPath.includes("\\\\") ||
         decodedPath.split("/").some((segment) => segment === "." || segment === "..") ||
         !decodedPath.startsWith("/storage/v1/object/public/products-images/")
       ) {
