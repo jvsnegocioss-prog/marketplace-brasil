@@ -299,3 +299,40 @@ test("distingue rejeição definitiva da criação de order de respostas ambígu
     assert.equal(isDefinitiveOrderCreationRejection(status), false, `status ${status}`);
   }
 });
+
+
+test("reconciliação só seleciona uma Order com external_reference exata", () => {
+  const reference = "123e4567-e89b-12d3-a456-426614174000";
+  const valid = { id: "order-100", external_reference: reference };
+  assert.deepEqual(selectUniqueOrderByExternalReference([], reference), { status: "not_found", order: null });
+  assert.deepEqual(selectUniqueOrderByExternalReference([valid], reference), { status: "matched", order: valid });
+  assert.deepEqual(selectUniqueOrderByExternalReference([
+    { id: "other", external_reference: "123e4567-e89b-12d3-a456-426614174001" },
+    valid,
+  ], reference), { status: "matched", order: valid });
+  assert.deepEqual(selectUniqueOrderByExternalReference([valid, { ...valid, id: "order-101" }], reference), {
+    status: "ambiguous",
+    order: null,
+  });
+  assert.deepEqual(selectUniqueOrderByExternalReference([{ external_reference: reference }], reference), {
+    status: "invalid_order",
+    order: null,
+  });
+  assert.deepEqual(selectUniqueOrderByExternalReference({ results: [valid] }, reference), {
+    status: "invalid_response",
+    order: null,
+  });
+  assert.deepEqual(selectUniqueOrderByExternalReference([valid], "not-a-uuid"), {
+    status: "invalid_reference",
+    order: null,
+  });
+});
+
+test("reconciliação não sobrescreve vínculo externo diferente", () => {
+  assert.equal(isSafeOrderLinkCandidate(null, "order-100"), true);
+  assert.equal(isSafeOrderLinkCandidate(undefined, "order-100"), true);
+  assert.equal(isSafeOrderLinkCandidate("order-100", "order-100"), true);
+  assert.equal(isSafeOrderLinkCandidate("order-100", "order-101"), false);
+  assert.equal(isSafeOrderLinkCandidate(null, ""), false);
+  assert.equal(isSafeOrderLinkCandidate(null, null), false);
+});
