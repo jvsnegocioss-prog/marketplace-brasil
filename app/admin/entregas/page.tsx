@@ -112,7 +112,7 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ fee_cents: Math.round(parsed * 100), updated_at: new Date().toISOString() })
       .eq("id", region.id)
       .eq("fee_cents", region.fee_cents)
@@ -140,7 +140,7 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId("all-regions");
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ free_shipping: true, updated_at: new Date().toISOString() })
       .eq("free_shipping", false)
       .select("id");
@@ -215,12 +215,16 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ fee_override_cents: override, updated_at: new Date().toISOString() })
-      .eq("id", item.id)
-      .eq("region_id", item.region_id ?? "")
-      .select("id")
-      .maybeSingle();
+      .eq("id", item.id);
+    updateQuery = item.region_id === null
+      ? updateQuery.is("region_id", null)
+      : updateQuery.eq("region_id", item.region_id);
+    updateQuery = item.fee_override_cents === null
+      ? updateQuery.is("fee_override_cents", null)
+      : updateQuery.eq("fee_override_cents", item.fee_override_cents);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao salvar bairro: " + error.message); return; }
     if (!data) {
@@ -237,12 +241,13 @@ export default function AdminDeliveriesPage() {
   async function useNeighborhoodRegionFee(item: Neighborhood) {
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ fee_override_cents: null, updated_at: new Date().toISOString() })
-      .eq("id", item.id)
-      .eq("fee_override_cents", item.fee_override_cents)
-      .select("id")
-      .maybeSingle();
+      .eq("id", item.id);
+    updateQuery = item.fee_override_cents === null
+      ? updateQuery.is("fee_override_cents", null)
+      : updateQuery.eq("fee_override_cents", item.fee_override_cents);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao restaurar taxa regional: " + error.message); return; }
     if (!data) {
@@ -262,12 +267,13 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ region_id: regionId, updated_at: new Date().toISOString() })
-      .eq("id", item.id)
-      .eq("region_id", item.region_id ?? "")
-      .select("id")
-      .maybeSingle();
+      .eq("id", item.id);
+    updateQuery = item.region_id === null
+      ? updateQuery.is("region_id", null)
+      : updateQuery.eq("region_id", item.region_id);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao salvar região do bairro: " + error.message); return; }
     if (!data) {
