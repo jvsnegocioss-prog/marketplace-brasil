@@ -444,15 +444,40 @@ export default function AdminPage() {
       return;
     }
     setExistingMedia((current) => current.filter((item) => item.id !== media.id));
-    const paths = [
+    const candidatePaths = [
       media.storage_path,
       getPublicBucketPath(media.poster_url, "products-media"),
     ].filter((path): path is string => Boolean(path));
-    const { error: storageError } = paths.length
-      ? await supabase.storage.from("products-media").remove(paths)
-      : { error: null };
-    setMessage(storageError
-      ? "Mídia removida do cadastro. A limpeza do arquivo no armazenamento ficou pendente."
+    const safePaths = candidatePaths.filter((path) =>
+      path.startsWith(`${media.product_id}/`) &&
+      !path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\\\"))
+    );
+    let cleanupPending = safePaths.length !== candidatePaths.length;
+    if (safePaths.length) {
+      const publicUrls = safePaths.map((path) =>
+        supabase.storage.from("products-media").getPublicUrl(path).data.publicUrl
+      );
+      const [pathReferences, posterReferences] = await Promise.all([
+        supabase.from("product_media").select("id").in("storage_path", safePaths).limit(1),
+        supabase.from("product_media").select("id").in("poster_url", publicUrls).limit(1),
+      ]);
+      if (pathReferences.error || posterReferences.error) {
+        cleanupPending = true;
+      } else {
+        const referencedPaths = new Set<string>();
+        if (pathReferences.data?.length) {
+          // If any candidate is still referenced, preserve all candidates rather than risk deleting shared media.
+          cleanupPending = true;
+        } else if (posterReferences.data?.length) {
+          cleanupPending = true;
+        } else {
+          const { error: storageError } = await supabase.storage.from("products-media").remove(safePaths);
+          if (storageError) cleanupPending = true;
+        }
+      }
+    }
+    setMessage(cleanupPending
+      ? "Mídia removida do cadastro. Um ou mais arquivos foram preservados porque a limpeza não pôde ser confirmada."
       : "Mídia removida.");
   }
 
