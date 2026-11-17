@@ -242,7 +242,10 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json(
-    {\n      reviews: await Promise.all((data || []).map(async (review) => ({ ...review, photos: await signReviewPhotos(review.photos) }))),\n      ownReview: ownReview ? { ...ownReview, photos: await signReviewPhotos(ownReview.photos) } : null,\n    },
+    {
+      reviews: await Promise.all((data || []).map(async (review) => ({ ...review, photos: await signReviewPhotos(review.photos) }))),
+      ownReview: ownReview ? { ...ownReview, photos: await signReviewPhotos(ownReview.photos) } : null,
+    },
     { headers: { "Cache-Control": "private, no-store" } }
   );
 }

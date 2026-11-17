@@ -3,8 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const { isReviewMediaPath } = require("../../../../lib/review-media-security.cjs");
-
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -98,17 +96,10 @@ export async function GET(request: NextRequest) {
   }
 
   const productNames = new Map((products || []).map((product) => [product.id, product.name]));
-  const allPaths = [...new Set((reviews || []).flatMap((review) => Array.isArray(review.photos) ? review.photos.filter((path: unknown): path is string => isReviewMediaPath(path)) : []))];
-  const { data: signedMedia, error: signedMediaError } = allPaths.length
-    ? await supabase.storage.from("review-media").createSignedUrls(allPaths, 600)
-    : { data: [], error: null };
-  if (signedMediaError) console.error("Não foi possível gerar URLs temporárias das mídias das avaliações.");
-  const signedByPath = new Map((signedMedia || []).filter((item) => item.path && item.signedUrl).map((item) => [item.path, item.signedUrl]));
   return NextResponse.json(
     {
       reviews: (reviews || []).map((review) => ({
         ...review,
-        photos: Array.isArray(review.photos) ? review.photos.filter((path: unknown): path is string => isReviewMediaPath(path)).map((path: string) => signedByPath.get(path)).filter((url: unknown): url is string => typeof url === "string") : [],
         product_name: productNames.get(review.product_id) || "Produto",
       })),
     },
