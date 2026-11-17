@@ -56,7 +56,7 @@ test("aceita somente pedido pago integralmente em BRL", () => {
     currency_id: "BRL",
     total_amount: "129.90",
     total_paid_amount: "129.90",
-    transactions: { payments: [{ status: "processed" }] },
+    transactions: { payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }] },
   };
   assert.equal(isProcessedOrderPaymentMatching("129.90", order), true);
   // A resposta GET de Orders API usa "currency"; payloads de notificação podem
@@ -115,7 +115,7 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
     status_detail: "partially_refunded",
-    transactions: { ...base.transactions, refunds: [{ status: "processed", amount: "25.00" }] },
+    transactions: { ...base.transactions, refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "25.00" }] },
   }), "partial_refund");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
@@ -127,17 +127,50 @@ test("classifica reembolso integral e parcial somente com valores conferidos", (
     ...base,
     status: "refunded",
     status_detail: "refunded",
-    transactions: { refunds: [{ status: "processed", amount: "100.00" }] },
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "refunded" }],
+      refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "100.00" }],
+    },
   }), "refunded");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
     status: "refunded",
-    transactions: { refunds: [{ status: "processed", amount: "99.00" }] },
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "refunded" }],
+      refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "99.00" }],
+    },
   }), "review");
   assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
     status_detail: "partially_refunded",
-    transactions: { refunds: [{ status: "processing", amount: "25.00" }] },
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }],
+      refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processing", amount: "25.00" }],
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status_detail: "partially_refunded",
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }],
+      refunds: [{ id: "REF-1", transaction_id: "UNKNOWN", status: "processed", amount: "25.00" }],
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status_detail: "partially_refunded",
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", refunded_amount: "20.00", status: "processed" }],
+      refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "25.00" }],
+    },
+  }), "review");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    ...base,
+    status_detail: "partially_refunded",
+    transactions: {
+      payments: [{ id: "PAY-1", amount: "100.00", paid_amount: "100.00", status: "processed" }],
+      refunds: [{ id: "REF-1", transaction_id: "PAY-1", status: "processed", amount: "110.00" }],
+    },
   }), "review");
 });
 
