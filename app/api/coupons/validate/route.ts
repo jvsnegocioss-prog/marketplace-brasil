@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { calculateCouponDiscount } from "../../../../lib/coupon-security.cjs";
+const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
 
 export const runtime = "nodejs";
 
@@ -97,6 +99,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Quantidade inválida para um dos produtos." }, { status: 400 });
       }
       quantities.set(item.id, combinedQuantity);
+    }
+
+    const ip = (request.headers.get("x-real-ip") || "").trim();
+    if (!ip) {
+      return NextResponse.json(
+        { error: "Não foi possível validar a origem da consulta. Tente novamente." },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    const ipKey = createHash("sha256").update(ip).digest("hex");
+    const rateLimit = consumeLocalRateLimit(`coupon:${ipKey}`, { limit: 10, windowMs: 15 * 60 * 1000 });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Muitas tentativas de validação. Aguarde e tente novamente." },
+        { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(rateLimit.retryAfterSeconds) } }
+      );
     }
 
     const ids = Array.from(quantities.keys());
