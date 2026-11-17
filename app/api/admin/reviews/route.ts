@@ -120,7 +120,7 @@ export async function PATCH(request: NextRequest) {
   const supabase = await getAdminClient(request);
   if (!supabase) return responseError("Acesso administrativo não autorizado.", 401);
 
-  let body: { reviewId?: string; status?: string };
+  let body: { reviewId?: string; status?: string; expectedStatus?: string };
   const parsed = await readLimitedJson(request);
   if (!parsed.ok) return responseError(parsed.status === 413 ? "Solicitação muito grande." : "Dados inválidos.", parsed.status);
   if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return responseError("Dados inválidos.", 400);
@@ -128,10 +128,12 @@ export async function PATCH(request: NextRequest) {
 
   const reviewId = body.reviewId;
   const status = body.status;
+  const expectedStatus = body.expectedStatus;
   if (
     typeof reviewId !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId) ||
-    !["pending", "approved", "hidden"].includes(status || "")
+    !["pending", "approved", "hidden"].includes(status || "") ||
+    !["pending", "approved", "hidden"].includes(expectedStatus || "")
   ) {
     return responseError("Informe uma avaliação e uma situação válida.", 400);
   }
@@ -140,13 +142,15 @@ export async function PATCH(request: NextRequest) {
     .from("product_reviews")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", reviewId)
+    .eq("status", expectedStatus)
     .select("id,status")
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
     console.error("Falha ao atualizar avaliação administrativa:", error);
     return responseError("Não foi possível atualizar a avaliação.", 500);
   }
+  if (!data) return responseError("A avaliação foi alterada por outra operação. Atualize a lista antes de tentar novamente.", 409);
 
   return NextResponse.json(
     { success: true, review: data },
