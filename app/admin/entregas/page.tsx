@@ -147,12 +147,20 @@ export default function AdminDeliveriesPage() {
   async function toggleRegionFreeShipping(region: Region) {
     setSavingId("free-" + region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ free_shipping: !region.free_shipping, updated_at: new Date().toISOString() })
-      .eq("id", region.id);
+      .eq("id", region.id)
+      .eq("free_shipping", region.free_shipping)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) {
       setMessage("Erro ao alterar frete grátis da região: " + error.message);
+      return;
+    }
+    if (!data) {
+      setMessage("A configuração de frete grátis foi alterada por outra operação. Atualize a lista.");
+      await loadData();
       return;
     }
     setMessage(region.free_shipping
@@ -164,11 +172,19 @@ export default function AdminDeliveriesPage() {
   async function toggleRegion(region: Region) {
     setSavingId(region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ active: !region.active, updated_at: new Date().toISOString() })
-      .eq("id", region.id);
+      .eq("id", region.id)
+      .eq("active", region.active)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao atualizar região: " + error.message); return; }
+    if (!data) {
+      setMessage("A disponibilidade da região foi alterada por outra operação. Atualize a lista.");
+      await loadData();
+      return;
+    }
     setMessage("Disponibilidade da região atualizada.");
     await loadData();
   }
@@ -233,11 +249,19 @@ export default function AdminDeliveriesPage() {
   async function toggleNeighborhood(item: Neighborhood) {
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    const { data, error } = await supabase.from("delivery_neighborhoods")
       .update({ active: !item.active, updated_at: new Date().toISOString() })
-      .eq("id", item.id);
+      .eq("id", item.id)
+      .eq("active", item.active)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao atualizar bairro: " + error.message); return; }
+    if (!data) {
+      setMessage("A disponibilidade do bairro foi alterada por outra operação. Atualize a lista.");
+      await loadData();
+      return;
+    }
     setMessage("Disponibilidade do bairro atualizada.");
     await loadData();
   }
