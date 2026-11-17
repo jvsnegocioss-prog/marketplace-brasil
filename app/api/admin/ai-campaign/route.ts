@@ -180,7 +180,9 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
 
     const result = await response.json();
     if (!response.ok) {
-      const providerMessage = String(result?.error?.message || "");
+      console.error("Falha na solicitação à Groq:", {
+        status: response.status,
+      });
       if (response.status === 429) {
         return errorResponse("O limite gratuito de solicitações foi atingido ou o modelo está ocupado. Aguarde um pouco e tente novamente.", 429);
       }
@@ -190,7 +192,7 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
       if ((response.status === 404 || response.status === 400) && hasImage) {
         return errorResponse("O modelo gratuito não aceitou essa imagem. Tente JPG ou PNG, ou use a criação por texto.", 502);
       }
-      return errorResponse(providerMessage.slice(0, 500) || "O serviço gratuito da Groq está temporariamente indisponível. Tente novamente.", 502);
+      return errorResponse("O serviço de IA está indisponível no momento. Tente novamente mais tarde.", 502);
     }
 
     const messageContent = result?.choices?.[0]?.message?.content;

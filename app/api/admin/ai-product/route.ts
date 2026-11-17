@@ -281,10 +281,14 @@ Informações e características fornecidas: ${description || "Não informado"}`
         /high demand|overload|temporar|unavailable|resource exhausted/i.test(lastProviderMessage);
 
       if (!retryable || model === models[models.length - 1]) {
+        console.error("Falha na solicitação ao Gemini:", {
+          status: response.status,
+          model,
+        });
         return errorResponse(
           retryable
             ? "Os modelos gratuitos do Gemini estão temporariamente sobrecarregados. Tente novamente mais tarde."
-            : lastProviderMessage,
+            : "O serviço de IA está indisponível no momento. Tente novamente mais tarde.",
           response.status === 429 ? 429 : 502
         );
       }
