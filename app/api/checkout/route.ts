@@ -363,7 +363,11 @@ export async function POST(request: Request) {
       paymentData.id === undefined ||
       paymentData.id === null
     ) {
-      console.error("ERRO MERCADO PAGO:", paymentData);
+      console.error("ERRO MERCADO PAGO:", {
+        status: paymentResponse.status,
+        error: typeof paymentData?.error === "string" ? paymentData.error.slice(0, 120) : undefined,
+        code: typeof paymentData?.code === "string" ? paymentData.code.slice(0, 80) : undefined,
+      });
 
       // Mantém o pedido aguardando: a resposta pode ter sido perdida após
       // o Mercado Pago aceitar a solicitação. A repetição usará a mesma chave.
