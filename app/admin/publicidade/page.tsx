@@ -23,6 +23,7 @@ type Campaign = {
   sort_order: number;
   start_at: string | null;
   end_at: string | null;
+  updated_at?: string | null;
 };
 
 const blankCampaign = (): Partial<Campaign> => ({
@@ -234,8 +235,15 @@ export default function AdminCampaignsPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase.from("homepage_campaigns").update(payload).eq("id", editingId);
+        const original = campaigns.find((campaign) => campaign.id === editingId);
+        if (!original) throw new Error("A campanha não está mais na lista carregada. Atualize os dados antes de editar.");
+        let updateQuery = supabase.from("homepage_campaigns").update(payload).eq("id", editingId);
+        updateQuery = original.updated_at == null
+          ? updateQuery.is("updated_at", null)
+          : updateQuery.eq("updated_at", original.updated_at);
+        const { data: updated, error } = await updateQuery.select("id").maybeSingle();
         if (error) throw error;
+        if (!updated) throw new Error("A campanha foi alterada por outra operação. Atualize a lista e abra a campanha novamente.");
       } else {
         const { error } = await supabase.from("homepage_campaigns").insert(payload);
         if (error) throw error;
@@ -314,8 +322,17 @@ export default function AdminCampaignsPage() {
 
   async function deleteCampaign(campaign: Campaign) {
     if (!window.confirm("Excluir esta campanha definitivamente?")) return;
-    const { error } = await supabase.from("homepage_campaigns").delete().eq("id", campaign.id);
+    let deleteQuery = supabase.from("homepage_campaigns").delete().eq("id", campaign.id);
+    deleteQuery = campaign.updated_at == null
+      ? deleteQuery.is("updated_at", null)
+      : deleteQuery.eq("updated_at", campaign.updated_at);
+    const { data: deleted, error } = await deleteQuery.select("id").maybeSingle();
     if (error) { setMessage(error.message); return; }
+    if (!deleted) {
+      setMessage("A campanha foi alterada por outra operação. Atualize a lista antes de excluir.");
+      await loadCampaigns();
+      return;
+    }
     let cleanupPending = false;
     if (campaign.storage_path) {
       const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(campaign.storage_path);
