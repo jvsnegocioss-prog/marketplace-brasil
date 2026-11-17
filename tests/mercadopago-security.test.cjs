@@ -5,6 +5,7 @@ const {
   isValidWebhookTimestamp,
   verifyMercadoPagoSignature,
   amountToCents,
+  isDefinitiveOrderCreationRejection,
   isProcessedOrderPaymentMatching,
   getOrderPaymentDisposition,
   getWebhookNotificationId,
@@ -287,4 +288,14 @@ test("corpo de notificação exige correspondência exata e formato de objeto", 
   assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: "123" } }, "0123"), false);
   assert.equal(isWebhookNotificationResourceMatch([], "123"), false);
   assert.equal(isWebhookNotificationResourceMatch({ type: "order", data: { id: null } }, "123"), false);
+});
+
+
+test("distingue rejeição definitiva da criação de order de respostas ambíguas", () => {
+  for (const status of [400, 401, 403, 422]) {
+    assert.equal(isDefinitiveOrderCreationRejection(status), true, `status ${status}`);
+  }
+  for (const status of [409, 423, 429, 500, 502, 503, 504, 200, 201]) {
+    assert.equal(isDefinitiveOrderCreationRejection(status), false, `status ${status}`);
+  }
 });
