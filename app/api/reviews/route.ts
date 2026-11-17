@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 const { getOwnedReviewMediaPaths, isReviewMediaPath } = require("../../../lib/review-media-security.cjs");
+const { escapePostgrestLikePattern } = require("../../../lib/email-filter-security.cjs");
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,7 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
   let ordersQuery = getSupabaseAdmin()
     .from("orders")
     .select("id,customer_name,status,delivery_status,customer_email")
-    .ilike("customer_email", email)
+    .ilike("customer_email", escapePostgrestLikePattern(email))
     .order("created_at", { ascending: false })
     .limit(50);
   if (requiredOrderId) ordersQuery = ordersQuery.eq("id", requiredOrderId);
@@ -221,7 +222,7 @@ export async function GET(request: Request) {
     const { data: orders } = await getSupabaseAdmin()
       .from("orders")
       .select("id")
-      .ilike("customer_email", user.email)
+      .ilike("customer_email", escapePostgrestLikePattern(user.email))
       .limit(50);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
