@@ -114,15 +114,24 @@ export default function OrdersPage() {
       alert("Registre o pedido como enviado antes de marcar como entregue.");
       return;
     }
-    // O banco registra shipped_at e delivered_at de forma transacional no trigger.
-    // O cliente envia somente a nova etapa e nunca define timestamps de entrega.
-    const updates: Record<string, string> = { delivery_status: newStatus };
-
+    // A API valida novamente o administrador e aplica CAS no estado atual do pedido.
+    // O banco continua responsável pelos timestamps de envio e entrega via trigger.
     setSavingDelivery(order.id);
-    const { error } = await supabase.from("orders").update(updates).eq("id", order.id);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/orders/delivery", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({ action: "delivery_status", orderId: order.id, status: newStatus }),
+    });
+    const result = await response.json().catch(() => ({}));
     setSavingDelivery(null);
-    if (error) {
-      alert("Erro ao atualizar entrega: " + error.message);
+    if (!response.ok) {
+      alert(result.error || "Erro ao atualizar entrega.");
       return;
     }
     await loadOrders();
@@ -144,12 +153,25 @@ export default function OrdersPage() {
       return;
     }
     setSavingDelivery(order.id);
-    const { error } = await supabase.from("orders")
-      .update({ estimated_delivery_at: estimated ? estimated.toISOString() : null, delivery_method: "motoboy" })
-      .eq("id", order.id);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/orders/delivery", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        action: "estimated_delivery",
+        orderId: order.id,
+        estimatedDeliveryAt: estimated ? estimated.toISOString() : null,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
     setSavingDelivery(null);
-    if (error) {
-      alert("Erro ao salvar a previsão: " + error.message);
+    if (!response.ok) {
+      alert(result.error || "Erro ao salvar a previsão.");
       return;
     }
     await loadOrders();
