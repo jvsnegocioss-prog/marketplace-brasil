@@ -270,6 +270,11 @@ export async function POST(request: Request) {
       }
 
       const disposition = getOrderPaymentDisposition(order.total, mpOrder);
+      if (disposition === "pending") {
+        // Keep the store order in aguardando; a later run can observe the final state.
+        result.waiting += 1;
+        continue;
+      }
       let applied = null;
       if (disposition === "paid") applied = await finalize(db, claim, id, "set_status", "Pago");
       else if (disposition === "not_paid") applied = await finalize(db, claim, id, "cancel_unpaid");
