@@ -190,10 +190,9 @@ export default function ContaClientePage() {
         try {
           result = responseText ? JSON.parse(responseText) : {};
         } catch {
-          console.error("RESPOSTA INVÁLIDA AO CARREGAR PEDIDOS:", {
+          console.error("Resposta inválida ao carregar pedidos:", {
             status: response.status,
             contentType: response.headers.get("content-type"),
-            preview: responseText.slice(0, 300),
           });
           throw new Error(
             `A consulta de pedidos retornou uma resposta inválida (HTTP ${response.status}). Atualize a página; se persistir, informe este código ao suporte.`
