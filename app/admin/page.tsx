@@ -596,11 +596,22 @@ export default function AdminPage() {
       let savedProductId = editingId;
 
       if (editingId) {
-        const { error } = await supabase
+        const existingProduct = products.find((product) => product.id === editingId);
+        if (!existingProduct) {
+          throw new Error("Não foi possível confirmar o estoque atual do produto. Atualize a lista e tente novamente.");
+        }
+        // Compare-and-set evita que um formulário antigo sobrescreva uma baixa de estoque do checkout.
+        const { data: updated, error } = await supabase
           .from("products")
           .update(productData)
-          .eq("id", editingId);
+          .eq("id", editingId)
+          .eq("stock", Number(existingProduct.stock))
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+        if (!updated) {
+          throw new Error("O estoque deste produto foi alterado por outra operação. Atualize a lista antes de salvar novamente.");
+        }
         setMessage("Produto atualizado com sucesso!");
       } else {
         const { data: insertedProduct, error } = await supabase
