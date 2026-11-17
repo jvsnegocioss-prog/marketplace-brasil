@@ -12,6 +12,7 @@ const {
   isWebhookResourceMatch,
   isWebhookNotificationResourceMatch,
   selectUniqueOrderByExternalReference,
+  readOrderSearchPage,
   isSafeOrderLinkCandidate,
 } = require("../lib/mercadopago-security.cjs");
 
@@ -337,4 +338,33 @@ test("reconciliação não sobrescreve vínculo externo diferente", () => {
   assert.equal(isSafeOrderLinkCandidate("order-100", "order-101"), false);
   assert.equal(isSafeOrderLinkCandidate(null, ""), false);
   assert.equal(isSafeOrderLinkCandidate(null, null), false);
+});
+
+
+test("valida paginação da busca de Orders e impede respostas incompletas", () => {
+  const first = readOrderSearchPage({
+    results: [{ id: "order-1" }, { id: "order-2" }],
+    paging: { total: 3, limit: 2, offset: 0 },
+  });
+  assert.deepEqual(first, { status: "valid", orders: [{ id: "order-1" }, { id: "order-2" }], nextOffset: 2, total: 3 });
+  assert.deepEqual(readOrderSearchPage({ results: [{ id: "order-3" }], paging: { total: 3, limit: 2, offset: 2 } }), {
+    status: "valid", orders: [{ id: "order-3" }], nextOffset: null, total: 3,
+  });
+  assert.deepEqual(readOrderSearchPage({ results: [], paging: { total: 0, limit: 10, offset: 0 } }), {
+    status: "valid", orders: [], nextOffset: null, total: 0,
+  });
+  for (const invalid of [
+    null,
+    { results: [] },
+    { results: {}, paging: { total: 0, limit: 10, offset: 0 } },
+    { results: [], paging: { total: -1, limit: 10, offset: 0 } },
+    { results: [], paging: { total: 1, limit: 0, offset: 0 } },
+    { results: [], paging: { total: 1, limit: 10, offset: 2 } },
+    { results: [{ id: "1" }, { id: "2" }], paging: { total: 1, limit: 1, offset: 0 } },
+    { results: [], paging: { total: 2, limit: 10, offset: 0 } },
+    { results: [], paging: { total: 1, limit: 10, offset: 0.5 } },
+  ]) {
+    assert.equal(readOrderSearchPage(invalid).status, "invalid_response");
+    assert.equal(readOrderSearchPage(invalid).nextOffset, null);
+  }
 });
