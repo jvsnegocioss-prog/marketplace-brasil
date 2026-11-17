@@ -11,6 +11,8 @@ const {
   getWebhookNotificationId,
   isWebhookResourceMatch,
   isWebhookNotificationResourceMatch,
+  selectUniqueOrderByExternalReference,
+  isSafeOrderLinkCandidate,
 } = require("../lib/mercadopago-security.cjs");
 
 test("aceita assinatura HMAC válida e normaliza data.id", () => {
