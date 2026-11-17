@@ -12,6 +12,10 @@ const leaseSql = fs.readFileSync(
   path.join(migrationDir, "20261115234248_protect_mercado_pago_webhook_processing_leases.sql"),
   "utf8"
 );
+const webhookRoute = fs.readFileSync(
+  path.join(__dirname, "..", "app", "api", "mercadopago", "webhook", "route.ts"),
+  "utf8"
+);
 
 function functionBody(sql, functionName) {
   const start = sql.toLowerCase().indexOf(`function public.${functionName.toLowerCase()}`);
@@ -58,4 +62,16 @@ test("funções críticas não são executáveis por anon ou authenticated", () 
   assert.match(leaseSql, /revoke all on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) from public, anon, authenticated/i);
   assert.match(leaseSql, /grant execute on function public\.claim_mercado_pago_webhook_event\(text, uuid\) to service_role, postgres/i);
   assert.match(leaseSql, /grant execute on function public\.finalize_mercado_pago_webhook_event\([\s\S]*?\) to service_role, postgres/i);
+});
+
+
+test("atualizações de revisão e chargeback usam compare-and-set do status observado", () => {
+  assert.match(
+    webhookRoute,
+    /payment_state_requires_manual_review",\s*"set_status",\s*orderId,\s*"Revisão necessária",\s*\[storeOrder\.status\]\)/
+  );
+  assert.match(
+    webhookRoute,
+    /chargeback_requires_manual_review",\s*"set_status",\s*orderId,\s*"Em contestação",\s*\[storeOrder\.status\]\)/
+  );
 });
