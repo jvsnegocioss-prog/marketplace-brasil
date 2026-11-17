@@ -45,8 +45,10 @@ async function findExternalOrder(token: string, orderId: string, createdAt: Date
     url.searchParams.set("begin_date", begin.toISOString());
     url.searchParams.set("end_date", now.toISOString());
     url.searchParams.set("external_reference", orderId);
-    url.searchParams.set("limit", String(PAGE_SIZE));
-    url.searchParams.set("offset", String(offset));
+    // Orders API uses page/page_size for requests. The response paging
+    // object still reports offset/limit, which readOrderSearchPage validates.
+    url.searchParams.set("page", String(Math.floor(offset / PAGE_SIZE) + 1));
+    url.searchParams.set("page_size", String(PAGE_SIZE));
 
     let response: Response;
     try {
@@ -271,7 +273,8 @@ export async function POST(request: Request) {
 
       const disposition = getOrderPaymentDisposition(order.total, mpOrder);
       if (disposition === "pending") {
-        // Keep the store order in aguardando; a later run can observe the final state.
+        // Release the event lease so the next scheduled/manual run can recheck immediately.
+        await finalize(db, claim, id, "none", undefined, true);
         result.waiting += 1;
         continue;
       }
