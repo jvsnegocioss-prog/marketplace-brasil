@@ -7,6 +7,7 @@ import {
   selectUniqueOrderAcrossSearchPages,
   isSafeOrderLinkCandidate,
 } from "@/lib/mercadopago-security.cjs";
+import { getReconciliationTransition } from "@/lib/reconciliation-transition.cjs";
 
 export const runtime = "nodejs";
 
@@ -130,7 +131,8 @@ async function finalize(
   orderId: string,
   action: "none" | "set_status" | "cancel_unpaid",
   status?: string,
-  failed = false
+  failed = false,
+  allowedCurrentStatuses?: string[]
 ) {
   const { data, error } = await db.rpc("finalize_mercado_pago_webhook_event", {
     p_notification_id: claim.notificationId,
@@ -140,7 +142,7 @@ async function finalize(
     p_order_id: action === "none" ? null : orderId,
     p_order_action: action,
     p_order_status: status ?? null,
-    p_allowed_current_statuses: action === "set_status" ? ["aguardando"] : null,
+    p_allowed_current_statuses: action === "set_status" ? (allowedCurrentStatuses ?? ["aguardando"]) : null,
   }).maybeSingle();
   if (error) throw new Error("Could not finalize reconciliation event.");
   return data as { finalized: boolean; order_updated: boolean; order_cancelled: boolean } | null;
@@ -184,7 +186,7 @@ export async function POST(request: Request) {
 
     let orderQuery = db.from("orders")
       .select("id,total,status,created_at,mercado_pago_order_id")
-      .ilike("status", "aguardando")
+      .in("status", ["aguardando", "Cancelado", "cancelado", "Cancelada", "cancelada", "Canceled", "canceled", "Cancelled", "cancelled"])
       .lt("created_at", cutoff)
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
@@ -246,7 +248,7 @@ export async function POST(request: Request) {
         const { data: linked, error: linkError } = await db.from("orders")
           .update({ mercado_pago_order_id: mpId })
           .eq("id", id)
-          .ilike("status", "aguardando")
+          .eq("status", order.status)
           .is("mercado_pago_order_id", null)
           .select("id,mercado_pago_order_id")
           .maybeSingle();
@@ -258,7 +260,7 @@ export async function POST(request: Request) {
           const { data: latest, error: readError } = await db.from("orders")
             .select("status,mercado_pago_order_id").eq("id", id).maybeSingle();
           if (readError || latest?.mercado_pago_order_id !== mpId ||
-              String(latest?.status ?? "").trim().toLowerCase() !== "aguardando") {
+              String(latest?.status ?? "") !== String(order.status)) {
             result.skipped += 1;
             continue;
           }
@@ -272,24 +274,22 @@ export async function POST(request: Request) {
       }
 
       const disposition = getOrderPaymentDisposition(order.total, mpOrder);
-      if (disposition === "pending") {
+      const transition = getReconciliationTransition(order.status, disposition);
+      if (transition.result === "waiting") {
         // Release the event lease so the next scheduled/manual run can recheck immediately.
         await finalize(db, claim, id, "none", undefined, true);
         result.waiting += 1;
         continue;
       }
-      let applied = null;
-      if (disposition === "paid") applied = await finalize(db, claim, id, "set_status", "Pago");
-      else if (disposition === "not_paid") applied = await finalize(db, claim, id, "cancel_unpaid");
-      else if (disposition === "chargeback") applied = await finalize(db, claim, id, "set_status", "Em contestação");
-      else if (disposition === "review" || disposition === "chargeback_resolved") {
-        applied = await finalize(db, claim, id, "set_status", "Revisão necessária");
-      } else if (disposition === "refunded" || disposition === "partial_refund") {
-        applied = await finalize(db, claim, id, "set_status",
-          disposition === "refunded" ? "Reembolsado" : "Reembolso parcial");
-      } else {
-        applied = await finalize(db, claim, id, "none", undefined, true);
-      }
+      const applied = await finalize(
+        db,
+        claim,
+        id,
+        transition.action,
+        transition.status,
+        transition.failed,
+        transition.allowedCurrentStatuses
+      );
 
       if (applied?.finalized) {
         result.reconciled += 1;

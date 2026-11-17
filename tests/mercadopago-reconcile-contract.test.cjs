@@ -65,3 +65,10 @@ test("processamento por lotes oferece cursor e limite explícito", () => {
   assert.match(route, /searchParams\.get\("cursor"\)/);
   assert.match(route, /nextCursor/);
 });
+
+test("reconciliação também revisita pedidos cancelados para detectar pagamento tardio", () => {
+  assert.match(route, /\.in\("status", \["aguardando", "Cancelado", "cancelado", "Cancelada", "cancelada", "Canceled", "canceled", "Cancelled", "cancelled"\]\)/);
+  assert.match(route, /getReconciliationTransition\(order\.status, disposition\)/);
+  assert.match(route, /allowedCurrentStatuses\?: string\[\]/);
+  assert.match(route, /\.eq\("status", order\.status\)[\s\S]*?\.is\("mercado_pago_order_id", null\)/);
+});
