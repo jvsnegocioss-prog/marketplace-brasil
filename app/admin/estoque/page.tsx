@@ -124,13 +124,21 @@ export default function StockPage() {
     }
     setSaving(product.id);
     setMessage("");
-    const { error } = await supabase.from("products").update({
+    const { data: updated, error } = await supabase.from("products").update({
       minimum_stock: minimum,
       updated_at: new Date().toISOString(),
-    }).eq("id", product.id);
+    }).eq("id", product.id)
+      .eq("minimum_stock", Number(product.minimum_stock))
+      .select("id")
+      .maybeSingle();
     setSaving(null);
     if (error) {
       setMessage("Erro ao salvar o estoque mínimo de " + product.name + ": " + error.message);
+      return;
+    }
+    if (!updated) {
+      setMessage("O estoque mínimo de " + product.name + " foi alterado por outra operação. Atualize a lista antes de salvar novamente.");
+      await loadProducts();
       return;
     }
     setProducts((current) => current.map((item) =>
