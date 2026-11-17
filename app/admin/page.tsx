@@ -15,6 +15,7 @@ type Product = {
   image_url: string | null;
   active: boolean;
   free_shipping: boolean;
+  updated_at?: string | null;
 };
 
 type ProductMedia = {
@@ -623,16 +624,18 @@ export default function AdminPage() {
           throw new Error("Não foi possível confirmar o estoque atual do produto. Atualize a lista e tente novamente.");
         }
         // Compare-and-set evita que um formulário antigo sobrescreva uma baixa de estoque do checkout.
-        const { data: updated, error } = await supabase
+        let updateQuery = supabase
           .from("products")
           .update(productData)
           .eq("id", editingId)
-          .eq("stock", Number(existingProduct.stock))
-          .select("id")
-          .maybeSingle();
+          .eq("stock", Number(existingProduct.stock));
+        updateQuery = existingProduct.updated_at == null
+          ? updateQuery.is("updated_at", null)
+          : updateQuery.eq("updated_at", existingProduct.updated_at);
+        const { data: updated, error } = await updateQuery.select("id").maybeSingle();
         if (error) throw error;
         if (!updated) {
-          throw new Error("O estoque deste produto foi alterado por outra operação. Atualize a lista antes de salvar novamente.");
+          throw new Error("Os dados ou o estoque deste produto foram alterados por outra operação. Atualize a lista antes de salvar novamente.");
         }
         productWriteSucceeded = true;
         setMessage("Produto atualizado com sucesso!");
