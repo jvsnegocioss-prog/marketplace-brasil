@@ -155,7 +155,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // Usa o e-mail confirmado da sessão, nunca um e-mail enviado livremente pelo navegador.
+      // Usa o e-mail associado à sessão autenticada, nunca um e-mail enviado livremente pelo navegador.
       verifiedCustomerEmail = customerAuth.user.email;
       authenticatedCustomerId = customerAuth.user.id;
     }
