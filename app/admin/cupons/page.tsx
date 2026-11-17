@@ -87,10 +87,43 @@ export default function CouponsPage() {
       usage_limit: usageLimit, active,
     };
     try {
-      const result = editingId
-        ? await supabase.from("discount_coupons").update(payload).eq("id", editingId)
-        : await supabase.from("discount_coupons").insert(payload);
-      if (result.error) throw result.error;
+      if (editingId) {
+        const original = coupons.find((coupon) => coupon.id === editingId);
+        if (!original) {
+          setMessage("O cupom não está mais na lista carregada. Atualize os dados antes de editar.");
+          await loadCoupons();
+          return;
+        }
+        let updateQuery = supabase.from("discount_coupons").update(payload)
+          .eq("id", original.id)
+          .eq("code", original.code)
+          .eq("discount_type", original.discount_type)
+          .eq("discount_value", original.discount_value)
+          .eq("min_order_amount", original.min_order_amount)
+          .eq("active", original.active);
+        updateQuery = original.max_discount === null
+          ? updateQuery.is("max_discount", null)
+          : updateQuery.eq("max_discount", original.max_discount);
+        updateQuery = original.starts_at === null
+          ? updateQuery.is("starts_at", null)
+          : updateQuery.eq("starts_at", original.starts_at);
+        updateQuery = original.expires_at === null
+          ? updateQuery.is("expires_at", null)
+          : updateQuery.eq("expires_at", original.expires_at);
+        updateQuery = original.usage_limit === null
+          ? updateQuery.is("usage_limit", null)
+          : updateQuery.eq("usage_limit", original.usage_limit);
+        const { data, error } = await updateQuery.select("id").maybeSingle();
+        if (error) throw error;
+        if (!data) {
+          setMessage("Este cupom foi alterado por outra operação. As alterações não foram aplicadas; atualize a lista e abra o cupom novamente.");
+          await loadCoupons();
+          return;
+        }
+      } else {
+        const { error } = await supabase.from("discount_coupons").insert(payload);
+        if (error) throw error;
+      }
       setMessage(editingId ? "Cupom atualizado com sucesso." : "Cupom cadastrado com sucesso.");
       resetForm(); await loadCoupons();
     } catch (err) {
@@ -114,8 +147,18 @@ export default function CouponsPage() {
   }
   async function deleteCoupon(c: Coupon) {
     if (!window.confirm("Excluir o cupom " + c.code + "?")) return;
-    const { error } = await supabase.from("discount_coupons").delete().eq("id", c.id);
+    const { data, error } = await supabase.from("discount_coupons").delete()
+      .eq("id", c.id)
+      .eq("code", c.code)
+      .eq("active", c.active)
+      .select("id")
+      .maybeSingle();
     if (error) { setMessage("Erro ao excluir cupom: " + error.message); return; }
+    if (!data) {
+      setMessage("Este cupom foi alterado por outra operação. Atualize a lista antes de excluir.");
+      await loadCoupons();
+      return;
+    }
     setMessage("Cupom excluído."); if (editingId === c.id) resetForm(); await loadCoupons();
   }
   if (loading) return <main style={{ padding: 24 }}>Carregando cupons...</main>;
