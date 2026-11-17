@@ -98,8 +98,18 @@ export default function CouponsPage() {
     } finally { setSaving(false); }
   }
   async function toggleCoupon(c: Coupon) {
-    const { error } = await supabase.from("discount_coupons").update({ active: !c.active }).eq("id", c.id);
+    const { data, error } = await supabase.from("discount_coupons")
+      .update({ active: !c.active })
+      .eq("id", c.id)
+      .eq("active", c.active)
+      .select("id")
+      .maybeSingle();
     if (error) { setMessage("Erro ao alterar cupom: " + error.message); return; }
+    if (!data) {
+      setMessage("Este cupom foi alterado por outra operação. Atualize a lista antes de tentar novamente.");
+      await loadCoupons();
+      return;
+    }
     await loadCoupons();
   }
   async function deleteCoupon(c: Coupon) {
