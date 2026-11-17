@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
+import { normalizeCheckoutItems } from "@/lib/checkout-items.cjs";
 
 export const runtime = "nodejs";
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
       deliveryNeighborhoodId,
     } = body;
 
+    const normalizedItemsResult = normalizeCheckoutItems(items);
     if (
       typeof customerName !== "string" ||
       !customerName.trim() ||
@@ -121,16 +123,7 @@ export async function POST(request: Request) {
       !deliveryAddress.trim() ||
       typeof deliveryNeighborhoodId !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deliveryNeighborhoodId) ||
-      !Array.isArray(items) ||
-      items.length === 0 ||
-      items.length > 100 ||
-      items.some(
-        (item: { id?: unknown; qty?: unknown }) =>
-          typeof item.id !== "string" ||
-          !item.id ||
-          !Number.isInteger(item.qty) ||
-          Number(item.qty) < 1
-      )
+      !normalizedItemsResult.ok
     ) {
       return NextResponse.json(
         { error: "Confira os dados e os produtos do pedido." },
@@ -177,10 +170,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedItems = items.map((item: { id: string; qty: number }) => ({
-      id: item.id,
-      qty: item.qty,
-    }));
+    const normalizedItems = normalizedItemsResult.items;
     const requestHash = createHash("sha256").update(JSON.stringify({
       customerUserId: authenticatedCustomerId,
       customerName: customerName.trim(),
