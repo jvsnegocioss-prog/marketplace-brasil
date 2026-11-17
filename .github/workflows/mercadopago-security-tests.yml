@@ -33,8 +33,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install without lockfile or lifecycle scripts
-        run: npm install --ignore-scripts --no-package-lock
+      - name: Install dependencies and create a runner-only lockfile
+        run: npm install --ignore-scripts
       - name: Report resolved React versions
         run: npm ls react react-dom --depth=0
       - name: Audit dependency tree
