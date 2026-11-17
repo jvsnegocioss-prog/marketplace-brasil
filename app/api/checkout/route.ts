@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
 
 export const runtime = "nodejs";
 
@@ -60,15 +61,17 @@ function getSupabaseAdmin() {
   return supabaseAdmin;
 }
 
-async function cancelOrder(orderId: string) {
-  const { error } = await getSupabaseAdmin().rpc(
+async function cancelOrder(orderId: string): Promise<boolean> {
+  const { data, error } = await getSupabaseAdmin().rpc(
     "cancel_unpaid_order_and_restore_stock",
     { p_order_id: orderId }
   );
 
   if (error) {
     console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+    return false;
   }
+  return data === true;
 }
 
 export async function POST(request: Request) {
@@ -381,15 +384,32 @@ export async function POST(request: Request) {
         code: typeof paymentData?.code === "string" ? paymentData.code.slice(0, 80) : undefined,
       });
 
-      // Mantém o pedido aguardando: a resposta pode ter sido perdida após
-      // o Mercado Pago aceitar a solicitação. A repetição usará a mesma chave.
-      createdOrderId = null;
+      // Respostas 4xx definitivas significam que o provedor rejeitou a criação.
+      // Só libere o estoque se o banco confirmar o cancelamento do pedido.
+      // 409/423, 429 e 5xx permanecem ambíguos e preservam a chave idempotente.
+      if (!paymentResponse.ok && isDefinitiveOrderCreationRejection(paymentResponse.status)) {
+        const canceled = await cancelOrder(orderId);
+        createdOrderId = null;
+        if (canceled) {
+          return NextResponse.json(
+            { error: "O provedor recusou esta tentativa. Inicie uma nova tentativa de compra." },
+            { status: 409, headers: { "Cache-Control": "no-store" } }
+          );
+        }
+        return NextResponse.json(
+          { error: "A solicitação foi recusada, mas não foi possível confirmar a liberação do estoque. Tente novamente em instantes." },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
 
+      // Timeout, conflito de idempotência, bloqueio temporário, limitação ou
+      // erro do servidor não provam que o provedor deixou de criar a order.
+      createdOrderId = null;
       return NextResponse.json(
         {
           error: "Não foi possível confirmar a criação do pagamento. Tente novamente sem alterar o pedido.",
         },
-        { status: 502 }
+        { status: 502, headers: { "Cache-Control": "no-store" } }
       );
     }
 
