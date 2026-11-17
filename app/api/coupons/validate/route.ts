@@ -146,10 +146,7 @@ export async function POST(request: Request) {
 
     const minimumCents = Math.round(Number(coupon.min_order_amount || 0) * 100);
     if (subtotalCents < minimumCents) {
-      return NextResponse.json({
-        error: "O pedido mínimo para este cupom é " +
-          (minimumCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) + "."
-      }, { status: 400 });
+      return unavailableCouponResponse();
     }
 
     const discount = calculateCouponDiscount({
