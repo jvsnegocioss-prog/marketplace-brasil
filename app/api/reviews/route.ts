@@ -288,7 +288,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ success: true, review: data, message: "Avaliação enviada e aguardando aprovação da loja." }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a avaliação." }, { status: 500 });
+    console.error("Falha ao processar avaliação:", error);
+    return NextResponse.json({ error: "Não foi possível processar a avaliação. Tente novamente." }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
 
@@ -351,7 +352,8 @@ export async function PATCH(request: Request) {
     if (uploaded) await removeOwnedReviewMedia(ownedReview.photos, user.id);
     return NextResponse.json({ success: true, review: data, message: "Avaliação atualizada e enviada para nova aprovação." });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível processar a alteração." }, { status: 500 });
+    console.error("Falha ao atualizar avaliação:", error);
+    return NextResponse.json({ error: "Não foi possível processar a alteração. Tente novamente." }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
 
