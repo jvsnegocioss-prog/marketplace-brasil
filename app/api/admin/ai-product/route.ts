@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
 
 export const runtime = "nodejs";
 
@@ -38,26 +39,39 @@ async function readLimitedJson(request: Request): Promise<
   }
 }
 
-async function isAdmin(request: NextRequest) {
-  const authorization = request.headers.get("authorization") || "";
-  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!token) return false;
+async function isAdmin(request: NextRequest): Promise<string | null> {
+  try {
+    const authorization = request.headers.get("authorization") || "";
+    const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+    if (!token) return null;
 
-  const userClient = createClient(supabaseUrl, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-  const { data: userData, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !userData.user) return false;
+    const { data: userData, error: userError } = await userClient.auth.getUser(token);
+    if (userError || !userData.user) return null;
 
-  const { data, error } = await userClient.rpc("is_marketplace_admin");
-  return !error && data === true;
+    const { data, error } = await userClient.rpc("is_marketplace_admin");
+    return !error && data === true ? userData.user.id : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdmin(request))) {
+  const adminId = await isAdmin(request);
+  if (!adminId) {
     return errorResponse("Acesso administrativo não autorizado.", 401);
+  }
+
+  const rateLimit = consumeLocalRateLimit(`admin-ai:${adminId}`, { limit: 5, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Muitas solicitações de IA. Aguarde um minuto e tente novamente." },
+      { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
