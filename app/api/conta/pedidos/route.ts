@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       await getSupabaseAdmin().auth.getUser(token);
 
     const user = authData?.user;
-    if (authError || !user?.email) {
+    if (authError || !user?.id) {
       return NextResponse.json({ error: "Sessão inválida. Entre novamente." }, { status: 401 });
     }
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
           subtotal
         )
       `)
-      .eq("customer_email", user.email)
+      .eq("customer_user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
