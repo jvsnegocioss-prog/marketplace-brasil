@@ -329,7 +329,7 @@ export async function PATCH(request: Request) {
 
     const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
-      .select("order_id,photos")
+      .select("order_id,photos,updated_at")
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("customer_phone_hash", user.id)
@@ -352,13 +352,15 @@ export async function PATCH(request: Request) {
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("order_id", validation.order.id)
+      .eq("customer_phone_hash", user.id)
+      .eq("updated_at", ownedReview.updated_at)
       .select("id,status")
       .maybeSingle();
 
     if (error || !data) {
       if (uploaded?.paths.length) await getSupabaseAdmin().storage.from(mediaBucket).remove(uploaded.paths);
       if (error) return NextResponse.json({ error: "Não foi possível atualizar a avaliação." }, { status: 500 });
-      return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+      return NextResponse.json({ error: "A avaliação foi alterada por outra operação. Atualize os dados antes de tentar novamente." }, { status: 409 });
     }
     if (uploaded) await removeOwnedReviewMedia(ownedReview.photos, user.id);
     return NextResponse.json({ success: true, review: data, message: "Avaliação atualizada e enviada para nova aprovação." });
@@ -382,7 +384,7 @@ export async function DELETE(request: Request) {
 
     const { data: ownedReview, error: ownedReviewError } = await getSupabaseAdmin()
       .from("product_reviews")
-      .select("order_id,photos")
+      .select("order_id,photos,updated_at")
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("customer_phone_hash", user.id)
@@ -399,10 +401,12 @@ export async function DELETE(request: Request) {
       .eq("id", reviewId)
       .eq("product_id", productId)
       .eq("order_id", validation.order.id)
+      .eq("customer_phone_hash", user.id)
+      .eq("updated_at", ownedReview.updated_at)
       .select("id")
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Não foi possível excluir a avaliação." }, { status: 500 });
-    if (!data) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
+    if (!data) return NextResponse.json({ error: "A avaliação foi alterada por outra operação. Atualize os dados antes de tentar novamente." }, { status: 409 });
     await removeOwnedReviewMedia(ownedReview.photos, user.id);
     return NextResponse.json({ success: true, message: "Avaliação excluída." });
   } catch {
