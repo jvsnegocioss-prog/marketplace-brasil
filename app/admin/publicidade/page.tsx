@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ImagePlus, Video, Sparkles, Trash2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type Campaign = {
   id: string;
@@ -129,8 +130,8 @@ export default function AdminCampaignsPage() {
 
       let imageBase64 = "";
       if (aiImageFile) {
-        if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(aiImageFile.type)) throw new Error("Envie uma imagem JPG, PNG, WEBP ou GIF.");
-        if (aiImageFile.size > 8 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 8 MB.");
+        const aiImageInfo = inspectMediaBytes(new Uint8Array(await aiImageFile.arrayBuffer()), aiImageFile.type, 8 * 1024 * 1024);
+        if (!aiImageInfo || aiImageInfo.kind !== "image") throw new Error("Envie uma imagem JPG, PNG, WEBP ou GIF válida, de até 8 MB.");
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
@@ -197,11 +198,11 @@ export default function AdminCampaignsPage() {
       let mediaType = draft.media_type || "image";
 
       if (mediaFile) {
-        const isImage = mediaFile.type.startsWith("image/");
-        const isVideo = mediaFile.type.startsWith("video/");
-        if (!isImage && !isVideo) throw new Error("Escolha uma imagem ou vídeo válido.");
-        if (mediaFile.size > 100 * 1024 * 1024) throw new Error("O arquivo deve ter no máximo 100 MB.");
-        const extension = mediaFile.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
+        const mediaInfo = inspectMediaBytes(new Uint8Array(await mediaFile.arrayBuffer()), mediaFile.type, 100 * 1024 * 1024);
+        if (!mediaInfo) throw new Error("Escolha uma imagem ou vídeo válido (JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV), de até 100 MB.");
+        const isImage = mediaInfo.kind === "image";
+        const isVideo = mediaInfo.kind === "video";
+        const extension = mediaInfo.extension;
         const path = `${crypto.randomUUID()}.${extension}`;
         const { error: uploadError } = await supabase.storage.from("campaign-media")
           .upload(path, mediaFile, { upsert: false, contentType: mediaFile.type });
