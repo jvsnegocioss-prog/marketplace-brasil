@@ -315,7 +315,7 @@ export async function POST(request: Request) {
       const refundStatus = disposition === "refunded" ? "Reembolsado" : "Reembolso parcial";
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (currentStatus !== "em contestação" && currentStatus !== "revisão necessária") {
-        const result = await finishEvent("processed", disposition === "refunded" ? "full_refund_recorded" : "partial_refund_recorded", "set_status", orderId, refundStatus, ["aguardando", "pago", "cancelado", "cancelada", "canceled"]);
+        const result = await finishEvent("processed", disposition === "refunded" ? "full_refund_recorded" : "partial_refund_recorded", "set_status", orderId, refundStatus, [storeOrder.status]);
         if (!result) return NextResponse.json({ error: "A reserva do evento expirou ou o estado do pedido mudou." }, { status: 503 });
       }
       if (currentStatus === "em contestação" || currentStatus === "revisão necessária") {
@@ -355,7 +355,7 @@ export async function POST(request: Request) {
     if (disposition === "paid") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (currentStatus === "cancelado" || currentStatus === "cancelada" || currentStatus === "canceled") {
-        const result = await finishEvent("processed", "payment_received_after_order_cancel", "set_status", orderId, "Revisão necessária", ["Cancelado", "cancelada", "canceled"]);
+        const result = await finishEvent("processed", "payment_received_after_order_cancel", "set_status", orderId, "Revisão necessária", [storeOrder.status]);
         if (!result) return NextResponse.json({ error: "A reserva expirou ou o estado do pedido mudou." }, { status: 503 });
         return NextResponse.json({ received: true, reviewRequired: true });
       }
