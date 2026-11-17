@@ -865,10 +865,26 @@ export default function Home() {
                       document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
                       return;
                     }
-                    const destination = /^https?:\/\//i.test(target)
-                      ? target
-                      : target.startsWith("/") ? target : `/${target}`;
-                    window.location.assign(destination);
+                    if (target.startsWith("//")) {
+                      console.warn("Destino externo inválido na campanha.");
+                      return;
+                    }
+                    try {
+                      const destination = /^https:\/\//i.test(target)
+                        ? new URL(target)
+                        : new URL(target.startsWith("/") ? target : `/${target}`, window.location.origin);
+                      if (
+                        (destination.protocol !== "https:" && destination.origin !== window.location.origin) ||
+                        destination.username ||
+                        destination.password
+                      ) {
+                        console.warn("Destino da campanha bloqueado por validação.");
+                        return;
+                      }
+                      window.location.assign(destination.toString());
+                    } catch {
+                      console.warn("Destino inválido na campanha.");
+                    }
                   }} style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     padding: "14px 22px", marginTop: 24, borderRadius: 10,
