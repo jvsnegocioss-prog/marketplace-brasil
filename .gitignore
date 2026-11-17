@@ -1,0 +1,19 @@
+# Local environment files (keep examples only)
+.env*
+!.env.example
+!.env.sample
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Vercel local project metadata
+.vercel/
+
+# Logs and OS/editor files
+*.log
+.DS_Store
