@@ -27,8 +27,9 @@ test("rejeita assinatura inválida, incompleta ou malformada", () => {
   assert.equal(verifyMercadoPagoSignature("secret", "id", "req", "123", "a".repeat(64)), false);
 });
 
-test("aceita timestamp antigo assinado para reentrega legítima", () => {
-  assert.equal(isValidWebhookTimestamp("1700000000", 1794700000000), true);
+test("rejeita timestamp antigo fora da janela contra replay", () => {
+  assert.equal(isValidWebhookTimestamp("1700000000", 1794700000000), false);
+  assert.equal(isValidWebhookTimestamp("1794699700", 1794700000000), true);
 });
 
 test("rejeita timestamp muito futuro e timestamp inseguro", () => {
@@ -248,6 +249,8 @@ test("valida timestamps em segundos e milissegundos sem aceitar valores negativo
   assert.equal(isValidWebhookTimestamp("1800000000", now), true);
   assert.equal(isValidWebhookTimestamp("1800000000000", now), true);
   assert.equal(isValidWebhookTimestamp("1800000300", now), true);
+  assert.equal(isValidWebhookTimestamp("1799999700", now), true);
+  assert.equal(isValidWebhookTimestamp("1799999699", now), false);
   assert.equal(isValidWebhookTimestamp("1800000300001", now), false);
   assert.equal(isValidWebhookTimestamp("-1", now), false);
   assert.equal(isValidWebhookTimestamp("", now), false);
