@@ -450,7 +450,7 @@ export default function AdminPage() {
     ].filter((path): path is string => Boolean(path));
     const safePaths = candidatePaths.filter((path) =>
       path.startsWith(`${media.product_id}/`) &&
-      !path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\\\"))
+      !path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\"))
     );
     let cleanupPending = safePaths.length !== candidatePaths.length;
     if (safePaths.length) {
@@ -464,7 +464,6 @@ export default function AdminPage() {
       if (pathReferences.error || posterReferences.error) {
         cleanupPending = true;
       } else {
-        const referencedPaths = new Set<string>();
         if (pathReferences.data?.length) {
           // If any candidate is still referenced, preserve all candidates rather than risk deleting shared media.
           cleanupPending = true;
