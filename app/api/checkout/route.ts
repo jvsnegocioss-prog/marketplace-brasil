@@ -342,18 +342,30 @@ export async function POST(request: Request) {
     }
 
     mercadoPagoRequestStarted = true;
-    const paymentResponse = await fetch(
-      "https://api.mercadopago.com/v1/orders",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-          "X-Idempotency-Key": mercadoPagoIdempotencyKey(orderId),
-        },
-        body: JSON.stringify(paymentBody),
-      }
-    );
+    let paymentResponse: Response;
+    try {
+      paymentResponse = await fetch(
+        "https://api.mercadopago.com/v1/orders",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": mercadoPagoIdempotencyKey(orderId),
+          },
+          body: JSON.stringify(paymentBody),
+          signal: AbortSignal.timeout(15_000),
+        }
+      );
+    } catch {
+      // Timeout/erro de rede não prova que o provedor rejeitou a criação.
+      // Preserva o pedido e reutiliza a mesma chave idempotente na repetição.
+      createdOrderId = null;
+      return NextResponse.json(
+        { error: "A confirmação do pagamento demorou. Tente novamente sem alterar o pedido." },
+        { status: 502, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
     const paymentData = await paymentResponse.json();
 
