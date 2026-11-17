@@ -621,7 +621,15 @@ export default function Home() {
           qty: item.qty,
         })),
       };
-      const checkoutFingerprint = JSON.stringify(checkoutPayload);
+      // Guarda somente um hash do payload no navegador; não persiste
+      // nome, e-mail, telefone ou endereço no registro de idempotência.
+      const fingerprintBuffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify(checkoutPayload))
+      );
+      const checkoutFingerprint = Array.from(new Uint8Array(fingerprintBuffer))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
       const idempotencyStorageKey = "novashopp_checkout_idempotency_v1";
       let checkoutIdempotencyKey = "";
       try {
