@@ -7,7 +7,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function errorResponse(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 async function readLimitedJson(request: Request): Promise<
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return errorResponse("A chave do Gemini não está configurada no servidor.", 500);
+    console.error("GEMINI_API_KEY não está configurada no ambiente.");
+    return errorResponse("O serviço de IA está temporariamente indisponível. Tente novamente mais tarde.", 503);
   }
 
   let body: {
