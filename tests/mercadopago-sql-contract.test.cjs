@@ -16,9 +16,11 @@ const leaseSql = fs.readFileSync(
 function functionBody(sql, functionName) {
   const start = sql.toLowerCase().indexOf(`function public.${functionName.toLowerCase()}`);
   assert.notEqual(start, -1, `função SQL ausente: ${functionName}`);
-  const end = sql.indexOf("$$;", start);
-  assert.notEqual(end, -1, `fim da função SQL ausente: ${functionName}`);
-  return sql.slice(start, end);
+  const dollarEnd = sql.indexOf("$;", start);
+  const namedEnd = sql.indexOf("$function$;", start);
+  const ends = [dollarEnd, namedEnd].filter((value) => value !== -1);
+  assert.ok(ends.length > 0, `fim da função SQL ausente: ${functionName}`);
+  return sql.slice(start, Math.min(...ends));
 }
 
 test("registro de webhook serializa IDs repetidos e rejeita recurso divergente", () => {
