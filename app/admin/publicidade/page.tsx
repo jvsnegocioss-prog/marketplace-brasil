@@ -186,6 +186,11 @@ export default function AdminCampaignsPage() {
     if (saving) return;
     setSaving(true);
     setMessage("");
+    let newlyUploadedPath: string | null = null;
+    let persisted = false;
+    const previousStoragePath = editingId
+      ? campaigns.find((campaign) => campaign.id === editingId)?.storage_path || null
+      : null;
     try {
       let mediaUrl = draft.media_url || null;
       let storagePath = draft.storage_path || null;
@@ -201,6 +206,7 @@ export default function AdminCampaignsPage() {
         const { error: uploadError } = await supabase.storage.from("campaign-media")
           .upload(path, mediaFile, { upsert: false, contentType: mediaFile.type });
         if (uploadError) throw uploadError;
+        newlyUploadedPath = path;
         mediaUrl = supabase.storage.from("campaign-media").getPublicUrl(path).data.publicUrl;
         storagePath = path;
         mediaType = isImage ? "image" : "video";
@@ -232,10 +238,19 @@ export default function AdminCampaignsPage() {
         const { error } = await supabase.from("homepage_campaigns").insert(payload);
         if (error) throw error;
       }
+      persisted = true;
+      if (previousStoragePath && previousStoragePath !== storagePath) {
+        const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
+        if (oldFileError) console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+      }
       setMessage("Campanha salva. A publicação respeita o status e o período definidos.");
       resetForm();
       await loadCampaigns();
     } catch (err) {
+      if (!persisted && newlyUploadedPath) {
+        const { error: cleanupError } = await supabase.storage.from("campaign-media").remove([newlyUploadedPath]);
+        if (cleanupError) console.warn("Não foi possível limpar o novo arquivo da campanha:", cleanupError.message);
+      }
       const details = err && typeof err === "object" && "message" in err
         ? String((err as { message?: unknown }).message || "")
         : err instanceof Error ? err.message : "";
