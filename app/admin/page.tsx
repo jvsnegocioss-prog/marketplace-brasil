@@ -723,53 +723,61 @@ export default function AdminPage() {
   }
 
   async function deleteProduct(id: string) {
-    if (!window.confirm("Deseja realmente excluir este produto?")) return;
-
     const product = products.find((item) => item.id === id);
-    const { data: mediaRows, error: mediaQueryError } = await supabase
-      .from("product_media")
-      .select("storage_path,poster_url")
-      .eq("product_id", id);
-    if (mediaQueryError) {
-      setMessage("Não foi possível preparar a remoção das mídias do produto.");
+    if (!product) {
+      setMessage("Produto não encontrado na lista atual. Atualize o painel e tente novamente.");
       return;
     }
 
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (!window.confirm("O produto será desativado e ficará oculto na loja. Pedidos, avaliações e mídias históricas serão preservados. Deseja continuar?")) return;
+
+    // Arquivamento lógico: evita apagar avaliações (FK CASCADE), perder vínculos
+    // históricos de pedidos (FK SET NULL) ou deixar arquivos públicos órfãos.
+    const { data, error } = await supabase
+      .from("products")
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("active", product.active)
+      .select("id")
+      .maybeSingle();
+
     if (error) {
-      setMessage("Não foi possível excluir o produto.");
+      setMessage("Não foi possível desativar o produto: " + error.message);
+      return;
+    }
+    if (!data) {
+      setMessage("O produto foi alterado por outra operação. Atualize a lista antes de tentar novamente.");
+      await loadProducts();
       return;
     }
 
-    const mediaPaths = (mediaRows || []).flatMap((media) => [
-      media.storage_path,
-      getPublicBucketPath(media.poster_url, "products-media"),
-    ]).filter((path): path is string => Boolean(path));
-    const imagePath = getPublicBucketPath(product?.image_url, "products-images");
-    const cleanupResults = await Promise.all([
-      mediaPaths.length ? supabase.storage.from("products-media").remove(mediaPaths) : Promise.resolve({ error: null }),
-      imagePath ? supabase.storage.from("products-images").remove([imagePath]) : Promise.resolve({ error: null }),
-    ]);
-    const cleanupFailed = cleanupResults.some((result) => result.error);
-    setMessage(cleanupFailed
-      ? "Produto excluído. Alguns arquivos não puderam ser removidos do armazenamento e precisam de limpeza."
-      : "Produto e mídias excluídos com sucesso.");
+    setMessage("Produto desativado e arquivado. Histórico, avaliações e mídias foram preservados.");
     await loadProducts();
   }
 
   async function toggleActive(product: Product) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("products")
       .update({
         active: !product.active,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", product.id);
+      .eq("id", product.id)
+      .eq("active", product.active)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       setMessage("Erro ao alterar situação: " + error.message);
       return;
     }
+    if (!data) {
+      setMessage("A situação do produto foi alterada por outra operação. Atualize a lista e tente novamente.");
+      await loadProducts();
+      return;
+    }
 
+    setMessage(product.active ? "Produto desativado." : "Produto ativado.");
     await loadProducts();
   }
 
