@@ -370,7 +370,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const paymentData = await paymentResponse.json();
+    // Uma resposta sem JSON válido não deve desviar o tratamento pelo status HTTP.
+    // Em 2xx, mantém o pedido para reconciliação/idempotência; em 4xx definitivo,
+    // o bloco abaixo ainda pode liberar a reserva com confirmação do banco.
+    let paymentData: Record<string, unknown> = {};
+    try {
+      const parsedPaymentData: unknown = await paymentResponse.json();
+      if (
+        parsedPaymentData &&
+        typeof parsedPaymentData === "object" &&
+        !Array.isArray(parsedPaymentData)
+      ) {
+        paymentData = parsedPaymentData as Record<string, unknown>;
+      }
+    } catch {
+      // Corpo ausente/inválido: a decisão de segurança usa o status HTTP.
+    }
 
     if (
       !paymentResponse.ok ||
