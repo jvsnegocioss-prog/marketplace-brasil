@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+const { isValidTrackingPhone } = require("../../../lib/tracking-phone-validation.cjs");
 
 export const runtime = "nodejs";
 
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     const orderNumber = typeof body.orderNumber === "string" ? body.orderNumber.trim().replace(/^#\s*/, "") : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
 
-    if (!orderNumber || orderNumber.length > 120 || !phone || phone.length > 40) {
+    if (!orderNumber || orderNumber.length > 120 || !phone || phone.length > 40 || !isValidTrackingPhone(phone)) {
       return NextResponse.json(
         { error: "Informe o número do pedido e o telefone utilizado na compra." },
         { status: 400, headers: { "Cache-Control": "no-store" } }
