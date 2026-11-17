@@ -38,4 +38,4 @@ jobs:
       - name: Report resolved React versions
         run: npm ls react react-dom --depth=0
       - name: Audit dependency tree
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --json
