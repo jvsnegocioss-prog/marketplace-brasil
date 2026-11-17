@@ -70,6 +70,20 @@ jobs:
           grep -qx 't|processing' /tmp/worker-a.txt
           grep -qx 'f|processing' /tmp/worker-b.txt
           echo "concurrent claim test passed: exactly one worker acquired the lease"
+      - name: Verify webhook and reconciler cannot overwrite the same order
+        shell: bash
+        run: |
+          set -euo pipefail
+          order_id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          psql -Atq -c "begin; select finalized, order_updated from public.finalize_mercado_pago_webhook_event('race-webhook', '55555555-5555-4555-8555-555555555555'::uuid, 'processed', null, '$order_id'::uuid, 'set_status', 'pago', array['aguardando']::text[]); select pg_sleep(2); commit" > /tmp/webhook-transition.txt &
+          webhook_worker=$!
+          sleep 0.25
+          psql -Atq -c "select finalized, order_updated from public.finalize_mercado_pago_webhook_event('race-reconciler', '66666666-6666-4666-8666-666666666666'::uuid, 'processed', null, '$order_id'::uuid, 'set_status', 'Cancelado', array['aguardando']::text[])" > /tmp/reconciler-transition.txt
+          wait "$webhook_worker"
+          grep -qx 't|t' /tmp/webhook-transition.txt
+          grep -qx 'f|f' /tmp/reconciler-transition.txt
+          test "$(psql -Atq -c "select status from public.orders where id = '$order_id'::uuid")" = "pago"
+          echo "order compare-and-set race test passed: stale competing transition rejected"
 
   dependency-audit:
     runs-on: ubuntu-latest
