@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return errorResponse("Configure GROQ_API_KEY nas variáveis de ambiente da Vercel para ativar a IA gratuita.", 503);
+    console.error("GROQ_API_KEY não está configurada no ambiente.");
+    return errorResponse("O serviço de IA está temporariamente indisponível. Tente novamente mais tarde.", 503);
   }
 
   let body: {
