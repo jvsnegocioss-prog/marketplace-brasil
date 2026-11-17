@@ -10,6 +10,7 @@ declare
   v_order uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_token_a uuid := '11111111-1111-4111-8111-111111111111';
   v_token_b uuid := '22222222-2222-4222-8222-222222222222';
+  v_order_race uuid := 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 begin
   select * into v_row from public.register_mercado_pago_webhook_delivery(
     'integration-duplicate', 'mp-order-1', 'req-1', 'order', 'created'
@@ -59,6 +60,14 @@ begin
   if (select status from public.orders where id = v_order) <> 'pago' then
     raise exception 'order status was not updated';
   end if;
+
+  insert into public.orders(id, status) values (v_order_race, 'aguardando');
+  perform public.register_mercado_pago_webhook_delivery('race-webhook', 'mp-race-1', 'req-race-1', 'order', 'updated');
+  perform public.register_mercado_pago_webhook_delivery('race-reconciler', 'mp-race-2', 'req-race-2', 'order', 'updated');
+  select * into v_row from public.claim_mercado_pago_webhook_event('race-webhook', '55555555-5555-4555-8555-555555555555');
+  if not v_row.claimed then raise exception 'webhook race event claim failed'; end if;
+  select * into v_row from public.claim_mercado_pago_webhook_event('race-reconciler', '66666666-6666-4666-8666-666666666666');
+  if not v_row.claimed then raise exception 'reconciler race event claim failed'; end if;
 end
 $$;
 
