@@ -545,6 +545,8 @@ export default function AdminPage() {
     const insertedMediaIds: string[] = [];
     let savedProductId: string | null = editingId;
     let productWriteSucceeded = false;
+    let previousProductImageUrl: string | null = null;
+    let oldImageCleanupPending = false;
 
     try {
       const mainImageInfo = image
@@ -562,7 +564,8 @@ export default function AdminPage() {
       let imageUrl: string | null = null;
 
       if (editingId) {
-        imageUrl = products.find((p) => p.id === editingId)?.image_url || null;
+        previousProductImageUrl = products.find((p) => p.id === editingId)?.image_url || null;
+        imageUrl = previousProductImageUrl;
       }
 
       if (image && mainImageInfo) {
@@ -658,6 +661,40 @@ export default function AdminPage() {
           if (mediaError) throw mediaError;
           insertedMediaIds.push(insertedMedia.id);
         }
+      }
+
+      // Só remove a imagem principal anterior depois que o produto e todas as
+      // novas mídias foram salvos. Antes da remoção, confirma que outro produto
+      // não compartilha a mesma URL; em caso de dúvida, preserva o arquivo.
+      if (
+        editingId &&
+        uploadedProductImagePath &&
+        previousProductImageUrl &&
+        previousProductImageUrl !== imageUrl
+      ) {
+        const previousImagePath = getPublicBucketPath(previousProductImageUrl, "products-images");
+        if (previousImagePath) {
+          const { data: otherReference, error: referenceError } = await supabase
+            .from("products")
+            .select("id")
+            .eq("image_url", previousProductImageUrl)
+            .neq("id", editingId)
+            .limit(1)
+            .maybeSingle();
+
+          if (referenceError) {
+            oldImageCleanupPending = true;
+          } else if (!otherReference) {
+            const { error: oldImageError } = await supabase.storage
+              .from("products-images")
+              .remove([previousImagePath]);
+            if (oldImageError) oldImageCleanupPending = true;
+          }
+        }
+      }
+
+      if (oldImageCleanupPending) {
+        setMessage("Produto atualizado, mas a imagem anterior foi preservada porque não foi possível confirmar ou concluir sua limpeza.");
       }
 
       clearForm();
