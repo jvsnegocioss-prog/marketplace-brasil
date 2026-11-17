@@ -116,7 +116,8 @@ async function claimEvent(db: ReturnType<typeof createClient<any>>, orderId: str
     p_notification_id: notificationId,
     p_processing_token: token,
   }).maybeSingle();
-  return claimError || !claim?.claimed ? null : { notificationId, token };
+  const claimResult = claim as { claimed?: boolean } | null;
+  return claimError || !claimResult?.claimed ? null : { notificationId, token };
 }
 
 async function finalize(
