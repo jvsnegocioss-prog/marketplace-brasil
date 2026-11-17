@@ -1262,7 +1262,7 @@ export default function AdminPage() {
                 background: "#b42318",
               }}
             >
-              Excluir
+              Desativar e arquivar
             </button>
           </div>
         </article>
