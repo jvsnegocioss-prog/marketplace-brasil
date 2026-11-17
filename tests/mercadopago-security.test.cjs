@@ -196,6 +196,26 @@ test("mantém Orders em estados conhecidos de espera para reconciliação poster
   };
   assert.equal(getOrderPaymentDisposition("100.00", { ...base, status: "created" }), "pending");
   assert.equal(getOrderPaymentDisposition("100.00", {
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "0.00",
+    status: "created",
+  }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "0.00",
+    status: "created",
+    transactions: {},
+  }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
+    currency: "BRL",
+    total_amount: "100.00",
+    total_paid_amount: "0.00",
+    status: "created",
+    transactions: { payments: [] },
+  }), "pending");
+  assert.equal(getOrderPaymentDisposition("100.00", {
     ...base,
     status: "processing",
     transactions: { payments: [{ status: "processing" }] },
