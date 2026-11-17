@@ -95,13 +95,18 @@ export default function StockPage() {
     }
     setSaving(product.id);
     setMessage("");
-    const { error } = await supabase.from("products").update({
+    const { data: updated, error } = await supabase.from("products").update({
       stock: quantity,
       updated_at: new Date().toISOString(),
-    }).eq("id", product.id);
+    }).eq("id", product.id).eq("stock", Number(product.stock)).select("id").maybeSingle();
     setSaving(null);
     if (error) {
       setMessage("Erro ao atualizar " + product.name + ": " + error.message);
+      return;
+    }
+    if (!updated) {
+      setMessage("O estoque de " + product.name + " foi alterado por outra operação. Atualize a lista antes de tentar novamente; nenhuma alteração foi aplicada.");
+      await loadProducts();
       return;
     }
     setProducts((current) => current.map((item) =>
