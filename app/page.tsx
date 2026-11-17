@@ -611,7 +611,9 @@ export default function Home() {
 
       const checkoutPayload = {
         customerName,
-        customerEmail,
+        // Para contas autenticadas, usa o mesmo e-mail confirmado que o servidor
+        // aplicará ao pedido, mantendo o fingerprint alinhado à chave idempotente.
+        customerEmail: accessToken ? (sessionData.session?.user?.email || customerEmail) : customerEmail,
         customerPhone,
         deliveryAddress,
         couponCode: appliedCoupon?.code || null,
