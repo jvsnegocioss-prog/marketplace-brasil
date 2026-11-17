@@ -4,6 +4,13 @@ import { calculateCouponDiscount } from "../../../../lib/coupon-security.cjs";
 
 export const runtime = "nodejs";
 
+function unavailableCouponResponse() {
+  return NextResponse.json(
+    { error: "Cupom inválido ou indisponível." },
+    { status: 400, headers: { "Cache-Control": "no-store" } }
+  );
+}
+
 let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
 
 function getSupabaseAdmin() {
@@ -120,21 +127,21 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (couponError || !coupon) {
-      return NextResponse.json({ error: "Cupom não encontrado." }, { status: 404 });
+      return unavailableCouponResponse();
     }
 
     const now = Date.now();
     if (!coupon.active) {
-      return NextResponse.json({ error: "Este cupom está inativo." }, { status: 400 });
+      return unavailableCouponResponse();
     }
     if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) {
-      return NextResponse.json({ error: "Este cupom ainda não está válido." }, { status: 400 });
+      return unavailableCouponResponse();
     }
     if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) {
-      return NextResponse.json({ error: "Este cupom está expirado." }, { status: 400 });
+      return unavailableCouponResponse();
     }
     if (coupon.usage_limit !== null && Number(coupon.usage_count) >= Number(coupon.usage_limit)) {
-      return NextResponse.json({ error: "Este cupom atingiu o limite de utilizações." }, { status: 400 });
+      return unavailableCouponResponse();
     }
 
     const minimumCents = Math.round(Number(coupon.min_order_amount || 0) * 100);
@@ -152,7 +159,7 @@ export async function POST(request: Request) {
       maxDiscount: coupon.max_discount,
     });
     if (!discount) {
-      return NextResponse.json({ error: "Este cupom não gera um valor de compra válido." }, { status: 400 });
+      return unavailableCouponResponse();
     }
     const discountCents = discount.discountCents;
 
@@ -163,7 +170,7 @@ export async function POST(request: Request) {
       discount: discountCents / 100,
       total: (subtotalCents - discountCents) / 100,
       message: "Cupom aplicado com sucesso!"
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("ERRO AO VALIDAR CUPOM:", error);
     return NextResponse.json({ error: "Não foi possível validar o cupom agora." }, { status: 500 });
