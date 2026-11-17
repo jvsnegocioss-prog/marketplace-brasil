@@ -29,6 +29,32 @@ function getSupabaseAdmin() {
 
 type EventStatus = "processed" | "ignored" | "failed";
 
+async function readLimitedWebhookJson(request: Request): Promise<{ ok: true; value: unknown } | { ok: false; tooLarge: boolean }> {
+  if (!request.body) return { ok: false, tooLarge: false };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 16_384) {
+        await reader.cancel();
+        return { ok: false, tooLarge: true };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, tooLarge: false };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function POST(request: Request) {
   let notificationId: string | null = null;
   let eventClaimed = false;
@@ -108,12 +134,19 @@ export async function POST(request: Request) {
     }
 
     // O ID único do evento só é aceito depois da validação HMAC.
-    let notificationBody: any;
-    try {
-      notificationBody = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Corpo da notificação inválido." }, { status: 400 });
+    // Webhooks têm payload pequeno; limite o corpo para evitar consumo excessivo de memória.
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 16_384) {
+      return NextResponse.json({ error: "Notificação muito grande." }, { status: 413, headers: { "Cache-Control": "no-store" } });
     }
+    const parsedNotification = await readLimitedWebhookJson(request);
+    if (!parsedNotification.ok) {
+      return NextResponse.json(
+        { error: parsedNotification.tooLarge ? "Notificação muito grande." : "Corpo da notificação inválido." },
+        { status: parsedNotification.tooLarge ? 413 : 400, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    const notificationBody: any = parsedNotification.value;
     // A assinatura autentica o data.id da URL; confirme que o corpo aponta
     // para exatamente o mesmo recurso antes de registrar/processar o evento.
     if (!isWebhookNotificationResourceMatch(notificationBody, dataId)) {
