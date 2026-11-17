@@ -41,6 +41,10 @@ test("vínculo externo usa compare-and-set e confirmação exata da referência"
   assert.match(route, /isSafeOrderLinkCandidate\(order\.mercado_pago_order_id, mpId\)/);
 });
 
+test("estados de pagamento ainda pendentes não encerram o pedido na reconciliação", () => {
+  assert.match(route, /if \(disposition === "pending"\)[\s\S]*?result\.waiting \+= 1;\s*continue;/);
+});
+
 test("reconciliação usa leases existentes e não cria pedidos nem pagamentos", () => {
   assert.match(route, /register_mercado_pago_webhook_delivery/);
   assert.match(route, /claim_mercado_pago_webhook_event/);
