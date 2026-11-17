@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import {
   getOrderPaymentDisposition,
@@ -145,7 +145,13 @@ async function finalize(
 export async function POST(request: Request) {
   const secret = process.env.MERCADO_PAGO_RECONCILIATION_SECRET;
   if (!secret) return fail("Reconciliation is not configured.", 503);
-  if (request.headers.get("authorization") !== "Bearer " + secret) return fail("Unauthorized.", 401);
+  const authorization = request.headers.get("authorization") ?? "";
+  const suppliedSecret = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const expectedBuffer = Buffer.from(secret, "utf8");
+  const suppliedBuffer = Buffer.from(suppliedSecret, "utf8");
+  if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    return fail("Unauthorized.", 401);
+  }
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!token) return fail("Payment provider is not configured.", 503);
 
@@ -153,12 +159,38 @@ export async function POST(request: Request) {
     const db = admin();
     const now = new Date();
     const cutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
-    const { data: orders, error } = await db.from("orders")
+    const cursorValue = new URL(request.url).searchParams.get("cursor");
+    let cursor: { created_at: string; id: string } | null = null;
+    if (cursorValue) {
+      try {
+        const parsed: unknown = JSON.parse(Buffer.from(cursorValue, "base64url").toString("utf8"));
+        if (parsed && typeof parsed === "object" &&
+            typeof (parsed as any).created_at === "string" &&
+            Number.isFinite(new Date((parsed as any).created_at).getTime()) &&
+            typeof (parsed as any).id === "string" &&
+            /^[0-9a-f-]{36}$/i.test((parsed as any).id)) {
+          cursor = { created_at: (parsed as any).created_at, id: (parsed as any).id };
+        } else {
+          return fail("Invalid reconciliation cursor.", 400);
+        }
+      } catch {
+        return fail("Invalid reconciliation cursor.", 400);
+      }
+    }
+
+    let orderQuery = db.from("orders")
       .select("id,total,status,created_at,mercado_pago_order_id")
       .ilike("status", "aguardando")
       .lt("created_at", cutoff)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(MAX_ORDERS);
+    if (cursor) {
+      orderQuery = orderQuery.or(
+        "created_at.gt." + cursor.created_at + ",and(created_at.eq." + cursor.created_at + ",id.gt." + cursor.id + ")"
+      );
+    }
+    const { data: orders, error } = await orderQuery;
 
     if (error) throw new Error("Could not load pending orders.");
 
@@ -266,7 +298,13 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    const lastOrder = orders?.length === MAX_ORDERS ? orders[orders.length - 1] : null;
+    const nextCursor = lastOrder
+      ? Buffer.from(JSON.stringify({ created_at: lastOrder.created_at, id: lastOrder.id }), "utf8").toString("base64url")
+      : null;
+    return NextResponse.json({ ...result, nextCursor }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     console.error("[MP reconciliation] Failed:", error);
     return fail("Reconciliation failed.", 500);
