@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 const { getOwnedReviewMediaPaths, isReviewMediaPath } = require("../../../lib/review-media-security.cjs");
-const { escapePostgrestLikePattern } = require("../../../lib/email-filter-security.cjs");
 
 export const runtime = "nodejs";
 
@@ -105,11 +104,11 @@ async function getAccount(request: Request) {
   return data.user;
 }
 
-async function validatePurchase(email: string, productId: string, requiredOrderId?: string) {
+async function validatePurchase(userId: string, productId: string, requiredOrderId?: string) {
   let ordersQuery = getSupabaseAdmin()
     .from("orders")
-    .select("id,customer_name,status,delivery_status,customer_email")
-    .ilike("customer_email", escapePostgrestLikePattern(email))
+    .select("id,customer_name,status,delivery_status")
+    .eq("customer_user_id", userId)
     .order("created_at", { ascending: false })
     .limit(50);
   if (requiredOrderId) ordersQuery = ordersQuery.eq("id", requiredOrderId);
@@ -218,11 +217,11 @@ export async function GET(request: Request) {
 
   const user = await getAccount(request);
   let ownReview = null;
-  if (user?.email) {
+  if (user?.id) {
     const { data: orders } = await getSupabaseAdmin()
       .from("orders")
       .select("id")
-      .ilike("customer_email", escapePostgrestLikePattern(user.email))
+      .eq("customer_user_id", user.id)
       .limit(50);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
@@ -274,7 +273,7 @@ export async function POST(request: Request) {
     }
 
     if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
-    const validation = await validatePurchase(user.email, productId);
+    const validation = await validatePurchase(user.id, productId);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const uploaded = await uploadReviewFiles(files, user.id);
@@ -338,7 +337,7 @@ export async function PATCH(request: Request) {
     if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
     if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
 
-    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
+    const validation = await validatePurchase(user.id, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
@@ -391,7 +390,7 @@ export async function DELETE(request: Request) {
     if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
     if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
 
-    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
+    const validation = await validatePurchase(user.id, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const { data, error } = await getSupabaseAdmin()
