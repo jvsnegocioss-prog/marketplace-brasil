@@ -13,7 +13,7 @@ const leaseSql = fs.readFileSync(
   "utf8"
 );
 const hardeningSql = fs.readFileSync(
-  path.join(migrationDir, "20261117020000_harden_mercado_pago_webhook_finalization.sql"),
+  path.join(migrationDir, "20261117033138_harden_mercado_pago_webhook_finalization.sql"),
   "utf8"
 );
 const webhookRoute = fs.readFileSync(
