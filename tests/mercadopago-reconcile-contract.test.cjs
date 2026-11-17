@@ -41,7 +41,31 @@ test("vínculo externo usa compare-and-set e confirmação exata da referência"
   assert.match(route, /isSafeOrderLinkCandidate\(order\.mercado_pago_order_id, mpId\)/);
 });
 
+test("busca Orders usa page/page_size e libera lease em estado pendente", () => {
+  assert.match(route, /searchParams\.set\("page", String\(Math\.floor\(offset \/ PAGE_SIZE\) \+ 1\)\)/);
+  assert.match(route, /searchParams\.set\("page_size", String\(PAGE_SIZE\)\)/);
+  assert.doesNotMatch(route, /searchParams\.set\("offset"/);
+  assert.match(route, /disposition === "pending"[\s\S]*?await finalize\(db, claim, id, "none", undefined, true\)/);
+});
+
 test("estados de pagamento ainda pendentes não encerram o pedido na reconciliação", () => {
+  assert.match(route, /if \(disposition === "pending"\)[\s\S]*?result\.waiting \+= 1;\s*continue;/);
+});
+
+test("reconciliação usa leases existentes e não cria pedidos nem pagamentos", () => {
+  assert.match(route, /register_mercado_pago_webhook_delivery/);
+  assert.match(route, /claim_mercado_pago_webhook_event/);
+  assert.match(route, /finalize_mercado_pago_webhook_event/);
+  assert.doesNotMatch(route, /method:\s*"POST"[\s\S]*?api\.mercadopago\.com/);
+  assert.doesNotMatch(route, /\.from\("orders"\)\s*\.insert\(/);
+});
+
+test("processamento por lotes oferece cursor e limite explícito", () => {
+  assert.match(route, /MAX_ORDERS\s*=\s*25/);
+  assert.match(route, /searchParams\.get\("cursor"\)/);
+  assert.match(route, /nextCursor/);
+});
+
   assert.match(route, /if \(disposition === "pending"\)[\s\S]*?result\.waiting \+= 1;\s*continue;/);
 });
 
