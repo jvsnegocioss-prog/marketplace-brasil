@@ -297,7 +297,7 @@ export async function POST(request: Request) {
     if (disposition === "review" || disposition === "chargeback_resolved") {
       const currentStatus = String(storeOrder.status).trim().toLowerCase();
       if (disposition === "chargeback_resolved" || !["em contestação", "reembolsado"].includes(currentStatus)) {
-        const result = await finishEvent("processed", "payment_state_requires_manual_review", "set_status", orderId, "Revisão necessária");
+        const result = await finishEvent("processed", "payment_state_requires_manual_review", "set_status", orderId, "Revisão necessária", [storeOrder.status]);
         if (!result) return NextResponse.json({ error: "A reserva do evento expirou antes da atualização." }, { status: 503 });
         return NextResponse.json({ received: true, reviewRequired: true });
       }
@@ -306,7 +306,7 @@ export async function POST(request: Request) {
     }
 
     if (disposition === "chargeback") {
-      const result = await finishEvent("processed", "chargeback_requires_manual_review", "set_status", orderId, "Em contestação");
+      const result = await finishEvent("processed", "chargeback_requires_manual_review", "set_status", orderId, "Em contestação", [storeOrder.status]);
       if (!result) return NextResponse.json({ error: "A reserva do evento expirou antes da atualização." }, { status: 503 });
       return NextResponse.json({ received: true, reviewRequired: true });
     }
