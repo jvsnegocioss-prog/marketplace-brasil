@@ -665,20 +665,65 @@ export default function Home() {
       }
 
       const checkoutIdempotencyKey = attemptDecision.attempt.key;
-      if (attemptDecision.created) {
-        try {
-          localStorage.setItem(idempotencyStorageKey, JSON.stringify(attemptDecision.attempt));
-        } catch {
-          setCheckoutMessage("Não foi possível salvar a identificação segura da tentativa neste aparelho. Verifique o armazenamento do navegador antes de tentar novamente.");
+      let recoveryToken = attemptDecision.attempt.recoveryToken;
+      if (typeof recoveryToken !== "string" || !/^[0-9a-f]{64}$/i.test(recoveryToken)) {
+        recoveryToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      attemptDecision.attempt.recoveryToken = recoveryToken;
+      try {
+        // O token é aleatório e independente da chave de pedido; apenas seu hash
+        // é persistido no servidor. O token bruto permanece neste dispositivo.
+        localStorage.setItem(idempotencyStorageKey, JSON.stringify(attemptDecision.attempt));
+      } catch {
+        setCheckoutMessage("Não foi possível salvar a identificação segura da tentativa neste aparelho. Verifique o armazenamento do navegador antes de tentar novamente.");
+        return;
+      }
+
+      // Consulta a tentativa no servidor antes de repetir o POST idempotente.
+      // 404 significa que ainda não há pedido vinculado a este token.
+      const recoveryResponse = await fetch(
+        `/api/checkout/recovery?key=${encodeURIComponent(checkoutIdempotencyKey)}`,
+        {
+          method: "GET",
+          headers: {
+            "X-Checkout-Recovery-Token": recoveryToken,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (recoveryResponse.status !== 404) {
+        const recoveryResult = await recoveryResponse.json().catch(() => ({}));
+        if (!recoveryResponse.ok) {
+          setCheckoutMessage(recoveryResult.error || "Não foi possível validar a tentativa anterior. Não inicie outra compra.");
+          return;
+        }
+        const recoveryState = recoveryResult.attempt?.state;
+        if (recoveryState === "paid") {
+          localStorage.removeItem(idempotencyStorageKey);
+          setCheckoutMessage("Esta tentativa já consta como paga. Consulte seu histórico de pedidos antes de iniciar outra compra.");
+          return;
+        }
+        if (recoveryState === "cancelled") {
+          localStorage.removeItem(idempotencyStorageKey);
+          setCheckoutMessage("A tentativa anterior consta como cancelada. Você pode revisar o carrinho e iniciar uma nova compra.");
+          return;
+        }
+        if (recoveryState !== "pending") {
+          setCheckoutMessage("A tentativa anterior possui uma situação que precisa ser conferida. Não inicie outra compra.");
           return;
         }
       }
 
-            const response = await fetch("/api/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Checkout-Idempotency-Key": checkoutIdempotencyKey,
+          "X-Checkout-Recovery-Token": recoveryToken,
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify(checkoutPayload),
