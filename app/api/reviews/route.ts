@@ -238,10 +238,22 @@ export async function GET(request: Request) {
     }
   }
 
+  let canReview = false;
+  if (user?.id) {
+    try {
+      const eligibility = await validatePurchase(user.id, productId);
+      canReview = !("error" in eligibility);
+    } catch (eligibilityError) {
+      console.error("Não foi possível verificar a elegibilidade da avaliação.");
+      canReview = false;
+    }
+  }
+
   return NextResponse.json(
     {
       reviews: await Promise.all((data || []).map(async (review) => ({ ...review, photos: await signReviewPhotos(review.photos) }))),
       ownReview: ownReview ? { ...ownReview, photos: await signReviewPhotos(ownReview.photos) } : null,
+      canReview,
     },
     { headers: { "Cache-Control": "private, no-store" } }
   );
