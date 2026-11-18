@@ -2,6 +2,7 @@ export type CheckoutAttempt = {
   fingerprint: string;
   userId: string | null;
   key: string;
+  recoveryToken?: string;
 };
 
 export type CheckoutAttemptDecision =
