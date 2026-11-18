@@ -12,7 +12,9 @@ import { getReconciliationTransition } from "@/lib/reconciliation-transition.cjs
 export const runtime = "nodejs";
 
 let adminClient: ReturnType<typeof createClient<any>> | null = null;
-const MAX_ORDERS = 25;
+// Keep each invocation comfortably below the Vercel function execution ceiling.
+// Each order may require up to ten 10s search calls plus one 10s detail call.
+const MAX_ORDERS = 2;
 const PAGE_SIZE = 50;
 const MAX_PAGES = 10;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
