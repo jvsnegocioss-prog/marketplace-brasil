@@ -1,0 +1,34 @@
+name: Mercado Pago reconciliation scheduler
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mercado-pago-reconciliation-production
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    # Scheduled reconciliation remains disabled until an administrator explicitly
+    # enables the repository variable. It is restricted to main so branch/PR
+    # validation can never contact the production reconciliation endpoint.
+    if: github.ref == 'refs/heads/main' && vars.MP_RECONCILIATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MERCADO_PAGO_RECONCILIATION_BASE_URL: https://novashoppstore.vercel.app
+      MERCADO_PAGO_RECONCILIATION_SECRET: ${{ secrets.MERCADO_PAGO_RECONCILIATION_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run bounded paginated reconciliation
+        run: node scripts/mercadopago-reconciliation-runner.cjs
