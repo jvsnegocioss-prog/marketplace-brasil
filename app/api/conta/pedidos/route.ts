@@ -3,23 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
-
-function getSupabaseAdmin() {
+function getSupabaseForUser(accessToken: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Configuração do Supabase indisponível.");
+  if (!supabaseUrl || !anonKey) {
+    throw new Error("Configuração pública do Supabase indisponível.");
   }
 
-  if (!supabaseAdmin) {
-    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  }
-
-  return supabaseAdmin;
+  return createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  });
 }
 
 export async function GET(request: Request) {
@@ -33,15 +30,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Acesso não autorizado." }, { status: 401 });
     }
 
-    const { data: authData, error: authError } =
-      await getSupabaseAdmin().auth.getUser(token);
+    const supabase = getSupabaseForUser(token);
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
 
     const user = authData?.user;
     if (authError || !user?.id) {
       return NextResponse.json({ error: "Sessão inválida. Entre novamente." }, { status: 401 });
     }
 
-    const { data, error } = await getSupabaseAdmin()
+    const { data, error } = await supabase
       .from("orders")
       .select(`
         id,
@@ -73,7 +70,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Não foi possível carregar seu histórico agora." }, { status: 500 });
     }
 
-    return NextResponse.json({ orders: data || [] }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { orders: data || [] },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("ERRO NO HISTÓRICO DO CLIENTE:", error);
     return NextResponse.json({ error: "Ocorreu um erro ao consultar seus pedidos." }, { status: 500 });
