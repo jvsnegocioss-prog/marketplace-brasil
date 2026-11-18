@@ -62,7 +62,7 @@ test("reconciliação usa leases existentes e não cria pedidos nem pagamentos",
 });
 
 test("processamento por lotes oferece cursor e limite explícito", () => {
-  assert.match(route, /MAX_ORDERS\s*=\s*25/);
+  assert.match(route, /MAX_ORDERS\s*=\s*2/);
   assert.match(route, /searchParams\.get\("cursor"\)/);
   assert.match(route, /nextCursor/);
 });
