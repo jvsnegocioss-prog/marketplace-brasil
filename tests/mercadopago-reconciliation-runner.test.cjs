@@ -49,6 +49,21 @@ test("follows every cursor page and aggregates counters", async () => {
   });
 });
 
+test("uses a 240-second request timeout", async () => {
+  const originalTimeout = AbortSignal.timeout;
+  let timeoutMs;
+  AbortSignal.timeout = (ms) => { timeoutMs = ms; return new AbortController().signal; };
+  try {
+    await runReconciliation({
+      baseUrl: "https://store.example", secret: "x".repeat(40),
+      fetchImpl: async () => reply(page()),
+    });
+    assert.equal(timeoutMs, 240_000);
+  } finally {
+    AbortSignal.timeout = originalTimeout;
+  }
+});
+
 test("rejects missing credentials and non-HTTPS URLs before calling fetch", async () => {
   let called = false;
   const fetchImpl = async () => { called = true; return reply(page()); };
