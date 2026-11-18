@@ -59,6 +59,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117190000_bind_orders_to_authenticated_customer.sql
       - name: Verify authenticated order ownership constraints
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres/order-ownership-integration.sql
+      - name: Apply secure checkout recovery migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261118120000_add_secure_checkout_recovery.sql
+      - name: Verify secure checkout recovery token binding and privileges
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/checkout-recovery-integration.sql
       - name: Run actual webhook migrations and database assertions
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres/webhook-integration.sql
       - name: Verify concurrent claims serialize to one active worker
