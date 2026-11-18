@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
+import { hashRecoveryToken } from "@/lib/checkout-recovery.cjs";
 import { normalizeCheckoutItems } from "@/lib/checkout-items.cjs";
 import { attemptCheckoutCancellation, isConfirmedUnpaidCancellation } from "@/lib/checkout-cancellation.cjs";
 
@@ -176,6 +177,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const recoveryToken = request.headers.get("x-checkout-recovery-token") || "";
+    const recoveryTokenHash = hashRecoveryToken(recoveryToken);
+    if (!recoveryTokenHash) {
+      return NextResponse.json(
+        { error: "Identificador de recuperação inválido. Atualize a página e tente novamente." },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     const normalizedItems = normalizedItemsResult.items;
     const requestHash = createHash("sha256").update(JSON.stringify({
       customerUserId: authenticatedCustomerId,
@@ -189,7 +199,7 @@ export async function POST(request: Request) {
     })).digest("hex");
 
     const { data: orderId, error: orderError } =
-      await getSupabaseAdmin().rpc("create_store_order_with_coupon_and_delivery", {
+      await getSupabaseAdmin().rpc("create_store_order_with_recovery_token", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
@@ -199,6 +209,7 @@ export async function POST(request: Request) {
         p_items: normalizedItems,
         p_checkout_idempotency_key: checkoutIdempotencyKey,
         p_checkout_request_hash: requestHash,
+        p_checkout_recovery_token_hash: recoveryTokenHash,
       });
 
     if (orderError || !orderId) {
