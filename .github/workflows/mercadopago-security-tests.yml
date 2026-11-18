@@ -1,0 +1,110 @@
+name: Mercado Pago security tests
+
+on:
+  push:
+    branches:
+      - audit/mercadopago-tests
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  security-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run isolated tests
+        run: npm test
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: webhook_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d webhook_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: webhook_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Create disposable schema fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/fixture.sql
+      - name: Apply authenticated order ownership migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117190000_bind_orders_to_authenticated_customer.sql
+      - name: Verify authenticated order ownership constraints
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/order-ownership-integration.sql
+      - name: Apply secure checkout recovery migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261118120000_add_secure_checkout_recovery.sql
+      - name: Verify secure checkout recovery token binding and privileges
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/checkout-recovery-integration.sql
+      - name: Run actual webhook migrations and database assertions
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/webhook-integration.sql
+      - name: Verify concurrent claims serialize to one active worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "select * from public.register_mercado_pago_webhook_delivery('integration-concurrent', 'mp-concurrent', 'req-a', 'order', 'created')"
+          psql -Atq -c "begin; select claimed, processing_status from public.claim_mercado_pago_webhook_event('integration-concurrent', '33333333-3333-4333-8333-333333333333'::uuid); select pg_sleep(2); commit" > /tmp/worker-a.txt &
+          worker_a=$!
+          sleep 0.25
+          psql -Atq -c "select claimed, processing_status from public.claim_mercado_pago_webhook_event('integration-concurrent', '44444444-4444-4444-8444-444444444444'::uuid)" > /tmp/worker-b.txt
+          wait "$worker_a"
+          grep -qx 't|processing' /tmp/worker-a.txt
+          grep -qx 'f|processing' /tmp/worker-b.txt
+          echo "concurrent claim test passed: exactly one worker acquired the lease"
+      - name: Verify webhook and reconciler cannot overwrite the same order
+        shell: bash
+        run: |
+          set -euo pipefail
+          order_id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          psql -Atq -c "begin; select finalized, order_updated from public.finalize_mercado_pago_webhook_event('race-webhook', '55555555-5555-4555-8555-555555555555'::uuid, 'processed', null, '$order_id'::uuid, 'set_status', 'pago', array['aguardando']::text[]); select pg_sleep(2); commit" > /tmp/webhook-transition.txt &
+          webhook_worker=$!
+          sleep 0.25
+          psql -Atq -c "select finalized, order_updated from public.finalize_mercado_pago_webhook_event('race-reconciler', '66666666-6666-4666-8666-666666666666'::uuid, 'processed', null, '$order_id'::uuid, 'set_status', 'Cancelado', array['aguardando']::text[])" > /tmp/reconciler-transition.txt
+          wait "$webhook_worker"
+          grep -qx 't|t' /tmp/webhook-transition.txt
+          grep -qx 'f|f' /tmp/reconciler-transition.txt
+          test "$(psql -Atq -c "select status from public.orders where id = '$order_id'::uuid")" = "pago"
+          echo "order compare-and-set race test passed: stale competing transition rejected"
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and create a runner-only lockfile
+        run: npm install --ignore-scripts
+      - name: Report resolved React versions
+        run: npm ls react react-dom --depth=0
+      - name: Audit dependency tree
+        run: npm audit --audit-level=high --json

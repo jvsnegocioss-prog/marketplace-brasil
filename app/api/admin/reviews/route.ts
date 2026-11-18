@@ -3,12 +3,42 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+const { isReviewMediaPath } = require("../../../../lib/review-media-security.cjs");
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function responseError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "private, no-store" } });
+}
+
+async function readLimitedJson(request: Request, maxBytes = 4096): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let source = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      source += decoder.decode(value, { stream: true });
+    }
+    source += decoder.decode();
+    return { ok: true, value: JSON.parse(source) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 async function getAdminClient(request: NextRequest) {
@@ -53,7 +83,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: reviews, error } = await query;
-  if (error) return responseError("Não foi possível carregar as avaliações: " + error.message, 500);
+  if (error) {
+    console.error("Falha ao carregar avaliações administrativas:", error);
+    return responseError("Não foi possível carregar as avaliações.", 500);
+  }
 
   const productIds = [...new Set((reviews || []).map((review) => review.product_id))];
   const { data: products, error: productsError } = productIds.length
@@ -65,28 +98,43 @@ export async function GET(request: NextRequest) {
   }
 
   const productNames = new Map((products || []).map((product) => [product.id, product.name]));
-  return NextResponse.json({
-    reviews: (reviews || []).map((review) => ({
-      ...review,
-      product_name: productNames.get(review.product_id) || "Produto",
-    })),
-  });
+  const allPaths = [...new Set((reviews || []).flatMap((review) => Array.isArray(review.photos) ? review.photos.filter((path: unknown): path is string => isReviewMediaPath(path)) : []))];
+  const { data: signedMedia, error: signedMediaError } = allPaths.length
+    ? await supabase.storage.from("review-media").createSignedUrls(allPaths, 600)
+    : { data: [], error: null };
+  if (signedMediaError) console.error("Não foi possível gerar URLs temporárias das mídias das avaliações.");
+  const signedByPath = new Map((signedMedia || []).filter((item) => item.path && item.signedUrl).map((item) => [item.path, item.signedUrl]));
+  return NextResponse.json(
+    {
+      reviews: (reviews || []).map((review) => ({
+        ...review,
+        photos: Array.isArray(review.photos) ? review.photos.filter((path: unknown): path is string => isReviewMediaPath(path)).map((path: string) => signedByPath.get(path)).filter((url: unknown): url is string => typeof url === "string") : [],
+        product_name: productNames.get(review.product_id) || "Produto",
+      })),
+    },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
 export async function PATCH(request: NextRequest) {
   const supabase = await getAdminClient(request);
   if (!supabase) return responseError("Acesso administrativo não autorizado.", 401);
 
-  let body: { reviewId?: string; status?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return responseError("Dados inválidos.", 400);
-  }
+  let body: { reviewId?: string; status?: string; expectedStatus?: string };
+  const parsed = await readLimitedJson(request);
+  if (!parsed.ok) return responseError(parsed.status === 413 ? "Solicitação muito grande." : "Dados inválidos.", parsed.status);
+  if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return responseError("Dados inválidos.", 400);
+  body = parsed.value as typeof body;
 
   const reviewId = body.reviewId;
   const status = body.status;
-  if (!reviewId || !["pending", "approved", "hidden"].includes(status || "")) {
+  const expectedStatus = body.expectedStatus;
+  if (
+    typeof reviewId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId) ||
+    !["pending", "approved", "hidden"].includes(status || "") ||
+    !["pending", "approved", "hidden"].includes(expectedStatus || "")
+  ) {
     return responseError("Informe uma avaliação e uma situação válida.", 400);
   }
 
@@ -94,12 +142,18 @@ export async function PATCH(request: NextRequest) {
     .from("product_reviews")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", reviewId)
+    .eq("status", expectedStatus)
     .select("id,status")
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    return responseError("Não foi possível atualizar a avaliação: " + (error?.message || "registro não encontrado"), 500);
+  if (error) {
+    console.error("Falha ao atualizar avaliação administrativa:", error);
+    return responseError("Não foi possível atualizar a avaliação.", 500);
   }
+  if (!data) return responseError("A avaliação foi alterada por outra operação. Atualize a lista antes de tentar novamente.", 409);
 
-  return NextResponse.json({ success: true, review: data });
+  return NextResponse.json(
+    { success: true, review: data },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }

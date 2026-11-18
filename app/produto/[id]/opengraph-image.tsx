@@ -41,18 +41,78 @@ export default async function OpenGraphImage({ params }: Props) {
   let productImage: string | null = null;
   if (imageUrl) {
     try {
-      const imageResponse = await fetch(imageUrl, { headers: { Accept: "image/*" } });
-      if (imageResponse.ok) {
-        const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
-        if (contentType.startsWith("image/")) {
-          const bytes = new Uint8Array(await imageResponse.arrayBuffer());
-          let binary = "";
-          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-          productImage = "data:" + contentType + ";base64," + btoa(binary);
-        }
+      const supabaseUrl = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+      const candidate = new URL(imageUrl);
+      const allowedPaths = [
+        "/storage/v1/object/public/products-images/",
+        "/storage/v1/object/public/products-media/",
+      ];
+      const decodedPath = decodeURIComponent(candidate.pathname);
+      const allowedPath = allowedPaths.some((prefix) => decodedPath.startsWith(prefix));
+      const hasTraversal = decodedPath.split("/").some((segment) => segment === "." || segment === "..");
+
+      if (
+        candidate.protocol !== "https:" ||
+        candidate.origin !== supabaseUrl.origin ||
+        candidate.username ||
+        candidate.password ||
+        !allowedPath ||
+        hasTraversal
+      ) {
+        throw new Error("Origem ou caminho de imagem não permitido");
       }
-    } catch (error) {
-      console.error("Não foi possível carregar a imagem do produto para o banner:", error);
+
+      const imageResponse = await fetch(candidate.toString(), {
+        headers: { Accept: "image/jpeg,image/png,image/webp" },
+        redirect: "manual",
+        signal: AbortSignal.timeout(5000),
+      });
+      const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+      const responseType = (imageResponse.headers.get("content-type") || "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      const maxBytes = 5 * 1024 * 1024;
+      const declaredLength = Number(imageResponse.headers.get("content-length") || 0);
+
+      if (
+        imageResponse.ok &&
+        allowedTypes.has(responseType) &&
+        (!declaredLength || declaredLength <= maxBytes) &&
+        imageResponse.body
+      ) {
+        const reader = imageResponse.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let totalBytes = 0;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            totalBytes += value.byteLength;
+            if (totalBytes > maxBytes) {
+              await reader.cancel();
+              throw new Error("Imagem excede o limite permitido");
+            }
+            chunks.push(value);
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        const bytes = new Uint8Array(totalBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          bytes.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        }
+        productImage = "data:" + responseType + ";base64," + btoa(binary);
+      }
+    } catch {
+      console.error("Imagem do produto ignorada no banner por validação ou limite de segurança.");
     }
   }
 

@@ -5705,3 +5705,537 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
   border-radius: 5px;
 }
+
+
+/* Correção dos estados de toque dos botões na página de produto (iOS/mobile) */
+.product-detail-page .detail-back-link,
+.product-detail-page .detail-buy-link,
+.product-detail-page .product-share-button,
+.product-detail-page .review-submit-button,
+.product-detail-page .review-delete-button,
+.product-detail-page .review-secondary-button {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  background-clip: padding-box;
+}
+.product-detail-page a.detail-back-link,
+.product-detail-page a.detail-back-link:hover,
+.product-detail-page a.detail-back-link:focus,
+.product-detail-page a.detail-back-link:focus-visible,
+.product-detail-page a.detail-back-link:active {
+  background: linear-gradient(115deg, #071b43 0%, #17477f 100%) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: #173b70 !important;
+  text-decoration: none !important;
+}
+.product-detail-page .detail-buy-link,
+.product-detail-page .detail-buy-link:hover,
+.product-detail-page .detail-buy-link:focus,
+.product-detail-page .detail-buy-link:focus-visible,
+.product-detail-page .detail-buy-link:active,
+.product-detail-page .review-submit-button,
+.product-detail-page .review-submit-button:hover,
+.product-detail-page .review-submit-button:focus,
+.product-detail-page .review-submit-button:focus-visible,
+.product-detail-page .review-submit-button:active {
+  background: #071b43 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border: 1px solid #173b70 !important;
+}
+.product-detail-page .detail-buy-link:disabled,
+.product-detail-page .detail-buy-link:disabled:hover,
+.product-detail-page .detail-buy-link:disabled:active,
+.product-detail-page .review-submit-button:disabled {
+  background: #071b43 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  opacity: .58;
+}
+.product-detail-page .product-share-button,
+.product-detail-page .product-share-button:hover,
+.product-detail-page .product-share-button:focus,
+.product-detail-page .product-share-button:focus-visible,
+.product-detail-page .product-share-button:active {
+  background: #fff !important;
+  -webkit-text-fill-color: currentColor !important;
+  border-color: #dce5f0 !important;
+}
+.product-detail-page .product-share-button.share-facebook { color: #1877f2 !important; }
+.product-detail-page .product-share-button.share-whatsapp { color: #168b50 !important; }
+.product-detail-page .product-share-button.share-x { color: #111827 !important; }
+.product-detail-page .review-delete-button,
+.product-detail-page .review-delete-button:hover,
+.product-detail-page .review-delete-button:focus,
+.product-detail-page .review-delete-button:focus-visible,
+.product-detail-page .review-delete-button:active {
+  background: #fffafa !important;
+  color: #a83d3d !important;
+  -webkit-text-fill-color: #a83d3d !important;
+  border-color: #f1dada !important;
+}
+.product-detail-page .review-secondary-button,
+.product-detail-page .review-secondary-button:hover,
+.product-detail-page .review-secondary-button:focus,
+.product-detail-page .review-secondary-button:focus-visible,
+.product-detail-page .review-secondary-button:active {
+  background: #f7f9fc !important;
+  color: #315783 !important;
+  -webkit-text-fill-color: #315783 !important;
+  border-color: #dce6f2 !important;
+}
+
+
+/* Acessos rápidos — categorias da navegação (estados consistentes no iOS) */
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 18px 22px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 3.5%;
+  border-bottom: 1px solid #e5eaf2;
+}
+.navigation > button,
+.navigation > button:hover,
+.navigation > button:focus,
+.navigation > button:focus-visible,
+.navigation > button:active {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  min-height: 104px;
+  padding: 14px 24px;
+  border: 2px solid #e1e7f0 !important;
+  border-radius: 27px;
+  background: #fff !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(17px, 2.1vw, 25px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045);
+  transform: none !important;
+  transition: border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.navigation > button .navigation-category-icon {
+  display: inline-flex;
+  flex: 0 0 66px;
+  width: 66px;
+  height: 66px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 23px;
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button .navigation-category-icon svg {
+  width: 35px;
+  height: 35px;
+  stroke: currentColor;
+}
+.navigation > button.nav-active,
+.navigation > button.nav-active:hover,
+.navigation > button.nav-active:focus,
+.navigation > button.nav-active:focus-visible,
+.navigation > button.nav-active:active {
+  border-color: #d6b94f !important;
+  background: #fff !important;
+  color: #172f50 !important;
+  -webkit-text-fill-color: #172f50 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .06);
+}
+.navigation > button.nav-active .navigation-category-icon,
+.navigation > button.nav-active:hover .navigation-category-icon,
+.navigation > button.nav-active:focus .navigation-category-icon,
+.navigation > button.nav-active:focus-visible .navigation-category-icon,
+.navigation > button.nav-active:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #172f50 !important;
+}
+.navigation > button:not(.nav-active):hover,
+.navigation > button:not(.nav-active):focus-visible {
+  border-color: #cbd6e5 !important;
+  color: #29496e !important;
+  -webkit-text-fill-color: #29496e !important;
+}
+@media (max-width: 600px) {
+  .navigation,
+  .navigation.nav-open {
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 12px;
+  }
+  .navigation > button,
+  .navigation > button:hover,
+  .navigation > button:focus,
+  .navigation > button:focus-visible,
+  .navigation > button:active {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+    min-height: 76px;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 19px;
+    font-size: 15px;
+    white-space: normal;
+  }
+  .navigation > button .navigation-category-icon {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+  }
+  .navigation > button .navigation-category-icon svg {
+    width: 27px;
+    height: 27px;
+  }
+}
+
+
+/* Estado persistente dos Acessos rápidos: não depende do pseudo-estado :active do iOS */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  background: #ffffff !important;
+  border: 2px solid #e1e7f0 !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045) !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: #ffffff !important;
+  border: 2px solid #d6b94f !important;
+  color: #172f50 !important;
+  -webkit-text-fill-color: #172f50 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .06) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button.quick-access-category[data-selected="true"] .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:hover .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #172f50 !important;
+}
+.navigation > button.quick-access-category:active {
+  transform: none !important;
+}
+
+
+/* Acessos rápidos: mesmo padrão visual do botão "Voltar para a NOVASHOPP STORE" */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  position: relative !important;
+  overflow: hidden !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border: 2px solid #d6b94f !important;
+  border-bottom: 7px solid #d6b94f !important;
+  border-radius: 23px !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(6, 24, 61, .18) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border-color: #f0cf55 !important;
+  border-bottom-color: #f0cf55 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(6, 24, 61, .24), 0 0 0 1px rgba(240, 207, 85, .24) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:focus .navigation-category-icon,
+.navigation > button.quick-access-category:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #06183d !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon svg {
+  stroke: currentColor !important;
+}
+
+
+/* Acessos rápidos: inativo branco; selecionado azul-marinho e dourado */
+.navigation > button.quick-access-category,
+.navigation > button.quick-access-category:hover,
+.navigation > button.quick-access-category:focus,
+.navigation > button.quick-access-category:focus-visible,
+.navigation > button.quick-access-category:active {
+  background: #ffffff !important;
+  border: 2px solid #e1e7f0 !important;
+  border-bottom: 2px solid #e1e7f0 !important;
+  color: #4a5870 !important;
+  -webkit-text-fill-color: #4a5870 !important;
+  box-shadow: 0 8px 22px rgba(15, 35, 65, .045) !important;
+}
+.navigation > button.quick-access-category .navigation-category-icon,
+.navigation > button.quick-access-category:hover .navigation-category-icon,
+.navigation > button.quick-access-category:focus .navigation-category-icon,
+.navigation > button.quick-access-category:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category:active .navigation-category-icon {
+  background: #eef2f8 !important;
+  color: #29496e !important;
+}
+.navigation > button.quick-access-category[data-selected="true"],
+.navigation > button.quick-access-category[data-selected="true"]:hover,
+.navigation > button.quick-access-category[data-selected="true"]:focus,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible,
+.navigation > button.quick-access-category[data-selected="true"]:active {
+  background: linear-gradient(112deg, #06183d 0%, #0b3475 58%, #20558c 100%) !important;
+  border: 2px solid #f0cf55 !important;
+  border-bottom: 7px solid #f0cf55 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(6, 24, 61, .24), 0 0 0 1px rgba(240, 207, 85, .24) !important;
+}
+.navigation > button.quick-access-category[data-selected="true"] .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:hover .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:focus-visible .navigation-category-icon,
+.navigation > button.quick-access-category[data-selected="true"]:active .navigation-category-icon {
+  background: #fff0b8 !important;
+  color: #06183d !important;
+}
+
+/* NOVASHOPP — aproveitamento de espaço em computadores e monitores largos */
+@media (min-width: 901px) {
+  .header {
+    padding: 16px clamp(28px, 4.5vw, 80px) !important;
+    gap: clamp(22px, 2.2vw, 38px) !important;
+  }
+
+  .search-box {
+    max-width: 780px !important;
+  }
+
+  .navigation {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: calc(100% - 64px) !important;
+    max-width: 1560px !important;
+    gap: 16px !important;
+    padding: 24px 0 !important;
+    justify-content: stretch !important;
+  }
+
+  .navigation > button,
+  .navigation > button:hover,
+  .navigation > button:focus,
+  .navigation > button:focus-visible,
+  .navigation > button:active {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 88px !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    border-radius: 22px !important;
+    font-size: clamp(16px, 1.25vw, 21px) !important;
+    white-space: normal !important;
+  }
+
+  .navigation > button .navigation-category-icon {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+  }
+
+  .navigation > button .navigation-category-icon svg {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .hero-campaign-carousel {
+    width: calc(100% - 64px) !important;
+    max-width: 1560px !important;
+    margin: 18px auto 24px !important;
+  }
+
+  .hero-campaign-slide {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: clamp(28px, 3.2vw, 56px) !important;
+    padding: clamp(34px, 3.2vw, 56px) clamp(34px, 4vw, 68px) 70px !important;
+  }
+
+  .hero-campaign-slide > div:first-child {
+    max-width: 700px;
+  }
+
+  .hero-campaign-slide h1 {
+    max-width: 720px !important;
+    font-size: clamp(34px, 3vw, 52px) !important;
+    line-height: 1.06 !important;
+  }
+
+  .hero-campaign-slide p {
+    max-width: 650px !important;
+    font-size: clamp(13px, 1vw, 16px) !important;
+    line-height: 1.65 !important;
+  }
+
+  .hero-campaign-media {
+    min-height: 260px !important;
+    max-height: 390px !important;
+  }
+
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 260px !important;
+    max-height: 390px !important;
+  }
+
+  .categories-section,
+  .products-section {
+    max-width: 1660px;
+    margin-inline: auto;
+    padding: 42px clamp(28px, 4vw, 64px) !important;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: clamp(18px, 1.8vw, 28px) !important;
+  }
+
+  .product-image {
+    height: clamp(210px, 18vw, 290px) !important;
+  }
+}
+
+@media (min-width: 1500px) {
+  .navigation {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .navigation {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: calc(100% - 40px) !important;
+  }
+
+  .hero-campaign-carousel {
+    width: calc(100% - 40px) !important;
+  }
+}
+
+/* PADRÃO GLOBAL DE FOTOGRAFIAS DE PRODUTOS E CAMPANHAS
+   Mantém proporção, centralização e enquadramento sem cortar imagens originais. */
+.hero-campaign-media {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  background: #f4f6fa !important;
+  overflow: hidden !important;
+}
+.hero-campaign-media img,
+.hero-campaign-media video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+.hero-campaign-media:hover img,
+.hero-campaign-media:hover video {
+  transform: none !important;
+}
+
+/* Cartões de produtos: área de imagem uniforme, independente do formato enviado. */
+.product-image {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+.product-image > a {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+.product-photo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  padding: 10px !important;
+}
+
+/* Detalhe do produto e galeria: nunca esticar nem recortar a foto original. */
+.detail-photo-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.detail-photo-frame img,
+.detail-photo-frame .detail-product-photo,
+.detail-image-lightbox-photo {
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+/* Imagens de campanhas inferiores mantêm enquadramento uniforme. */
+.campaign-bottom-image,
+section img[src] {
+  object-position: center center;
+}

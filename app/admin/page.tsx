@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type Product = {
   id: string;
@@ -14,6 +15,7 @@ type Product = {
   image_url: string | null;
   active: boolean;
   free_shipping: boolean;
+  updated_at?: string | null;
 };
 
 type ProductMedia = {
@@ -22,6 +24,7 @@ type ProductMedia = {
   media_type: "image" | "video";
   url: string;
   storage_path: string;
+  poster_url: string | null;
   sort_order: number;
 };
 
@@ -100,6 +103,22 @@ async function createVideoPoster(file: File): Promise<Blob> {
       canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao gerar a imagem de capa do vídeo.")), "image/jpeg", 0.82);
     });
   } finally { URL.revokeObjectURL(objectUrl); }
+}
+
+function getPublicBucketPath(value: string | null | undefined, bucket: string): string | null {
+  if (!value || !process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
+  try {
+    const url = new URL(value);
+    const projectOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    if (url.origin !== projectOrigin || !url.pathname.startsWith(marker)) return null;
+    const path = decodeURIComponent(url.pathname.slice(marker.length));
+    const segments = path.split("/");
+    if (!path || segments.some((part) => !part || part === "." || part === ".." || part.includes("\\"))) return null;
+    return path;
+  } catch {
+    return null;
+  }
 }
 
 function formatCurrency(value: number) {
@@ -206,7 +225,9 @@ export default function AdminPage() {
           loadAnalytics(),
         ]);
       } catch {
-        setMessage("Erro ao verificar acesso ao painel.");
+        setAuthorized(false);
+        setMessage("Não foi possível confirmar seu acesso administrativo. Entre novamente.");
+        router.replace("/admin/login");
       } finally {
         setLoading(false);
       }
@@ -249,24 +270,31 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authorized) return;
 
+    let refreshTimeout: number | null = null;
     const channel = supabase
       .channel("admin-store-page-views")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "store_page_views" },
         () => {
-          void loadAnalytics();
+          // Agrupa eventos próximos para evitar consultas repetidas em rajadas.
+          if (refreshTimeout !== null) return;
+          refreshTimeout = window.setTimeout(() => {
+            refreshTimeout = null;
+            void loadAnalytics();
+          }, 3000);
         }
       )
       .subscribe();
 
-    // Atualização de segurança caso o Realtime não esteja habilitado para a tabela.
+    // Fallback periódico sem consultas excessivas ao banco.
     const intervalId = window.setInterval(() => {
       void loadAnalytics();
-    }, 5000);
+    }, 30000);
 
     return () => {
       window.clearInterval(intervalId);
+      if (refreshTimeout !== null) window.clearTimeout(refreshTimeout);
       void supabase.removeChannel(channel);
     };
   }, [authorized, loadAnalytics]);
@@ -394,7 +422,7 @@ export default function AdminPage() {
   async function loadProductMedia(productId: string) {
     const { data, error } = await supabase
       .from("product_media")
-      .select("id,product_id,media_type,url,storage_path,sort_order")
+      .select("id,product_id,media_type,url,storage_path,poster_url,sort_order")
       .eq("product_id", productId)
       .order("sort_order", { ascending: true });
     if (error) {
@@ -406,20 +434,51 @@ export default function AdminPage() {
 
   async function removeProductMedia(media: ProductMedia) {
     if (!window.confirm("Remover esta foto ou vídeo do produto?")) return;
-    const { error: storageError } = await supabase.storage
-      .from("products-media")
-      .remove([media.storage_path]);
-    if (storageError) {
-      setMessage("Erro ao remover arquivo: " + storageError.message);
-      return;
-    }
-    const { error } = await supabase.from("product_media").delete().eq("id", media.id);
-    if (error) {
-      setMessage("Arquivo removido, mas não foi possível atualizar o cadastro: " + error.message);
+    const { data, error } = await supabase.from("product_media")
+      .delete()
+      .eq("id", media.id)
+      .eq("product_id", media.product_id)
+      .select("id")
+      .maybeSingle();
+    if (error || !data) {
+      setMessage("Não foi possível atualizar o cadastro da mídia.");
       return;
     }
     setExistingMedia((current) => current.filter((item) => item.id !== media.id));
-    setMessage("Mídia removida.");
+    const candidatePaths = [
+      media.storage_path,
+      getPublicBucketPath(media.poster_url, "products-media"),
+    ].filter((path): path is string => Boolean(path));
+    const safePaths = candidatePaths.filter((path) =>
+      path.startsWith(`${media.product_id}/`) &&
+      !path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\"))
+    );
+    let cleanupPending = safePaths.length !== candidatePaths.length;
+    if (safePaths.length) {
+      const publicUrls = safePaths.map((path) =>
+        supabase.storage.from("products-media").getPublicUrl(path).data.publicUrl
+      );
+      const [pathReferences, posterReferences] = await Promise.all([
+        supabase.from("product_media").select("id").in("storage_path", safePaths).limit(1),
+        supabase.from("product_media").select("id").in("poster_url", publicUrls).limit(1),
+      ]);
+      if (pathReferences.error || posterReferences.error) {
+        cleanupPending = true;
+      } else {
+        if (pathReferences.data?.length) {
+          // If any candidate is still referenced, preserve all candidates rather than risk deleting shared media.
+          cleanupPending = true;
+        } else if (posterReferences.data?.length) {
+          cleanupPending = true;
+        } else {
+          const { error: storageError } = await supabase.storage.from("products-media").remove(safePaths);
+          if (storageError) cleanupPending = true;
+        }
+      }
+    }
+    setMessage(cleanupPending
+      ? "Mídia removida do cadastro. Um ou mais arquivos foram preservados porque a limpeza não pôde ser confirmada."
+      : "Mídia removida.");
   }
 
   async function generateProductContent() {
@@ -438,11 +497,9 @@ export default function AdminPage() {
       let imageMimeType = "";
 
       if (image) {
-        if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) {
-          throw new Error("Para a análise com IA, use uma foto JPG, PNG ou WEBP.");
-        }
-        if (image.size > 2.5 * 1024 * 1024) {
-          throw new Error("A foto deve ter no máximo 2,5 MB para análise.");
+        const aiImageInfo = inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 2.5 * 1024 * 1024);
+        if (!aiImageInfo || aiImageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(aiImageInfo.extension)) {
+          throw new Error("Para a análise com IA, use uma imagem JPG, PNG ou WEBP válida, de até 2,5 MB.");
         }
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -508,33 +565,46 @@ export default function AdminPage() {
     setSaving(true);
     setMessage("");
 
+    let uploadedProductImagePath: string | null = null;
+    const uploadedMediaPaths: string[] = [];
+    const insertedMediaIds: string[] = [];
+    let savedProductId: string | null = editingId;
+    let productWriteSucceeded = false;
+    let previousProductImageUrl: string | null = null;
+    let oldImageCleanupPending = false;
+
     try {
+      const mainImageInfo = image
+        ? inspectMediaBytes(new Uint8Array(await image.arrayBuffer()), image.type, 3 * 1024 * 1024)
+        : null;
+      if (image && (!mainImageInfo || mainImageInfo.kind !== "image" || !["jpg", "png", "webp"].includes(mainImageInfo.extension))) {
+        throw new Error("A foto principal deve ser um arquivo JPG, PNG ou WEBP válido, de até 3 MB.");
+      }
+      const validatedMediaFiles = await Promise.all(mediaFiles.map(async (file) => {
+        const info = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 50 * 1024 * 1024);
+        if (!info) throw new Error(file.name + ": formato, conteúdo ou tamanho não permitido. Use JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV, até 50 MB.");
+        return { file, info };
+      }));
+
       let imageUrl: string | null = null;
 
       if (editingId) {
-        imageUrl =
-          products.find((p) => p.id === editingId)?.image_url || null;
+        previousProductImageUrl = products.find((p) => p.id === editingId)?.image_url || null;
+        imageUrl = previousProductImageUrl;
       }
 
-      if (image) {
-        const extension = image.name.split(".").pop() || "jpg";
-        const fileName = `${crypto.randomUUID()}.${extension}`;
-
+      if (image && mainImageInfo) {
+        const fileName = crypto.randomUUID() + "." + mainImageInfo.extension;
         const { error: uploadError } = await supabase.storage
           .from("products-images")
           .upload(fileName, image, {
             upsert: false,
+            contentType: image.type,
           });
+        if (uploadError) throw uploadError;
 
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        const { data } = supabase.storage
-          .from("products-images")
-          .getPublicUrl(fileName);
-
-        imageUrl = data.publicUrl;
+        uploadedProductImagePath = fileName;
+        imageUrl = supabase.storage.from("products-images").getPublicUrl(fileName).data.publicUrl;
       }
 
       const productData = {
@@ -548,14 +618,26 @@ export default function AdminPage() {
         updated_at: new Date().toISOString(),
       };
 
-      let savedProductId = editingId;
-
       if (editingId) {
-        const { error } = await supabase
+        const existingProduct = products.find((product) => product.id === editingId);
+        if (!existingProduct) {
+          throw new Error("Não foi possível confirmar o estoque atual do produto. Atualize a lista e tente novamente.");
+        }
+        // Compare-and-set evita que um formulário antigo sobrescreva uma baixa de estoque do checkout.
+        let updateQuery = supabase
           .from("products")
           .update(productData)
-          .eq("id", editingId);
+          .eq("id", editingId)
+          .eq("stock", Number(existingProduct.stock));
+        updateQuery = existingProduct.updated_at == null
+          ? updateQuery.is("updated_at", null)
+          : updateQuery.eq("updated_at", existingProduct.updated_at);
+        const { data: updated, error } = await updateQuery.select("id").maybeSingle();
         if (error) throw error;
+        if (!updated) {
+          throw new Error("Os dados ou o estoque deste produto foram alterados por outra operação. Atualize a lista antes de salvar novamente.");
+        }
+        productWriteSucceeded = true;
         setMessage("Produto atualizado com sucesso!");
       } else {
         const { data: insertedProduct, error } = await supabase
@@ -565,98 +647,201 @@ export default function AdminPage() {
           .single();
         if (error) throw error;
         savedProductId = insertedProduct.id;
+        productWriteSucceeded = true;
         setMessage("Produto cadastrado com sucesso!");
       }
 
       if (savedProductId && mediaFiles.length) {
-        for (let index = 0; index < mediaFiles.length; index++) {
-          const file = mediaFiles[index];
-          const isImage = file.type.startsWith("image/");
-          const isVideo = file.type.startsWith("video/");
-          if (!isImage && !isVideo) throw new Error(`Formato não permitido: ${file.name}`);
-          if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name}: o limite é 50 MB por arquivo.`);
-
-          const extension = file.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
-          const storagePath = `${savedProductId}/${crypto.randomUUID()}.${extension}`;
+        for (let index = 0; index < validatedMediaFiles.length; index++) {
+          const { file, info: mediaInfo } = validatedMediaFiles[index];
+          const isImage = mediaInfo.kind === "image";
+          const isVideo = mediaInfo.kind === "video";
+          const storagePath = `${savedProductId}/${crypto.randomUUID()}.${mediaInfo.extension}`;
           const { error: uploadError } = await supabase.storage
             .from("products-media")
             .upload(storagePath, file, { upsert: false, contentType: file.type });
           if (uploadError) throw uploadError;
+          uploadedMediaPaths.push(storagePath);
 
-          const { data: publicData } = supabase.storage
-            .from("products-media")
-            .getPublicUrl(storagePath);
-
+          const publicUrl = supabase.storage.from("products-media").getPublicUrl(storagePath).data.publicUrl;
           let posterUrl: string | null = null;
+
           if (isVideo) {
             const posterBlob = await createVideoPoster(file);
-            const posterPath = savedProductId + "/posters/" + crypto.randomUUID() + ".jpg";
+            const posterPath = `${savedProductId}/posters/${crypto.randomUUID()}.jpg`;
             const { error: posterUploadError } = await supabase.storage
               .from("products-media")
               .upload(posterPath, posterBlob, { upsert: false, contentType: "image/jpeg" });
             if (posterUploadError) throw posterUploadError;
+            uploadedMediaPaths.push(posterPath);
             posterUrl = supabase.storage.from("products-media").getPublicUrl(posterPath).data.publicUrl;
           }
 
-          const { error: mediaError } = await supabase.from("product_media").insert({
+          const { data: insertedMedia, error: mediaError } = await supabase.from("product_media").insert({
             product_id: savedProductId,
             media_type: isImage ? "image" : "video",
-            url: publicData.publicUrl,
+            url: publicUrl,
             storage_path: storagePath,
             poster_url: posterUrl,
             sort_order: existingMedia.length + index,
-          });
+          }).select("id").single();
           if (mediaError) throw mediaError;
+          insertedMediaIds.push(insertedMedia.id);
         }
+      }
+
+      // Só remove a imagem principal anterior depois que o produto e todas as
+      // novas mídias foram salvos. Antes da remoção, confirma que outro produto
+      // não compartilha a mesma URL; em caso de dúvida, preserva o arquivo.
+      if (
+        editingId &&
+        uploadedProductImagePath &&
+        previousProductImageUrl &&
+        previousProductImageUrl !== imageUrl
+      ) {
+        const previousImagePath = getPublicBucketPath(previousProductImageUrl, "products-images");
+        if (previousImagePath) {
+          const { data: otherReference, error: referenceError } = await supabase
+            .from("products")
+            .select("id")
+            .eq("image_url", previousProductImageUrl)
+            .neq("id", editingId)
+            .limit(1)
+            .maybeSingle();
+
+          if (referenceError) {
+            oldImageCleanupPending = true;
+          } else if (!otherReference) {
+            const { error: oldImageError } = await supabase.storage
+              .from("products-images")
+              .remove([previousImagePath]);
+            if (oldImageError) oldImageCleanupPending = true;
+          }
+        }
+      }
+
+      if (oldImageCleanupPending) {
+        setMessage("Produto atualizado, mas a imagem anterior foi preservada porque não foi possível confirmar ou concluir sua limpeza.");
       }
 
       clearForm();
       await loadProducts();
     } catch (error) {
+      let cleanupPending = false;
+
+      // Remove only media rows/files created by this attempt. If row deletion fails,
+      // keep its files to avoid leaving database records pointing at missing objects.
+      if (insertedMediaIds.length) {
+        const { error: rowsError } = await supabase
+          .from("product_media")
+          .delete()
+          .in("id", insertedMediaIds);
+        if (rowsError) {
+          cleanupPending = true;
+        } else if (uploadedMediaPaths.length) {
+          const { error: filesError } = await supabase.storage
+            .from("products-media")
+            .remove(uploadedMediaPaths);
+          if (filesError) cleanupPending = true;
+        }
+      } else if (uploadedMediaPaths.length) {
+        const { error: filesError } = await supabase.storage
+          .from("products-media")
+          .remove(uploadedMediaPaths);
+        if (filesError) cleanupPending = true;
+      }
+
+      // An image uploaded before a failed product write is safe to remove.
+      // Once the product row references it, preserve the file.
+      if (uploadedProductImagePath && !productWriteSucceeded) {
+        const { error: imageCleanupError } = await supabase.storage
+          .from("products-images")
+          .remove([uploadedProductImagePath]);
+        if (imageCleanupError) cleanupPending = true;
+      }
+
+      // A newly created product whose media setup failed is retained but hidden,
+      // avoiding an incomplete item becoming visible in the storefront.
+      if (productWriteSucceeded && !editingId && savedProductId) {
+        const { error: deactivateError } = await supabase
+          .from("products")
+          .update({ active: false, updated_at: new Date().toISOString() })
+          .eq("id", savedProductId);
+        if (deactivateError) cleanupPending = true;
+      }
+
+      const originalMessage = error instanceof Error ? error.message : "Erro ao salvar produto.";
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Erro ao salvar produto."
+        originalMessage +
+        (productWriteSucceeded && !editingId
+          ? " O produto foi mantido inativo porque a conclusão do cadastro falhou."
+          : "") +
+        (cleanupPending
+          ? " A limpeza de alguns arquivos ou registros ficou pendente e exige revisão administrativa."
+          : " Os arquivos enviados nesta tentativa foram limpos quando não estavam vinculados a um produto.")
       );
+      await loadProducts();
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteProduct(id: string) {
-    if (
-      !window.confirm("Deseja realmente excluir este produto?")
-    ) {
+    const product = products.find((item) => item.id === id);
+    if (!product) {
+      setMessage("Produto não encontrado na lista atual. Atualize o painel e tente novamente.");
       return;
     }
 
-    const { error } = await supabase
+    if (!window.confirm("O produto será desativado e ficará oculto na loja. Pedidos, avaliações e mídias históricas serão preservados. Deseja continuar?")) return;
+
+    // Arquivamento lógico: evita apagar avaliações (FK CASCADE), perder vínculos
+    // históricos de pedidos (FK SET NULL) ou deixar arquivos públicos órfãos.
+    const { data, error } = await supabase
       .from("products")
-      .delete()
-      .eq("id", id);
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("active", product.active)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
-      setMessage("Erro ao excluir: " + error.message);
+      setMessage("Não foi possível desativar o produto: " + error.message);
+      return;
+    }
+    if (!data) {
+      setMessage("O produto foi alterado por outra operação. Atualize a lista antes de tentar novamente.");
+      await loadProducts();
       return;
     }
 
-    setMessage("Produto excluído com sucesso!");
+    setMessage("Produto desativado e arquivado. Histórico, avaliações e mídias foram preservados.");
     await loadProducts();
   }
 
   async function toggleActive(product: Product) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("products")
       .update({
         active: !product.active,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", product.id);
+      .eq("id", product.id)
+      .eq("active", product.active)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       setMessage("Erro ao alterar situação: " + error.message);
       return;
     }
+    if (!data) {
+      setMessage("A situação do produto foi alterada por outra operação. Atualize a lista e tente novamente.");
+      await loadProducts();
+      return;
+    }
 
+    setMessage(product.active ? "Produto desativado." : "Produto ativado.");
     await loadProducts();
   }
 
@@ -694,8 +879,15 @@ export default function AdminPage() {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
-    router.replace("/admin/login");
+    setMessage("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setAuthorized(false);
+      router.replace("/admin/login");
+    } catch {
+      setMessage("Não foi possível encerrar a sessão. Verifique sua conexão e tente novamente.");
+    }
   }
 
   if (loading) {
@@ -946,7 +1138,7 @@ export default function AdminPage() {
         <input
           id="product-image"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           onChange={(e) =>
             setImage(e.target.files?.[0] || null)
           }
@@ -1134,7 +1326,7 @@ export default function AdminPage() {
                 background: "#b42318",
               }}
             >
-              Excluir
+              Desativar e arquivar
             </button>
           </div>
         </article>

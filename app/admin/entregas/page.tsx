@@ -90,7 +90,11 @@ export default function AdminDeliveriesPage() {
         setAuthorized(true);
         await loadData();
       } catch {
-        if (!cancelled) setMessage("Erro ao verificar acesso administrativo.");
+        if (!cancelled) {
+          setAuthorized(false);
+          setMessage("Não foi possível confirmar seu acesso administrativo. Entre novamente.");
+          router.replace("/admin/login");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -108,11 +112,19 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ fee_cents: Math.round(parsed * 100), updated_at: new Date().toISOString() })
-      .eq("id", region.id);
+      .eq("id", region.id)
+      .eq("fee_cents", region.fee_cents)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao salvar região: " + error.message); return; }
+    if (!data) {
+      setMessage("A taxa desta região foi alterada por outra operação. Atualize os dados antes de salvar novamente.");
+      await loadData();
+      return;
+    }
     setMessage("Taxa regional atualizada.");
     await loadData();
   }
@@ -128,27 +140,36 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId("all-regions");
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ free_shipping: true, updated_at: new Date().toISOString() })
-      .not("id", "is", null);
+      .eq("free_shipping", false)
+      .select("id");
     setSavingId("");
     if (error) {
       setMessage("Erro ao ativar frete grátis em todas as regiões: " + error.message);
       return;
     }
-    setMessage("Frete grátis ativado em todas as regiões. Cada região poderá ser alterada individualmente sem modificar as demais.");
+    setMessage("Frete grátis ativado em " + (data?.length || 0) + " região(ões) que ainda estavam com frete pago. Regiões já alteradas por outra operação foram preservadas.");
     await loadData();
   }
 
   async function toggleRegionFreeShipping(region: Region) {
     setSavingId("free-" + region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ free_shipping: !region.free_shipping, updated_at: new Date().toISOString() })
-      .eq("id", region.id);
+      .eq("id", region.id)
+      .eq("free_shipping", region.free_shipping)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) {
       setMessage("Erro ao alterar frete grátis da região: " + error.message);
+      return;
+    }
+    if (!data) {
+      setMessage("A configuração de frete grátis foi alterada por outra operação. Atualize a lista.");
+      await loadData();
       return;
     }
     setMessage(region.free_shipping
@@ -160,11 +181,19 @@ export default function AdminDeliveriesPage() {
   async function toggleRegion(region: Region) {
     setSavingId(region.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_regions")
+    const { data, error } = await supabase.from("delivery_regions")
       .update({ active: !region.active, updated_at: new Date().toISOString() })
-      .eq("id", region.id);
+      .eq("id", region.id)
+      .eq("active", region.active)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao atualizar região: " + error.message); return; }
+    if (!data) {
+      setMessage("A disponibilidade da região foi alterada por outra operação. Atualize a lista.");
+      await loadData();
+      return;
+    }
     setMessage("Disponibilidade da região atualizada.");
     await loadData();
   }
@@ -186,11 +215,23 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ fee_override_cents: override, updated_at: new Date().toISOString() })
       .eq("id", item.id);
+    updateQuery = item.region_id === null
+      ? updateQuery.is("region_id", null)
+      : updateQuery.eq("region_id", item.region_id);
+    updateQuery = item.fee_override_cents === null
+      ? updateQuery.is("fee_override_cents", null)
+      : updateQuery.eq("fee_override_cents", item.fee_override_cents);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao salvar bairro: " + error.message); return; }
+    if (!data) {
+      setMessage("A configuração deste bairro foi alterada por outra operação. Atualize os dados antes de salvar novamente.");
+      await loadData();
+      return;
+    }
     setMessage(override === null
       ? "Taxa individual removida. O bairro voltou a acompanhar automaticamente a taxa da região."
       : "Taxa manual do bairro salva. Ela será aplicada somente a este bairro.");
@@ -200,11 +241,20 @@ export default function AdminDeliveriesPage() {
   async function useNeighborhoodRegionFee(item: Neighborhood) {
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ fee_override_cents: null, updated_at: new Date().toISOString() })
       .eq("id", item.id);
+    updateQuery = item.fee_override_cents === null
+      ? updateQuery.is("fee_override_cents", null)
+      : updateQuery.eq("fee_override_cents", item.fee_override_cents);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao restaurar taxa regional: " + error.message); return; }
+    if (!data) {
+      setMessage("A taxa deste bairro foi alterada por outra operação. Atualize os dados antes de continuar.");
+      await loadData();
+      return;
+    }
     setMessage("Taxa individual removida. O bairro voltou a acompanhar a taxa da região.");
     await loadData();
   }
@@ -217,11 +267,20 @@ export default function AdminDeliveriesPage() {
     }
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    let updateQuery = supabase.from("delivery_neighborhoods")
       .update({ region_id: regionId, updated_at: new Date().toISOString() })
       .eq("id", item.id);
+    updateQuery = item.region_id === null
+      ? updateQuery.is("region_id", null)
+      : updateQuery.eq("region_id", item.region_id);
+    const { data, error } = await updateQuery.select("id").maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao salvar região do bairro: " + error.message); return; }
+    if (!data) {
+      setMessage("A região deste bairro foi alterada por outra operação. Atualize os dados antes de salvar novamente.");
+      await loadData();
+      return;
+    }
     setMessage("Região do bairro atualizada. A ativação continua sendo uma ação separada.");
     await loadData();
   }
@@ -229,11 +288,19 @@ export default function AdminDeliveriesPage() {
   async function toggleNeighborhood(item: Neighborhood) {
     setSavingId(item.id);
     setMessage("");
-    const { error } = await supabase.from("delivery_neighborhoods")
+    const { data, error } = await supabase.from("delivery_neighborhoods")
       .update({ active: !item.active, updated_at: new Date().toISOString() })
-      .eq("id", item.id);
+      .eq("id", item.id)
+      .eq("active", item.active)
+      .select("id")
+      .maybeSingle();
     setSavingId("");
     if (error) { setMessage("Erro ao atualizar bairro: " + error.message); return; }
+    if (!data) {
+      setMessage("A disponibilidade do bairro foi alterada por outra operação. Atualize a lista.");
+      await loadData();
+      return;
+    }
     setMessage("Disponibilidade do bairro atualizada.");
     await loadData();
   }

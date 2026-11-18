@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ImagePlus, Video, Sparkles, Trash2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type Campaign = {
   id: string;
@@ -22,6 +23,7 @@ type Campaign = {
   sort_order: number;
   start_at: string | null;
   end_at: string | null;
+  updated_at?: string | null;
 };
 
 const blankCampaign = (): Partial<Campaign> => ({
@@ -129,8 +131,8 @@ export default function AdminCampaignsPage() {
 
       let imageBase64 = "";
       if (aiImageFile) {
-        if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(aiImageFile.type)) throw new Error("Envie uma imagem JPG, PNG, WEBP ou GIF.");
-        if (aiImageFile.size > 8 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 8 MB.");
+        const aiImageInfo = inspectMediaBytes(new Uint8Array(await aiImageFile.arrayBuffer()), aiImageFile.type, 8 * 1024 * 1024);
+        if (!aiImageInfo || aiImageInfo.kind !== "image") throw new Error("Envie uma imagem JPG, PNG, WEBP ou GIF válida, de até 8 MB.");
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
@@ -186,21 +188,28 @@ export default function AdminCampaignsPage() {
     if (saving) return;
     setSaving(true);
     setMessage("");
+    let newlyUploadedPath: string | null = null;
+    let persisted = false;
+    let cleanupPending = false;
+    const previousStoragePath = editingId
+      ? campaigns.find((campaign) => campaign.id === editingId)?.storage_path || null
+      : null;
     try {
       let mediaUrl = draft.media_url || null;
       let storagePath = draft.storage_path || null;
       let mediaType = draft.media_type || "image";
 
       if (mediaFile) {
-        const isImage = mediaFile.type.startsWith("image/");
-        const isVideo = mediaFile.type.startsWith("video/");
-        if (!isImage && !isVideo) throw new Error("Escolha uma imagem ou vídeo válido.");
-        if (mediaFile.size > 100 * 1024 * 1024) throw new Error("O arquivo deve ter no máximo 100 MB.");
-        const extension = mediaFile.name.split(".").pop()?.toLowerCase() || (isImage ? "jpg" : "mp4");
+        const mediaInfo = inspectMediaBytes(new Uint8Array(await mediaFile.arrayBuffer()), mediaFile.type, 100 * 1024 * 1024);
+        if (!mediaInfo) throw new Error("Escolha uma imagem ou vídeo válido (JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV), de até 100 MB.");
+        const isImage = mediaInfo.kind === "image";
+        const isVideo = mediaInfo.kind === "video";
+        const extension = mediaInfo.extension;
         const path = `${crypto.randomUUID()}.${extension}`;
         const { error: uploadError } = await supabase.storage.from("campaign-media")
           .upload(path, mediaFile, { upsert: false, contentType: mediaFile.type });
         if (uploadError) throw uploadError;
+        newlyUploadedPath = path;
         mediaUrl = supabase.storage.from("campaign-media").getPublicUrl(path).data.publicUrl;
         storagePath = path;
         mediaType = isImage ? "image" : "video";
@@ -226,46 +235,132 @@ export default function AdminCampaignsPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase.from("homepage_campaigns").update(payload).eq("id", editingId);
+        const original = campaigns.find((campaign) => campaign.id === editingId);
+        if (!original) throw new Error("A campanha não está mais na lista carregada. Atualize os dados antes de editar.");
+        let updateQuery = supabase.from("homepage_campaigns").update(payload).eq("id", editingId);
+        updateQuery = original.updated_at == null
+          ? updateQuery.is("updated_at", null)
+          : updateQuery.eq("updated_at", original.updated_at);
+        const { data: updated, error } = await updateQuery.select("id").maybeSingle();
         if (error) throw error;
+        if (!updated) throw new Error("A campanha foi alterada por outra operação. Atualize a lista e abra a campanha novamente.");
       } else {
         const { error } = await supabase.from("homepage_campaigns").insert(payload);
         if (error) throw error;
       }
-      setMessage("Campanha salva. A publicação respeita o status e o período definidos.");
+      persisted = true;
+      if (previousStoragePath && previousStoragePath !== storagePath) {
+        const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(previousStoragePath);
+        if (safePath) {
+          const { data: sharedReference, error: referenceError } = await supabase
+            .from("homepage_campaigns")
+            .select("id")
+            .eq("storage_path", previousStoragePath)
+            .neq("id", editingId)
+            .limit(1)
+            .maybeSingle();
+          if (referenceError || sharedReference) {
+            cleanupPending = true;
+            console.warn("Arquivo antigo preservado porque a referência não pôde ser verificada ou ainda é compartilhada.");
+          } else {
+            const { error: oldFileError } = await supabase.storage.from("campaign-media").remove([previousStoragePath]);
+            if (oldFileError) {
+              cleanupPending = true;
+              console.warn("Arquivo antigo da campanha não foi removido:", oldFileError.message);
+            }
+          }
+        } else {
+          cleanupPending = true;
+          console.warn("Caminho antigo da campanha não passou pela validação; arquivo preservado.");
+        }
+      }
+      setMessage(cleanupPending
+        ? "Campanha salva, mas a limpeza da mídia anterior ficou pendente. O arquivo foi preservado para revisão."
+        : "Campanha salva. A publicação respeita o status e o período definidos.");
       resetForm();
       await loadCampaigns();
     } catch (err) {
+      if (!persisted && newlyUploadedPath) {
+        const { error: cleanupError } = await supabase.storage.from("campaign-media").remove([newlyUploadedPath]);
+        if (cleanupError) {
+          cleanupPending = true;
+          console.warn("Não foi possível limpar o novo arquivo da campanha:", cleanupError.message);
+        }
+      }
       const details = err && typeof err === "object" && "message" in err
         ? String((err as { message?: unknown }).message || "")
         : err instanceof Error ? err.message : "";
       const code = err && typeof err === "object" && "code" in err
         ? String((err as { code?: unknown }).code || "")
         : "";
-      setMessage(details
-        ? `Falha ao salvar campanha: ${details}${code ? ` (código: ${code})` : ""}`
-        : "Não foi possível salvar a campanha. Verifique os dados e tente novamente.");
+      setMessage(
+        (details
+          ? `Falha ao salvar campanha: ${details}${code ? ` (código: ${code})` : ""}`
+          : "Não foi possível salvar a campanha. Verifique os dados e tente novamente.") +
+        (cleanupPending ? " A limpeza de um arquivo enviado ficou pendente e exige revisão." : "")
+      );
     } finally {
       setSaving(false);
     }
   }
 
   async function toggleCampaign(campaign: Campaign) {
-    const { error } = await supabase.from("homepage_campaigns")
-      .update({ active: !campaign.active, updated_at: new Date().toISOString() }).eq("id", campaign.id);
+    const { data, error } = await supabase.from("homepage_campaigns")
+      .update({ active: !campaign.active, updated_at: new Date().toISOString() })
+      .eq("id", campaign.id)
+      .eq("active", campaign.active)
+      .select("id")
+      .maybeSingle();
     if (error) { setMessage(error.message); return; }
+    if (!data) {
+      setMessage("A campanha foi alterada por outra operação. Atualize a lista antes de tentar novamente.");
+      await loadCampaigns();
+      return;
+    }
     await loadCampaigns();
   }
 
   async function deleteCampaign(campaign: Campaign) {
     if (!window.confirm("Excluir esta campanha definitivamente?")) return;
-    const { error } = await supabase.from("homepage_campaigns").delete().eq("id", campaign.id);
+    let deleteQuery = supabase.from("homepage_campaigns").delete().eq("id", campaign.id);
+    deleteQuery = campaign.updated_at == null
+      ? deleteQuery.is("updated_at", null)
+      : deleteQuery.eq("updated_at", campaign.updated_at);
+    const { data: deleted, error } = await deleteQuery.select("id").maybeSingle();
     if (error) { setMessage(error.message); return; }
-    if (campaign.storage_path) {
-      const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
-      if (storageError) console.warn("Arquivo mantido no armazenamento:", storageError.message);
+    if (!deleted) {
+      setMessage("A campanha foi alterada por outra operação. Atualize a lista antes de excluir.");
+      await loadCampaigns();
+      return;
     }
-    setMessage("Campanha excluída.");
+    let cleanupPending = false;
+    if (campaign.storage_path) {
+      const safePath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|webm|mov)$/i.test(campaign.storage_path);
+      if (safePath) {
+        const { data: sharedReference, error: referenceError } = await supabase
+          .from("homepage_campaigns")
+          .select("id")
+          .eq("storage_path", campaign.storage_path)
+          .limit(1)
+          .maybeSingle();
+        if (referenceError || sharedReference) {
+          cleanupPending = true;
+          console.warn("Arquivo da campanha preservado porque a referência não pôde ser verificada ou ainda é compartilhada.");
+        } else {
+          const { error: storageError } = await supabase.storage.from("campaign-media").remove([campaign.storage_path]);
+          if (storageError) {
+            cleanupPending = true;
+            console.warn("Arquivo mantido no armazenamento:", storageError.message);
+          }
+        }
+      } else {
+        cleanupPending = true;
+        console.warn("Caminho da mídia da campanha não passou pela validação; arquivo preservado.");
+      }
+    }
+    setMessage(cleanupPending
+      ? "Campanha excluída. A limpeza do arquivo no armazenamento ficou pendente e exige revisão."
+      : "Campanha excluída.");
     await loadCampaigns();
   }
 

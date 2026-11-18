@@ -2,8 +2,40 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
+import { hashRecoveryToken } from "@/lib/checkout-recovery.cjs";
+import { normalizeCheckoutItems } from "@/lib/checkout-items.cjs";
+import { attemptCheckoutCancellation, isConfirmedUnpaidCancellation } from "@/lib/checkout-cancellation.cjs";
 
 export const runtime = "nodejs";
+
+async function readLimitedJson(request: Request, maxBytes = 32 * 1024): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let source = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      source += decoder.decode(value, { stream: true });
+    }
+    source += decoder.decode();
+    return { ok: true, value: JSON.parse(source) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 function mercadoPagoIdempotencyKey(orderId: string) {
   const hex = createHash("sha256").update(`novashopp-checkout:${orderId}`).digest("hex").slice(0, 32).split("");
@@ -13,25 +45,40 @@ function mercadoPagoIdempotencyKey(orderId: string) {
   return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
 }
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do Supabase indisponível.");
   }
-);
+  if (!supabaseAdmin) {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return supabaseAdmin;
+}
 
-async function cancelOrder(orderId: string) {
-  const { error } = await supabaseAdmin.rpc(
-    "cancel_unpaid_order_and_restore_stock",
-    { p_order_id: orderId }
-  );
+async function cancelOrder(orderId: string): Promise<boolean> {
+  try {
+    const { data, error } = await getSupabaseAdmin().rpc(
+      "cancel_unpaid_order_and_restore_stock",
+      { p_order_id: orderId }
+    );
 
-  if (error) {
-    console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+    if (error) {
+      console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+      return false;
+    }
+    return data === true;
+  } catch (error) {
+    console.error("FALHA AO CONFIRMAR CANCELAMENTO E RESTAURAÇÃO DO ESTOQUE:", error);
+    return false;
   }
 }
 
@@ -47,7 +94,21 @@ export async function POST(request: Request) {
   let mercadoPagoRequestStarted = false;
 
   try {
-    const body = await request.json();
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > 32 * 1024) {
+      return NextResponse.json({ error: "Solicitação muito grande." }, { status: 413, headers: { "Cache-Control": "no-store" } });
+    }
+    const parsedBody = await readLimitedJson(request);
+    if (!parsedBody.ok) {
+      return NextResponse.json(
+        { error: parsedBody.status === 413 ? "Solicitação muito grande." : "Corpo da solicitação inválido." },
+        { status: parsedBody.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+      return NextResponse.json({ error: "Corpo da solicitação inválido." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+    const body = parsedBody.value as Record<string, unknown>;
 
     const {
       customerName,
@@ -59,6 +120,7 @@ export async function POST(request: Request) {
       deliveryNeighborhoodId,
     } = body;
 
+    const normalizedItemsResult = normalizeCheckoutItems(items);
     if (
       typeof customerName !== "string" ||
       !customerName.trim() ||
@@ -68,15 +130,7 @@ export async function POST(request: Request) {
       !deliveryAddress.trim() ||
       typeof deliveryNeighborhoodId !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deliveryNeighborhoodId) ||
-      !Array.isArray(items) ||
-      items.length === 0 ||
-      items.some(
-        (item: { id?: unknown; qty?: unknown }) =>
-          typeof item.id !== "string" ||
-          !item.id ||
-          !Number.isInteger(item.qty) ||
-          Number(item.qty) < 1
-      )
+      !normalizedItemsResult.ok
     ) {
       return NextResponse.json(
         { error: "Confira os dados e os produtos do pedido." },
@@ -84,6 +138,7 @@ export async function POST(request: Request) {
       );
     }
 
+    let authenticatedCustomerId: string | null = null;
     let verifiedCustomerEmail =
       typeof customerEmail === "string" ? customerEmail.trim() : "";
 
@@ -91,7 +146,7 @@ export async function POST(request: Request) {
     if (authorization.startsWith("Bearer ")) {
       const customerAccessToken = authorization.slice(7);
       const { data: customerAuth, error: customerAuthError } =
-        await supabaseAdmin.auth.getUser(customerAccessToken);
+        await getSupabaseAdmin().auth.getUser(customerAccessToken);
 
       if (customerAuthError || !customerAuth.user?.email) {
         return NextResponse.json(
@@ -100,8 +155,9 @@ export async function POST(request: Request) {
         );
       }
 
-      // Usa o e-mail confirmado da sessão, nunca um e-mail enviado livremente pelo navegador.
+      // Usa o e-mail associado à sessão autenticada, nunca um e-mail enviado livremente pelo navegador.
       verifiedCustomerEmail = customerAuth.user.email;
+      authenticatedCustomerId = customerAuth.user.id;
     }
 
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -121,11 +177,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedItems = items.map((item: { id: string; qty: number }) => ({
-      id: item.id,
-      qty: item.qty,
-    }));
+    const recoveryToken = request.headers.get("x-checkout-recovery-token") || "";
+    const recoveryTokenHash = hashRecoveryToken(recoveryToken);
+    if (!recoveryTokenHash) {
+      return NextResponse.json(
+        { error: "Identificador de recuperação inválido. Atualize a página e tente novamente." },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const normalizedItems = normalizedItemsResult.items;
     const requestHash = createHash("sha256").update(JSON.stringify({
+      customerUserId: authenticatedCustomerId,
       customerName: customerName.trim(),
       customerEmail: verifiedCustomerEmail,
       customerPhone: customerPhone.trim(),
@@ -136,7 +199,7 @@ export async function POST(request: Request) {
     })).digest("hex");
 
     const { data: orderId, error: orderError } =
-      await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery", {
+      await getSupabaseAdmin().rpc("create_store_order_with_recovery_token", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
@@ -146,55 +209,82 @@ export async function POST(request: Request) {
         p_items: normalizedItems,
         p_checkout_idempotency_key: checkoutIdempotencyKey,
         p_checkout_request_hash: requestHash,
+        p_checkout_recovery_token_hash: recoveryTokenHash,
       });
 
     if (orderError || !orderId) {
       console.error("ERRO AO CRIAR PEDIDO:", orderError);
 
       return NextResponse.json(
-        {
-          error:
-            "Não foi possível registrar o pedido: " +
-            (orderError?.message || "erro desconhecido"),
-        },
-        { status: 400 }
+        { error: "Não foi possível registrar o pedido. Confira os dados e tente novamente." },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 
     createdOrderId = orderId;
 
-    const { data: order, error: fetchOrderError } =
-      await supabaseAdmin
+    // Bind account ownership by the verified Supabase user ID, never by a supplied email.
+    // The request hash also includes this ID, preventing an idempotency-key reuse across accounts.
+    if (authenticatedCustomerId) {
+      const { data: ownership, error: ownershipError } = await getSupabaseAdmin()
         .from("orders")
-        .select("id,status,total,discount_amount,coupon_code,shipping_fee")
+        .update({ customer_user_id: authenticatedCustomerId })
+        .eq("id", orderId)
+        .or(`customer_user_id.is.null,customer_user_id.eq.${authenticatedCustomerId}`)
+        .select("customer_user_id")
+        .maybeSingle();
+
+      if (ownershipError || ownership?.customer_user_id !== authenticatedCustomerId) {
+        console.error("ERRO AO VINCULAR PEDIDO À CONTA:", ownershipError);
+        const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
+        if (cancellation.confirmed) createdOrderId = null;
+        return NextResponse.json(
+          cancellation.confirmed
+            ? { code: "attempt_rejected", error: "Não foi possível vincular o pedido à sua conta. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+            : { error: "Não foi possível vincular o pedido à sua conta. Nenhuma cobrança foi iniciada, mas o cancelamento ainda não foi confirmado. Não inicie outra tentativa; tente novamente em instantes." },
+          { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+    }
+
+    const { data: order, error: fetchOrderError } =
+      await getSupabaseAdmin()
+        .from("orders")
+        .select("id,status,total,discount_amount,coupon_code,shipping_fee,mercado_pago_order_id")
         .eq("id", orderId)
         .single();
 
     if (fetchOrderError || !order) {
       console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
 
-      await cancelOrder(orderId);
-      createdOrderId = null;
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
-        {
-          error: "Falha ao consultar o pedido.",
-          detalhe: fetchOrderError?.message || "Pedido não encontrado.",
-        },
-        { status: 500 }
+        cancellation.confirmed
+          ? { code: "attempt_rejected", error: "Não foi possível confirmar os dados do pedido. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+          : { error: "Não foi possível confirmar os dados do pedido nem a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
       );
     }
 
     if (order.status !== "aguardando") {
+      if (isConfirmedUnpaidCancellation(order.status, order.mercado_pago_order_id)) {
+        createdOrderId = null;
+        return NextResponse.json(
+          { code: "attempt_rejected", error: "Esta tentativa já foi cancelada e não possui vínculo de pagamento registrado. Você pode iniciar uma nova compra." },
+          { status: 409, headers: { "Cache-Control": "no-store" } }
+        );
+      }
       createdOrderId = null;
       return NextResponse.json(
-        { error: "Este pedido já foi finalizado ou cancelado. Inicie uma nova tentativa de compra." },
-        { status: 409 }
+        { code: "attempt_closed", error: "Este pedido já foi finalizado ou possui uma situação que precisa ser conferida. Não inicie outra tentativa até verificar o histórico." },
+        { status: 409, headers: { "Cache-Control": "no-store" } }
       );
     }
 
     const { data: orderItems, error: itemsError } =
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("order_items")
         .select("product_name,quantity,unit_price")
         .eq("order_id", orderId);
@@ -202,15 +292,14 @@ export async function POST(request: Request) {
     if (itemsError || !orderItems?.length) {
       console.error("ERRO AO BUSCAR ITENS:", itemsError);
 
-      await cancelOrder(orderId);
-      createdOrderId = null;
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
-        {
-          error: "Falha ao consultar os itens do pedido.",
-          detalhe: itemsError?.message || "Nenhum item encontrado.",
-        },
-        { status: 500 }
+        cancellation.confirmed
+          ? { code: "attempt_rejected", error: "Não foi possível confirmar os itens do pedido. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+          : { error: "Não foi possível confirmar os itens do pedido nem a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -297,20 +386,47 @@ export async function POST(request: Request) {
     }
 
     mercadoPagoRequestStarted = true;
-    const paymentResponse = await fetch(
-      "https://api.mercadopago.com/v1/orders",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-          "X-Idempotency-Key": mercadoPagoIdempotencyKey(orderId),
-        },
-        body: JSON.stringify(paymentBody),
-      }
-    );
+    let paymentResponse: Response;
+    try {
+      paymentResponse = await fetch(
+        "https://api.mercadopago.com/v1/orders",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": mercadoPagoIdempotencyKey(orderId),
+          },
+          body: JSON.stringify(paymentBody),
+          signal: AbortSignal.timeout(15_000),
+        }
+      );
+    } catch {
+      // Timeout/erro de rede não prova que o provedor rejeitou a criação.
+      // Preserva o pedido e reutiliza a mesma chave idempotente na repetição.
+      createdOrderId = null;
+      return NextResponse.json(
+        { error: "A confirmação do pagamento demorou. Tente novamente sem alterar o pedido." },
+        { status: 502, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
-    const paymentData = await paymentResponse.json();
+    // Uma resposta sem JSON válido não deve desviar o tratamento pelo status HTTP.
+    // Em 2xx, mantém o pedido para reconciliação/idempotência; em 4xx definitivo,
+    // o bloco abaixo ainda pode liberar a reserva com confirmação do banco.
+    let paymentData: Record<string, unknown> = {};
+    try {
+      const parsedPaymentData: unknown = await paymentResponse.json();
+      if (
+        parsedPaymentData &&
+        typeof parsedPaymentData === "object" &&
+        !Array.isArray(parsedPaymentData)
+      ) {
+        paymentData = parsedPaymentData as Record<string, unknown>;
+      }
+    } catch {
+      // Corpo ausente/inválido: a decisão de segurança usa o status HTTP.
+    }
 
     if (
       !paymentResponse.ok ||
@@ -318,35 +434,70 @@ export async function POST(request: Request) {
       paymentData.id === undefined ||
       paymentData.id === null
     ) {
-      console.error("ERRO MERCADO PAGO:", paymentData);
+      console.error("ERRO MERCADO PAGO:", {
+        status: paymentResponse.status,
+        error: typeof paymentData?.error === "string" ? paymentData.error.slice(0, 120) : undefined,
+        code: typeof paymentData?.code === "string" ? paymentData.code.slice(0, 80) : undefined,
+      });
 
-      // Mantém o pedido aguardando: a resposta pode ter sido perdida após
-      // o Mercado Pago aceitar a solicitação. A repetição usará a mesma chave.
+      // Respostas 4xx definitivas significam que o provedor rejeitou a criação.
+      // Só libere o estoque se o banco confirmar o cancelamento do pedido.
+      // 409/423, 429 e 5xx permanecem ambíguos e preservam a chave idempotente.
+      if (!paymentResponse.ok && isDefinitiveOrderCreationRejection(paymentResponse.status)) {
+        const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
+        if (cancellation.confirmed) {
+          createdOrderId = null;
+          return NextResponse.json(
+            { code: "attempt_rejected", error: "O provedor recusou esta tentativa e o cancelamento foi confirmado. Você pode iniciar uma nova tentativa de compra." },
+            { status: 409, headers: { "Cache-Control": "no-store" } }
+          );
+        }
+        return NextResponse.json(
+          { error: "O provedor recusou a tentativa, mas o cancelamento e a restauração do estoque ainda não foram confirmados. Não inicie outra tentativa; tente novamente em instantes." },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+
+      // Timeout, conflito de idempotência, bloqueio temporário, limitação ou
+      // erro do servidor não provam que o provedor deixou de criar a order.
       createdOrderId = null;
-
       return NextResponse.json(
         {
           error: "Não foi possível confirmar a criação do pagamento. Tente novamente sem alterar o pedido.",
-          detalhe: paymentData,
         },
-        { status: 502 }
+        { status: 502, headers: { "Cache-Control": "no-store" } }
       );
     }
 
     const mercadoPagoOrderId = String(paymentData.id);
 
-    const { error: savePaymentIdError } =
-      await supabaseAdmin
+    const { data: linkedOrder, error: savePaymentIdError } =
+      await getSupabaseAdmin()
         .from("orders")
         .update({
           mercado_pago_order_id: mercadoPagoOrderId,
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select("id,mercado_pago_order_id")
+        .maybeSingle();
 
-    if (savePaymentIdError) {
+    if (
+      savePaymentIdError ||
+      !linkedOrder ||
+      linkedOrder.mercado_pago_order_id !== mercadoPagoOrderId
+    ) {
       console.error(
-        "ERRO AO SALVAR ID MERCADO PAGO:",
+        "ERRO AO CONFIRMAR VÍNCULO DO PEDIDO COM MERCADO PAGO:",
         savePaymentIdError
+      );
+
+      // Não liberar o checkout sem gravar o vínculo que o webhook exige.
+      // O pedido e a Order externa são preservados: a repetição usa a mesma
+      // chave idempotente e tenta salvar novamente o mesmo identificador.
+      createdOrderId = null;
+      return NextResponse.json(
+        { error: "O pagamento foi iniciado, mas a confirmação do vínculo está pendente. Tente novamente em instantes." },
+        { status: 503 }
       );
     }
 
@@ -363,16 +514,25 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      await cancelOrder(createdOrderId);
+      const orderIdToCancel = createdOrderId;
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderIdToCancel));
+      if (cancellation.confirmed) {
+        createdOrderId = null;
+        return NextResponse.json(
+          { code: "attempt_rejected", error: "Ocorreu um erro antes de iniciar o pagamento. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." },
+          { status: 409, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+      console.error("RECUPERAÇÃO DE CHECKOUT PENDENTE:", { orderId: orderIdToCancel });
+      return NextResponse.json(
+        { error: "Ocorreu um erro antes de iniciar o pagamento e não foi possível confirmar a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     return NextResponse.json(
-      {
-        error: "Ocorreu um erro ao iniciar o pagamento.",
-        detalhe:
-          error instanceof Error ? error.message : "Erro desconhecido.",
-      },
-      { status: 500 }
+      { error: "Ocorreu um erro ao iniciar o pagamento. A situação do pedido foi preservada para recuperação; tente novamente sem alterar os dados." },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

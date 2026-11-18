@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
+const { isValidImageBase64 } = require("../../../../lib/image-validation.cjs");
 
 export const runtime = "nodejs";
 
@@ -7,23 +9,56 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function errorResponse(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-async function isAdmin(request: NextRequest) {
-  const authorization = request.headers.get("authorization") || "";
-  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!token) return false;
+async function readLimitedJson(request: Request): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 12500000) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
 
-  const userClient = createClient(supabaseUrl, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
+async function isAdmin(request: NextRequest): Promise<string | null> {
+  try {
+    const authorization = request.headers.get("authorization") || "";
+    const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+    if (!token) return null;
 
-  const { data: userData, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !userData.user) return false;
-  const { data, error } = await userClient.rpc("is_marketplace_admin");
-  return !error && data === true;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const { data: userData, error: userError } = await userClient.auth.getUser(token);
+    if (userError || !userData.user) return null;
+
+    const { data, error } = await userClient.rpc("is_marketplace_admin");
+    return !error && data === true ? userData.user.id : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseJsonContent(value: unknown) {
@@ -36,13 +71,23 @@ function parseJsonContent(value: unknown) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdmin(request))) {
+  const adminId = await isAdmin(request);
+  if (!adminId) {
     return errorResponse("Acesso administrativo não autorizado.", 401);
+  }
+
+  const rateLimit = consumeLocalRateLimit(`admin-ai:${adminId}`, { limit: 5, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Muitas solicitações de IA. Aguarde um minuto e tente novamente." },
+      { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
   }
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return errorResponse("Configure GROQ_API_KEY nas variáveis de ambiente da Vercel para ativar a IA gratuita.", 503);
+    console.error("GROQ_API_KEY não está configurada no ambiente.");
+    return errorResponse("O serviço de IA está temporariamente indisponível. Tente novamente mais tarde.", 503);
   }
 
   let body: {
@@ -56,11 +101,21 @@ export async function POST(request: NextRequest) {
     imageMimeType?: string;
   };
 
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse("Não foi possível ler os dados enviados.", 400);
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > 12500000) {
+    return errorResponse("Solicitação muito grande.", 413);
   }
+  const parsedBody = await readLimitedJson(request);
+  if (!parsedBody.ok) {
+    return errorResponse(
+      parsedBody.status === 413 ? "Solicitação muito grande." : "Não foi possível ler os dados enviados.",
+      parsedBody.status
+    );
+  }
+  if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+    return errorResponse("Dados inválidos.", 400);
+  }
+  body = parsedBody.value as typeof body;
 
   const customPrompt = String(body.prompt || "").trim().slice(0, 4000);
   const objective = String(body.objective || "").trim().slice(0, 500);
@@ -76,8 +131,8 @@ export async function POST(request: NextRequest) {
   if (!customPrompt && !objective && !product && !offer && !hasImage) {
     return errorResponse("Preencha os detalhes da campanha ou envie uma imagem para a IA analisar.", 400);
   }
-  if (hasImage && (!allowedImageTypes.includes(imageMimeType) || imageBase64.length > 11_200_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64))) {
-    return errorResponse("Imagem inválida ou muito grande. Envie JPG, PNG, WEBP ou GIF de até 8 MB.", 400);
+  if (hasImage && !isValidImageBase64(imageBase64, imageMimeType, allowedImageTypes, 8 * 1024 * 1024)) {
+    return errorResponse("Imagem inválida ou muito grande. Envie um arquivo JPG, PNG, WEBP ou GIF legítimo de até 8 MB.", 400);
   }
 
   const prompt = `Você é o assistente de marketing da NOVASHOPP STORE, uma loja virtual brasileira.
@@ -142,7 +197,9 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
 
     const result = await response.json();
     if (!response.ok) {
-      const providerMessage = String(result?.error?.message || "");
+      console.error("Falha na solicitação à Groq:", {
+        status: response.status,
+      });
       if (response.status === 429) {
         return errorResponse("O limite gratuito de solicitações foi atingido ou o modelo está ocupado. Aguarde um pouco e tente novamente.", 429);
       }
@@ -152,7 +209,7 @@ ${hasImage ? "ANALISE TAMBÉM A IMAGEM ENVIADA: identifique visualmente o produt
       if ((response.status === 404 || response.status === 400) && hasImage) {
         return errorResponse("O modelo gratuito não aceitou essa imagem. Tente JPG ou PNG, ou use a criação por texto.", 502);
       }
-      return errorResponse(providerMessage.slice(0, 500) || "O serviço gratuito da Groq está temporariamente indisponível. Tente novamente.", 502);
+      return errorResponse("O serviço de IA está indisponível no momento. Tente novamente mais tarde.", 502);
     }
 
     const messageContent = result?.choices?.[0]?.message?.content;

@@ -3,33 +3,82 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+let supabasePublic: ReturnType<typeof createClient<any>> | null = null;
 
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Configuração do Supabase indisponível.");
+  if (!supabaseAdmin) supabaseAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabaseAdmin;
+}
+
+function getSupabasePublic() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("Configuração pública do Supabase indisponível.");
+  if (!supabasePublic) supabasePublic = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return supabasePublic;
+}
 
 // Limite por instância: proteção básica contra rajadas; não substitui rate limiting distribuído.
 const requestBuckets = new Map<string, { minute: number; count: number }>();
 const recentViews = new Map<string, number>();
 
 function getClientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-  return (forwarded?.split(",")[0] || realIp || "").trim();
+  // Use only the platform-provided client IP header. Never trust the
+  // left-most x-forwarded-for value, which can contain client-supplied data.
+  return (request.headers.get("x-real-ip") || "").trim();
+}
+
+async function readLimitedJson(request: Request): Promise<
+  { ok: true; value: any } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 2000) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export async function POST(request: Request) {
   try {
     const contentLength = Number(request.headers.get("content-length") || 0);
-    if (contentLength > 2000) {
+    if (Number.isFinite(contentLength) && contentLength > 2000) {
       return NextResponse.json({ error: "Solicitação muito grande." }, { status: 413 });
+    }
+
+    const parsedBody = await readLimitedJson(request);
+    if (!parsedBody.ok) {
+      return NextResponse.json(
+        { error: parsedBody.status === 413 ? "Solicitação muito grande." : "Corpo da solicitação inválido." },
+        { status: parsedBody.status, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    const body = parsedBody.value;
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Corpo da solicitação inválido." }, { status: 400 });
     }
 
     const ip = getClientIp(request);
@@ -37,7 +86,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível validar a origem da solicitação." }, { status: 503 });
     }
 
-    const body = await request.json();
     const visitorId = typeof body.visitorId === "string" ? body.visitorId.trim() : "";
     const productId = typeof body.productId === "string" ? body.productId.trim() : "";
 
@@ -67,7 +115,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
       }
 
-      const { data: product, error: productError } = await supabasePublic
+      const { data: product, error: productError } = await getSupabasePublic()
         .from("products")
         .select("id,name")
         .eq("id", productId)
@@ -106,7 +154,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error } = await supabaseAdmin.rpc("record_store_page_view", {
+    const { error } = await getSupabaseAdmin().rpc("record_store_page_view", {
       p_visitor_id: visitorId,
       p_path: path,
       p_product_id: verifiedProductId,

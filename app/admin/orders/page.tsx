@@ -86,7 +86,7 @@ export default function OrdersPage() {
       setMessage("Erro ao carregar pedidos: " + error.message);
       setOrders([]);
     } else {
-      const loaded = ((data || []) as Order[]).filter((order) => isPaid(order.status));
+      const loaded = (data || []) as Order[];
       setOrders(loaded);
       const estimateDrafts: Record<string, string> = {};
       loaded.forEach((order) => {
@@ -106,23 +106,32 @@ export default function OrdersPage() {
     }
     const currentIndex = deliverySteps.findIndex((step) => step.value === (order.delivery_status || "aguardando_separacao"));
     const nextIndex = deliverySteps.findIndex((step) => step.value === newStatus);
-    if (nextIndex < 0 || nextIndex < currentIndex) {
-      alert("Não é possível voltar para uma etapa anterior. O pedido só pode avançar.");
+    if (nextIndex < 0 || nextIndex < currentIndex || nextIndex > currentIndex + 1) {
+      alert("O pedido deve avançar uma etapa por vez, sem pular ou voltar etapas.");
       return;
     }
     if (newStatus === "entregue" && order.delivery_status !== "enviado" && order.delivery_status !== "entregue") {
       alert("Registre o pedido como enviado antes de marcar como entregue.");
       return;
     }
-    const updates: Record<string, string> = { delivery_status: newStatus };
-    if (newStatus === "enviado" && !order.shipped_at) updates.shipped_at = new Date().toISOString();
-    if (newStatus === "entregue" && !order.delivered_at) updates.delivered_at = new Date().toISOString();
-
+    // A API valida novamente o administrador e aplica CAS no estado atual do pedido.
+    // O banco continua responsável pelos timestamps de envio e entrega via trigger.
     setSavingDelivery(order.id);
-    const { error } = await supabase.from("orders").update(updates).eq("id", order.id);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/orders/delivery", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({ action: "delivery_status", orderId: order.id, status: newStatus }),
+    });
+    const result = await response.json().catch(() => ({}));
     setSavingDelivery(null);
-    if (error) {
-      alert("Erro ao atualizar entrega: " + error.message);
+    if (!response.ok) {
+      alert(result.error || "Erro ao atualizar entrega.");
       return;
     }
     await loadOrders();
@@ -144,12 +153,25 @@ export default function OrdersPage() {
       return;
     }
     setSavingDelivery(order.id);
-    const { error } = await supabase.from("orders")
-      .update({ estimated_delivery_at: estimated ? estimated.toISOString() : null, delivery_method: "motoboy" })
-      .eq("id", order.id);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/orders/delivery", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        action: "estimated_delivery",
+        orderId: order.id,
+        estimatedDeliveryAt: estimated ? estimated.toISOString() : null,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
     setSavingDelivery(null);
-    if (error) {
-      alert("Erro ao salvar a previsão: " + error.message);
+    if (!response.ok) {
+      alert(result.error || "Erro ao salvar a previsão.");
       return;
     }
     await loadOrders();
@@ -202,12 +224,15 @@ export default function OrdersPage() {
     const labels: Record<string, string> = {
       aguardando: "Aguardando pagamento", pendente: "Aguardando pagamento", pending: "Aguardando pagamento",
       pago: "Pago", aprovado: "Aprovado", approved: "Aprovado", concluido: "Concluído", "concluído": "Concluído",
-      cancelado: "Cancelado", cancelada: "Cancelado", canceled: "Cancelado", cancelled: "Cancelado"
+      cancelado: "Cancelado", cancelada: "Cancelado", canceled: "Cancelado", cancelled: "Cancelado",
+      "reembolso parcial": "Reembolso parcial", reembolsado: "Reembolsado",
+      "em contestação": "Em contestação · revisão manual", "revisão necessária": "Revisão necessária · não despachar"
     };
     return labels[normalizedStatus(status)] || status;
   };
 
-  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const paidOrders = orders.filter((order) => isPaid(order.status));
+  const revenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const visibleOrders = orders.filter((order) => {
     const term = search.trim().toLowerCase();
     return !term || order.customer_name.toLowerCase().includes(term) ||
@@ -236,7 +261,7 @@ export default function OrdersPage() {
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "18px 0" }}>
           {[
             { label: "Total vendido", value: money(revenue), note: "Somente pagamentos confirmados" },
-            { label: "Pedidos pagos", value: String(orders.length), note: "Pedidos aprovados" },
+            { label: "Pedidos pagos", value: String(paidOrders.length), note: "Pedidos aprovados" },
           ].map(item => (
             <article key={item.label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 18, boxShadow: "0 4px 14px rgba(15,23,42,.04)" }}>
               <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{item.label}</p>
@@ -333,7 +358,7 @@ export default function OrdersPage() {
                         <div>
                           <label style={{ display: "block", color: "#526176", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Atualizar etapa</label>
                           <select value={order.delivery_status || "aguardando_separacao"} disabled={savingDelivery === order.id} onChange={e => void updateDeliveryStatus(order, e.target.value)} style={{ width: "100%", padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", boxSizing: "border-box" }}>
-                            {deliverySteps.map((step, index) => <option key={step.value} value={step.value} disabled={index < currentStep}>{step.label}</option>)}
+                            {deliverySteps.map((step, index) => <option key={step.value} value={step.value} disabled={index < currentStep || index > currentStep + 1}>{step.label}</option>)}
                           </select>
                         </div>
                         <div>
@@ -358,7 +383,15 @@ export default function OrdersPage() {
                       </div>
                     </>
                   ) : (
-                    <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}><CreditCard size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {["reembolso parcial", "reembolsado", "em contestação", "revisão necessária"].includes(normalizedStatus(order.status)) ? (
+                        <p role="alert" style={{ margin: 0, padding: 12, borderRadius: 9, background: "#fff1f0", border: "1px solid #f3c5c1", color: "#922b21", fontSize: 13, fontWeight: 700 }}>
+                          Pagamento reembolsado, contestado ou em revisão. Não iniciar novas etapas de entrega. Se o pedido já foi enviado ou entregue, verificar a situação física e tratar manualmente.
+                        </p>
+                      ) : (
+                        <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}><CreditCard size={15} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />As etapas de entrega serão liberadas após a confirmação do pagamento.</p>
+                      )}
+                    </div>
                   )}
                 </div>
               </article>

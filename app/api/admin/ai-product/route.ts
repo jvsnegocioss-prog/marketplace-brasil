@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+const { consumeLocalRateLimit } = require("../../../../lib/local-rate-limit.cjs");
+const { isValidImageBase64 } = require("../../../../lib/image-validation.cjs");
 
 export const runtime = "nodejs";
 
@@ -7,34 +9,76 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function errorResponse(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-async function isAdmin(request: NextRequest) {
-  const authorization = request.headers.get("authorization") || "";
-  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!token) return false;
+async function readLimitedJson(request: Request): Promise<
+  { ok: true; value: unknown } | { ok: false; status: 400 | 413 }
+> {
+  if (!request.body) return { ok: false, status: 400 };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 4000000) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
 
-  const userClient = createClient(supabaseUrl, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
+async function isAdmin(request: NextRequest): Promise<string | null> {
+  try {
+    const authorization = request.headers.get("authorization") || "";
+    const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+    if (!token) return null;
 
-  const { data: userData, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !userData.user) return false;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-  const { data, error } = await userClient.rpc("is_marketplace_admin");
-  return !error && data === true;
+    const { data: userData, error: userError } = await userClient.auth.getUser(token);
+    if (userError || !userData.user) return null;
+
+    const { data, error } = await userClient.rpc("is_marketplace_admin");
+    return !error && data === true ? userData.user.id : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdmin(request))) {
+  const adminId = await isAdmin(request);
+  if (!adminId) {
     return errorResponse("Acesso administrativo não autorizado.", 401);
+  }
+
+  const rateLimit = consumeLocalRateLimit(`admin-ai:${adminId}`, { limit: 5, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Muitas solicitações de IA. Aguarde um minuto e tente novamente." },
+      { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return errorResponse("A chave do Gemini não está configurada no servidor.", 500);
+    console.error("GEMINI_API_KEY não está configurada no ambiente.");
+    return errorResponse("O serviço de IA está temporariamente indisponível. Tente novamente mais tarde.", 503);
   }
 
   let body: {
@@ -46,11 +90,21 @@ export async function POST(request: NextRequest) {
     imageUrl?: string;
   };
 
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse("Não foi possível ler os dados enviados.", 400);
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > 4000000) {
+    return errorResponse("Solicitação muito grande.", 413);
   }
+  const parsedBody = await readLimitedJson(request);
+  if (!parsedBody.ok) {
+    return errorResponse(
+      parsedBody.status === 413 ? "Solicitação muito grande." : "Não foi possível ler os dados enviados.",
+      parsedBody.status
+    );
+  }
+  if (!parsedBody.value || typeof parsedBody.value !== "object" || Array.isArray(parsedBody.value)) {
+    return errorResponse("Dados inválidos.", 400);
+  }
+  body = parsedBody.value as typeof body;
 
   const name = String(body.name || "").trim().slice(0, 180);
   const description = String(body.description || "").trim().slice(0, 4000);
@@ -100,23 +154,69 @@ Informações e características fornecidas: ${description || "Não informado"}`
   if (!imageData && body.imageUrl) {
     try {
       const imageUrl = new URL(body.imageUrl);
-      const trustedHost = new URL(supabaseUrl).host;
+      const trustedUrl = new URL(supabaseUrl);
+      let decodedPath = "";
+      try {
+        decodedPath = decodeURIComponent(imageUrl.pathname);
+      } catch {
+        return errorResponse("Endereço da foto inválido.", 400);
+      }
       if (
-        imageUrl.host !== trustedHost ||
-        !imageUrl.pathname.includes("/storage/v1/object/public/products-images/")
+        imageUrl.protocol !== "https:" ||
+        imageUrl.origin !== trustedUrl.origin ||
+        imageUrl.username ||
+        imageUrl.password ||
+        decodedPath.split("/").some((segment) => segment === "." || segment === "..") ||
+        !decodedPath.startsWith("/storage/v1/object/public/products-images/")
       ) {
         return errorResponse("A imagem informada não pertence ao armazenamento público de produtos da loja.", 400);
       }
-      const imageResponse = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(12000) });
-      if (!imageResponse.ok) return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
-      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-      if (imageBuffer.byteLength > 2.5 * 1024 * 1024) {
+
+      const imageResponse = await fetch(imageUrl.toString(), {
+        redirect: "manual",
+        signal: AbortSignal.timeout(12000),
+        headers: { Accept: "image/jpeg,image/png,image/webp" },
+      });
+      if (!imageResponse.ok || imageResponse.status >= 300) {
+        return errorResponse("Não foi possível acessar a foto atual do produto.", 400);
+      }
+
+      const declaredLength = Number(imageResponse.headers.get("content-length") || 0);
+      const maxImageBytes = Math.floor(2.5 * 1024 * 1024);
+      if (Number.isFinite(declaredLength) && declaredLength > maxImageBytes) {
+        await imageResponse.body?.cancel();
         return errorResponse("A foto deve ter no máximo 2,5 MB para análise.", 413);
       }
-      mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
-      if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+
+      const responseMimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!["image/jpeg", "image/png", "image/webp"].includes(responseMimeType)) {
+        await imageResponse.body?.cancel();
         return errorResponse("A foto deve estar em JPG, PNG ou WEBP.", 400);
       }
+      if (!imageResponse.body) {
+        return errorResponse("Não foi possível ler a foto atual do produto.", 400);
+      }
+
+      const reader = imageResponse.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let receivedBytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          receivedBytes += value.byteLength;
+          if (receivedBytes > maxImageBytes) {
+            await reader.cancel();
+            return errorResponse("A foto deve ter no máximo 2,5 MB para análise.", 413);
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      const imageBuffer = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
+      mimeType = responseMimeType;
       imageData = imageBuffer.toString("base64");
     } catch {
       return errorResponse("Não foi possível carregar a foto atual do produto.", 400);
@@ -124,11 +224,8 @@ Informações e características fornecidas: ${description || "Não informado"}`
   }
 
   if (imageData) {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
-      return errorResponse("Formato de foto não permitido. Use JPG, PNG ou WEBP.", 400);
-    }
-    if (imageData.length > 3_500_000) {
-      return errorResponse("A foto deve ter no máximo 2,5 MB.", 413);
+    if (!isValidImageBase64(imageData, mimeType, ["image/jpeg", "image/png", "image/webp"], Math.floor(2.5 * 1024 * 1024))) {
+      return errorResponse("Imagem inválida. Envie um arquivo JPG, PNG ou WEBP legítimo de até 2,5 MB.", 400);
     }
     parts.push({ inline_data: { mime_type: mimeType, data: imageData } });
   }
@@ -197,10 +294,14 @@ Informações e características fornecidas: ${description || "Não informado"}`
         /high demand|overload|temporar|unavailable|resource exhausted/i.test(lastProviderMessage);
 
       if (!retryable || model === models[models.length - 1]) {
+        console.error("Falha na solicitação ao Gemini:", {
+          status: response.status,
+          model,
+        });
         return errorResponse(
           retryable
             ? "Os modelos gratuitos do Gemini estão temporariamente sobrecarregados. Tente novamente mais tarde."
-            : lastProviderMessage,
+            : "O serviço de IA está indisponível no momento. Tente novamente mais tarde.",
           response.status === 429 ? 429 : 502
         );
       }

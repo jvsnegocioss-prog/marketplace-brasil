@@ -8,6 +8,7 @@ import {
   Gamepad2, House, Shirt, Package
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { resolveCheckoutAttempt } from "@/lib/checkout-attempt.cjs";
 
 const SALES_ENABLED = process.env.NEXT_PUBLIC_STORE_SALES_ENABLED === "true";
 
@@ -206,7 +207,7 @@ export default function Home() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setError("Não foi possível carregar os produtos. " + error.message);
+      setError("Não foi possível carregar os produtos no momento. Tente novamente mais tarde.");
       setProducts([]);
     } else {
       setProducts((data || []) as Product[]);
@@ -611,7 +612,9 @@ export default function Home() {
 
       const checkoutPayload = {
         customerName,
-        customerEmail,
+        // Para contas autenticadas, usa o mesmo e-mail confirmado que o servidor
+        // aplicará ao pedido, mantendo o fingerprint alinhado à chave idempotente.
+        customerEmail: accessToken ? (sessionData.session?.user?.email || customerEmail) : customerEmail,
         customerPhone,
         deliveryAddress,
         couponCode: appliedCoupon?.code || null,
@@ -621,27 +624,98 @@ export default function Home() {
           qty: item.qty,
         })),
       };
-      const checkoutFingerprint = JSON.stringify(checkoutPayload);
+      // Guarda somente um hash do payload no navegador; não persiste
+      // nome, e-mail, telefone ou endereço no registro de idempotência.
+      const fingerprintBuffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify(checkoutPayload))
+      );
+      const checkoutFingerprint = Array.from(new Uint8Array(fingerprintBuffer))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
       const idempotencyStorageKey = "novashopp_checkout_idempotency_v1";
-      let checkoutIdempotencyKey = "";
-      try {
-        const savedAttempt = JSON.parse(localStorage.getItem(idempotencyStorageKey) || "null");
-        if (
-          savedAttempt?.fingerprint === checkoutFingerprint &&
-          typeof savedAttempt?.key === "string" &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedAttempt.key)
-        ) {
-          checkoutIdempotencyKey = savedAttempt.key;
+      const rawSavedAttempt = localStorage.getItem(idempotencyStorageKey);
+      let savedAttempt: any = null;
+
+      if (rawSavedAttempt !== null) {
+        try {
+          savedAttempt = JSON.parse(rawSavedAttempt);
+        } catch {
+          setCheckoutMessage("Existe uma tentativa anterior que não pôde ser validada. Não inicie outra compra; entre em contato com o atendimento.");
+          return;
         }
-      } catch {
-        // Uma entrada local inválida será substituída por uma nova tentativa.
+
+        // Migra fingerprints antigos em texto puro para SHA-256 sem trocar a chave.
+        if (savedAttempt && typeof savedAttempt.fingerprint === "string" && !/^[0-9a-f]{64}$/i.test(savedAttempt.fingerprint)) {
+          const legacyBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(savedAttempt.fingerprint));
+          savedAttempt.fingerprint = Array.from(new Uint8Array(legacyBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+          localStorage.setItem(idempotencyStorageKey, JSON.stringify(savedAttempt));
+        }
       }
-      if (!checkoutIdempotencyKey) {
-        checkoutIdempotencyKey = crypto.randomUUID();
-        localStorage.setItem(idempotencyStorageKey, JSON.stringify({
-          fingerprint: checkoutFingerprint,
-          key: checkoutIdempotencyKey,
-        }));
+
+      const attemptDecision = resolveCheckoutAttempt(savedAttempt, checkoutFingerprint, sessionData.session?.user?.id || null, () => crypto.randomUUID());
+      if (!attemptDecision.ok) {
+        const message = attemptDecision.reason === "identity_mismatch"
+          ? "Existe uma tentativa anterior vinculada a outra conta. Entre na conta original e retome com os mesmos dados. Não inicie outra tentativa enquanto ela estiver pendente."
+          : attemptDecision.reason === "payload_mismatch"
+            ? "Existe uma tentativa anterior com dados diferentes. Restaure os mesmos dados do pedido anterior antes de continuar. Não foi criada uma nova tentativa."
+            : "Não foi possível validar a tentativa anterior. Não inicie outra compra; entre em contato com o atendimento.";
+        setCheckoutMessage(message);
+        return;
+      }
+
+      const checkoutIdempotencyKey = attemptDecision.attempt.key;
+      let recoveryToken = attemptDecision.attempt.recoveryToken;
+      if (typeof recoveryToken !== "string" || !/^[0-9a-f]{64}$/i.test(recoveryToken)) {
+        recoveryToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      attemptDecision.attempt.recoveryToken = recoveryToken;
+      try {
+        // O token é aleatório e independente da chave de pedido; apenas seu hash
+        // é persistido no servidor. O token bruto permanece neste dispositivo.
+        localStorage.setItem(idempotencyStorageKey, JSON.stringify(attemptDecision.attempt));
+      } catch {
+        setCheckoutMessage("Não foi possível salvar a identificação segura da tentativa neste aparelho. Verifique o armazenamento do navegador antes de tentar novamente.");
+        return;
+      }
+
+      // Consulta a tentativa no servidor antes de repetir o POST idempotente.
+      // 404 significa que ainda não há pedido vinculado a este token.
+      const recoveryResponse = await fetch(
+        `/api/checkout/recovery?key=${encodeURIComponent(checkoutIdempotencyKey)}`,
+        {
+          method: "GET",
+          headers: {
+            "X-Checkout-Recovery-Token": recoveryToken,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (recoveryResponse.status !== 404) {
+        const recoveryResult = await recoveryResponse.json().catch(() => ({}));
+        if (!recoveryResponse.ok) {
+          setCheckoutMessage(recoveryResult.error || "Não foi possível validar a tentativa anterior. Não inicie outra compra.");
+          return;
+        }
+        const recoveryState = recoveryResult.attempt?.state;
+        if (recoveryState === "paid") {
+          localStorage.removeItem(idempotencyStorageKey);
+          setCheckoutMessage("Esta tentativa já consta como paga. Consulte seu histórico de pedidos antes de iniciar outra compra.");
+          return;
+        }
+        if (recoveryState === "cancelled") {
+          localStorage.removeItem(idempotencyStorageKey);
+          setCheckoutMessage("A tentativa anterior consta como cancelada. Você pode revisar o carrinho e iniciar uma nova compra.");
+          return;
+        }
+        if (recoveryState !== "pending") {
+          setCheckoutMessage("A tentativa anterior possui uma situação que precisa ser conferida. Não inicie outra compra.");
+          return;
+        }
       }
 
       const response = await fetch("/api/checkout", {
@@ -649,6 +723,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
           "X-Checkout-Idempotency-Key": checkoutIdempotencyKey,
+          "X-Checkout-Recovery-Token": recoveryToken,
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify(checkoutPayload),
@@ -657,7 +732,8 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        if (response.status === 409) {
+        if (result.code === "attempt_rejected") {
+          // O servidor só envia este código após confirmar cancelamento e restauração do estoque.
           localStorage.removeItem(idempotencyStorageKey);
         }
         setCheckoutMessage(
@@ -676,7 +752,8 @@ export default function Home() {
         return;
       }
 
-      localStorage.removeItem(idempotencyStorageKey);
+      // Mantém a chave até haver resposta definitiva do fluxo.
+      // Se o redirecionamento falhar, a próxima tentativa reutiliza o mesmo pedido.
       window.location.href = result.checkoutUrl;
     } catch (error) {
       console.error("Erro ao iniciar checkout:", error);
@@ -773,7 +850,9 @@ export default function Home() {
           return (
             <button
               key={item.name}
-              className={category === item.name ? "nav-active" : ""}
+              type="button"
+              className={`quick-access-category ${category === item.name ? "nav-active" : ""}`}
+              data-selected={category === item.name ? "true" : "false"}
               aria-pressed={category === item.name}
               onClick={() => {
                 setCategory(item.name);
@@ -862,10 +941,26 @@ export default function Home() {
                       document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
                       return;
                     }
-                    const destination = /^https?:\/\//i.test(target)
-                      ? target
-                      : target.startsWith("/") ? target : `/${target}`;
-                    window.location.assign(destination);
+                    if (target.startsWith("//")) {
+                      console.warn("Destino externo inválido na campanha.");
+                      return;
+                    }
+                    try {
+                      const destination = /^https:\/\//i.test(target)
+                        ? new URL(target)
+                        : new URL(target.startsWith("/") ? target : `/${target}`, window.location.origin);
+                      if (
+                        (destination.protocol !== "https:" && destination.origin !== window.location.origin) ||
+                        destination.username ||
+                        destination.password
+                      ) {
+                        console.warn("Destino da campanha bloqueado por validação.");
+                        return;
+                      }
+                      window.location.assign(destination.toString());
+                    } catch {
+                      console.warn("Destino inválido na campanha.");
+                    }
                   }} style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     padding: "14px 22px", marginTop: 24, borderRadius: 10,
@@ -1102,7 +1197,35 @@ export default function Home() {
         <section key={campaign.id} style={{ maxWidth: 1240, margin: "24px auto", padding: 24, borderRadius: 16, background: campaign.background_color, color: campaign.text_color, textAlign: "center" }}>
           <h2>{campaign.title}</h2><h3>{campaign.subtitle}</h3><p>{campaign.description}</p>
           {campaign.media_url && (campaign.media_type === "video" ? <video src={campaign.media_url} controls playsInline style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} /> : <img src={campaign.media_url} alt={campaign.title} style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} />)}
-          <a className="campaign-bottom-button" href={campaign.button_url || "/"} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</a>
+          <button className="campaign-bottom-button" type="button" onClick={() => {
+            const target = (campaign.button_url || "").trim();
+            const label = (campaign.button_text || "").toLowerCase();
+            const isCatalogTarget = !target || target === "/" || target === "#produtos" || target === "/#produtos";
+            if (isCatalogTarget || label.includes("explorar")) {
+              document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+            if (target.startsWith("//")) {
+              console.warn("Destino externo inválido na campanha.");
+              return;
+            }
+            try {
+              const destination = /^https:\/\//i.test(target)
+                ? new URL(target)
+                : new URL(target.startsWith("/") ? target : `/${target}`, window.location.origin);
+              if (
+                (destination.protocol !== "https:" && destination.origin !== window.location.origin) ||
+                destination.username ||
+                destination.password
+              ) {
+                console.warn("Destino da campanha bloqueado por validação.");
+                return;
+              }
+              window.location.assign(destination.toString());
+            } catch {
+              console.warn("Destino inválido na campanha.");
+            }
+          }} style={{ display: "inline-block", padding: "11px 17px", borderRadius: 8, border: 0, cursor: "pointer", background: "#ffc928", color: "#071b43", fontWeight: 800, textDecoration: "none" }}>{campaign.button_text || "Confira"}</button>
         </section>
       ))}
       <footer className="footer">

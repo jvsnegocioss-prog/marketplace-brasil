@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { inspectMediaBytes } from "@/lib/media-validation.cjs";
 
 type AccountUser = {
   email?: string;
@@ -56,8 +57,13 @@ function paymentLabel(status: string) {
     aprovado: "Pagamento aprovado",
     approved: "Pagamento aprovado",
     cancelado: "Cancelado",
+    cancelada: "Cancelado",
     cancelled: "Cancelado",
     canceled: "Cancelado",
+    "reembolso parcial": "Reembolso parcial · pedido em revisão",
+    "reembolsado": "Pagamento reembolsado",
+    "em contestação": "Pagamento em contestação · em análise",
+    "revisão necessária": "Pagamento em revisão manual",
   };
   return labels[(status || "").toLowerCase()] || status || "Não informado";
 }
@@ -108,8 +114,11 @@ export default function ContaClientePage() {
   const [ordersError, setOrdersError] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    let active = true;
+    let authEventReceived = false;
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      authEventReceived = true;
+      if (!active) return;
       setUser(session?.user ?? null);
       if (event === "PASSWORD_RECOVERY") {
         setMode("reset");
@@ -119,7 +128,28 @@ export default function ContaClientePage() {
         setMessage("");
       }
     });
-    return () => listener.subscription.unsubscribe();
+
+    void supabase.auth.getSession()
+      .then(({ data, error: sessionError }) => {
+        if (!active || authEventReceived) return;
+        if (sessionError) {
+          setUser(null);
+          setError("Não foi possível verificar sua sessão. Entre novamente.");
+          return;
+        }
+        setUser(data.session?.user ?? null);
+      })
+      .catch(() => {
+        if (active && !authEventReceived) {
+          setUser(null);
+          setError("Não foi possível verificar sua sessão. Entre novamente.");
+        }
+      });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -161,10 +191,9 @@ export default function ContaClientePage() {
         try {
           result = responseText ? JSON.parse(responseText) : {};
         } catch {
-          console.error("RESPOSTA INVÁLIDA AO CARREGAR PEDIDOS:", {
+          console.error("Resposta inválida ao carregar pedidos:", {
             status: response.status,
             contentType: response.headers.get("content-type"),
-            preview: responseText.slice(0, 300),
           });
           throw new Error(
             `A consulta de pedidos retornou uma resposta inválida (HTTP ${response.status}). Atualize a página; se persistir, informe este código ao suporte.`
@@ -173,7 +202,7 @@ export default function ContaClientePage() {
         if (!response.ok) throw new Error(result.error || `Não foi possível carregar os pedidos (HTTP ${response.status}).`);
         if (active) setOrders((result.orders || []) as CustomerOrder[]);
       } catch (err) {
-        if (active) setOrdersError(err instanceof Error ? err.message : "Erro ao consultar pedidos.");
+        if (active) setOrdersError(err instanceof Error && err.message === "Sua sessão expirou. Entre novamente." ? err.message : "Não foi possível carregar seu histórico agora. Atualize a página e tente novamente.");
       } finally {
         if (active) setOrdersLoading(false);
       }
@@ -194,7 +223,11 @@ export default function ContaClientePage() {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: name.trim() },
+            // Retorna à área do cliente no mesmo ambiente após a confirmação do e-mail.
+            emailRedirectTo: `${window.location.origin}/conta`,
+          },
         });
 
         if (authError) throw authError;
@@ -212,7 +245,7 @@ export default function ContaClientePage() {
         setMessage("Login realizado com sucesso.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível concluir. Tente novamente.");
+      setError(mode === "register" ? "Não foi possível concluir o cadastro. Confira os dados e tente novamente." : "Não foi possível entrar. Confira seu e-mail e senha e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -236,7 +269,7 @@ export default function ContaClientePage() {
       if (recoveryError) throw recoveryError;
       setMessage("Se existir uma conta com esse e-mail, enviaremos um link para redefinir sua senha. Verifique também a caixa de spam.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível solicitar a recuperação. Tente novamente.");
+      setError("Não foi possível solicitar a recuperação agora. Confira o e-mail e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -259,14 +292,18 @@ export default function ContaClientePage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      await supabase.auth.signOut();
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        setMessage("Senha alterada com sucesso, mas não foi possível encerrar a sessão automaticamente. Saia da conta antes de entrar novamente.");
+        return;
+      }
       setUser(null);
       setPassword("");
       setConfirmPassword("");
       setMode("login");
       setMessage("Senha alterada com sucesso. Entre usando sua nova senha.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar a senha. Solicite um novo link.");
+      setError("Não foi possível atualizar a senha. Solicite um novo link e tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -309,7 +346,7 @@ export default function ContaClientePage() {
       setEditingProfile(false);
       setMessage("Seus dados foram atualizados. Nome, telefone e endereço serão preenchidos nos próximos checkouts.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar seu nome.");
+      setError("Não foi possível atualizar seus dados. Confira os campos e tente novamente.");
     } finally {
       setSavingProfile(false);
     }
@@ -319,12 +356,9 @@ export default function ContaClientePage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !user) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Escolha uma imagem JPG, PNG ou WEBP.");
-      return;
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      setError("A foto deve ter no máximo 3 MB.");
+    const avatarInfo = inspectMediaBytes(new Uint8Array(await file.arrayBuffer()), file.type, 3 * 1024 * 1024);
+    if (!avatarInfo || avatarInfo.kind !== "image" || !["jpg", "png", "webp"].includes(avatarInfo.extension)) {
+      setError("Escolha uma imagem JPG, PNG ou WEBP válida, de até 3 MB.");
       return;
     }
 
@@ -355,7 +389,7 @@ export default function ContaClientePage() {
       setAvatarUrl(publicData.publicUrl);
       setMessage("Foto de perfil atualizada com sucesso.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar a foto.");
+      setError("Não foi possível atualizar a foto. Confira o formato e o tamanho do arquivo e tente novamente.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -370,19 +404,23 @@ export default function ContaClientePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       if (!userId) throw new Error("Entre novamente na sua conta.");
-      const { error: removeError } = await supabase.storage
-        .from("avatars")
-        .remove([`${userId}/avatar`]);
-      if (removeError) throw removeError;
+      // Primeiro remove a referência do perfil; se a limpeza do Storage falhar,
+      // a conta não continuará publicando uma URL de foto que o usuário removeu.
       const { data, error: updateError } = await supabase.auth.updateUser({
         data: { avatar_url: null },
       });
       if (updateError) throw updateError;
       if (data.user) setUser(data.user);
       setAvatarUrl("");
-      setMessage("Foto removida. Seu perfil voltou ao avatar padrão.");
+
+      const { error: removeError } = await supabase.storage
+        .from("avatars")
+        .remove([`${userId}/avatar`]);
+      setMessage(removeError
+        ? "Foto removida do perfil. A limpeza do arquivo no armazenamento ficou pendente."
+        : "Foto removida. Seu perfil voltou ao avatar padrão.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível remover a foto.");
+      setError("Não foi possível remover a foto agora. Tente novamente.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -390,11 +428,14 @@ export default function ContaClientePage() {
 
   async function handleLogout() {
     setError("");
-    const { error: authError } = await supabase.auth.signOut();
-    if (authError) setError("Não foi possível sair da conta. Tente novamente.");
-    else {
+    setMessage("");
+    try {
+      const { error: authError } = await supabase.auth.signOut();
+      if (authError) throw authError;
       setMessage("Você saiu da sua conta.");
       setOrders([]);
+    } catch {
+      setError("Não foi possível sair da conta. Verifique sua conexão e tente novamente.");
     }
   }
 
