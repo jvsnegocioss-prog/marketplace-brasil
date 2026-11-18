@@ -252,8 +252,8 @@ export async function POST(request: Request) {
     if (order.status !== "aguardando") {
       createdOrderId = null;
       return NextResponse.json(
-        { error: "Este pedido já foi finalizado ou cancelado. Inicie uma nova tentativa de compra." },
-        { status: 409 }
+        { code: "attempt_closed", error: "Este pedido já foi finalizado ou cancelado. Confira o histórico antes de iniciar outra compra." },
+        { status: 409, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -422,7 +422,7 @@ export async function POST(request: Request) {
         createdOrderId = null;
         if (canceled) {
           return NextResponse.json(
-            { error: "O provedor recusou esta tentativa. Inicie uma nova tentativa de compra." },
+            { code: "attempt_rejected", error: "O provedor recusou esta tentativa e o cancelamento foi confirmado. Você pode iniciar uma nova tentativa de compra." },
             { status: 409, headers: { "Cache-Control": "no-store" } }
           );
         }
