@@ -48,3 +48,27 @@ test("falha de forma segura para registros salvos inválidos", () => {
     ok: false, reason: "invalid",
   });
 });
+const { classifyCheckoutCancellation } = require("../lib/checkout-cancellation.cjs");
+
+test("só confirma liberação da tentativa quando o banco confirma cancelamento", () => {
+  assert.deepEqual(classifyCheckoutCancellation(true), {
+    confirmed: true,
+    code: "attempt_rejected",
+  });
+});
+
+test("mantém tentativa pendente quando cancelamento retorna false", () => {
+  assert.deepEqual(classifyCheckoutCancellation(false), {
+    confirmed: false,
+    code: "cancellation_pending",
+  });
+});
+
+test("mantém tentativa pendente para respostas ausentes ou inesperadas", () => {
+  for (const result of [null, undefined, 0, "true", {}]) {
+    assert.deepEqual(classifyCheckoutCancellation(result), {
+      confirmed: false,
+      code: "cancellation_pending",
+    });
+  }
+});
