@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
 import { normalizeCheckoutItems } from "@/lib/checkout-items.cjs";
-import { classifyCheckoutCancellation } from "@/lib/checkout-cancellation.cjs";
+import { attemptCheckoutCancellation, isConfirmedUnpaidCancellation } from "@/lib/checkout-cancellation.cjs";
 
 export const runtime = "nodejs";
 
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
 
       if (ownershipError || ownership?.customer_user_id !== authenticatedCustomerId) {
         console.error("ERRO AO VINCULAR PEDIDO À CONTA:", ownershipError);
-        const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+        const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
         if (cancellation.confirmed) createdOrderId = null;
         return NextResponse.json(
           cancellation.confirmed
@@ -239,14 +239,14 @@ export async function POST(request: Request) {
     const { data: order, error: fetchOrderError } =
       await getSupabaseAdmin()
         .from("orders")
-        .select("id,status,total,discount_amount,coupon_code,shipping_fee")
+        .select("id,status,total,discount_amount,coupon_code,shipping_fee,mercado_pago_order_id")
         .eq("id", orderId)
         .single();
 
     if (fetchOrderError || !order) {
       console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
 
-      const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
       if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
@@ -258,9 +258,16 @@ export async function POST(request: Request) {
     }
 
     if (order.status !== "aguardando") {
+      if (isConfirmedUnpaidCancellation(order.status, order.mercado_pago_order_id)) {
+        createdOrderId = null;
+        return NextResponse.json(
+          { code: "attempt_rejected", error: "Esta tentativa já foi cancelada e não possui vínculo de pagamento registrado. Você pode iniciar uma nova compra." },
+          { status: 409, headers: { "Cache-Control": "no-store" } }
+        );
+      }
       createdOrderId = null;
       return NextResponse.json(
-        { code: "attempt_closed", error: "Este pedido já foi finalizado ou cancelado. Confira o histórico antes de iniciar outra compra." },
+        { code: "attempt_closed", error: "Este pedido já foi finalizado ou possui uma situação que precisa ser conferida. Não inicie outra tentativa até verificar o histórico." },
         { status: 409, headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -274,7 +281,7 @@ export async function POST(request: Request) {
     if (itemsError || !orderItems?.length) {
       console.error("ERRO AO BUSCAR ITENS:", itemsError);
 
-      const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
       if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
@@ -426,7 +433,7 @@ export async function POST(request: Request) {
       // Só libere o estoque se o banco confirmar o cancelamento do pedido.
       // 409/423, 429 e 5xx permanecem ambíguos e preservam a chave idempotente.
       if (!paymentResponse.ok && isDefinitiveOrderCreationRejection(paymentResponse.status)) {
-        const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+        const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderId));
         if (cancellation.confirmed) {
           createdOrderId = null;
           return NextResponse.json(
@@ -496,7 +503,7 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      const cancellation = classifyCheckoutCancellation(await cancelOrder(createdOrderId));
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(createdOrderId));
       if (cancellation.confirmed) {
         createdOrderId = null;
         return NextResponse.json(
