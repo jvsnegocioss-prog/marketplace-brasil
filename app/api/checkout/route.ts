@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { isDefinitiveOrderCreationRejection } from "@/lib/mercadopago-security.cjs";
 import { normalizeCheckoutItems } from "@/lib/checkout-items.cjs";
+import { classifyCheckoutCancellation } from "@/lib/checkout-cancellation.cjs";
 
 export const runtime = "nodejs";
 
@@ -63,16 +64,21 @@ function getSupabaseAdmin() {
 }
 
 async function cancelOrder(orderId: string): Promise<boolean> {
-  const { data, error } = await getSupabaseAdmin().rpc(
-    "cancel_unpaid_order_and_restore_stock",
-    { p_order_id: orderId }
-  );
+  try {
+    const { data, error } = await getSupabaseAdmin().rpc(
+      "cancel_unpaid_order_and_restore_stock",
+      { p_order_id: orderId }
+    );
 
-  if (error) {
-    console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+    if (error) {
+      console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+      return false;
+    }
+    return data === true;
+  } catch (error) {
+    console.error("FALHA AO CONFIRMAR CANCELAMENTO E RESTAURAÇÃO DO ESTOQUE:", error);
     return false;
   }
-  return data === true;
 }
 
 export async function POST(request: Request) {
@@ -219,11 +225,13 @@ export async function POST(request: Request) {
 
       if (ownershipError || ownership?.customer_user_id !== authenticatedCustomerId) {
         console.error("ERRO AO VINCULAR PEDIDO À CONTA:", ownershipError);
-        await cancelOrder(orderId);
-        createdOrderId = null;
+        const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+        if (cancellation.confirmed) createdOrderId = null;
         return NextResponse.json(
-          { error: "Não foi possível vincular o pedido à sua conta. Nenhuma cobrança foi iniciada; atualize a página e tente novamente." },
-          { status: 503, headers: { "Cache-Control": "no-store" } }
+          cancellation.confirmed
+            ? { code: "attempt_rejected", error: "Não foi possível vincular o pedido à sua conta. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+            : { error: "Não foi possível vincular o pedido à sua conta. Nenhuma cobrança foi iniciada, mas o cancelamento ainda não foi confirmado. Não inicie outra tentativa; tente novamente em instantes." },
+          { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
         );
       }
     }
@@ -238,14 +246,14 @@ export async function POST(request: Request) {
     if (fetchOrderError || !order) {
       console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
 
-      await cancelOrder(orderId);
-      createdOrderId = null;
+      const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
-        {
-          error: "Não foi possível confirmar os dados do pedido. Tente novamente.",
-        },
-        { status: 500 }
+        cancellation.confirmed
+          ? { code: "attempt_rejected", error: "Não foi possível confirmar os dados do pedido. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+          : { error: "Não foi possível confirmar os dados do pedido nem a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -266,14 +274,14 @@ export async function POST(request: Request) {
     if (itemsError || !orderItems?.length) {
       console.error("ERRO AO BUSCAR ITENS:", itemsError);
 
-      await cancelOrder(orderId);
-      createdOrderId = null;
+      const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
-        {
-          error: "Não foi possível confirmar os itens do pedido. Tente novamente.",
-        },
-        { status: 500 }
+        cancellation.confirmed
+          ? { code: "attempt_rejected", error: "Não foi possível confirmar os itens do pedido. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." }
+          : { error: "Não foi possível confirmar os itens do pedido nem a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: cancellation.confirmed ? 409 : 503, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -418,16 +426,16 @@ export async function POST(request: Request) {
       // Só libere o estoque se o banco confirmar o cancelamento do pedido.
       // 409/423, 429 e 5xx permanecem ambíguos e preservam a chave idempotente.
       if (!paymentResponse.ok && isDefinitiveOrderCreationRejection(paymentResponse.status)) {
-        const canceled = await cancelOrder(orderId);
-        createdOrderId = null;
-        if (canceled) {
+        const cancellation = classifyCheckoutCancellation(await cancelOrder(orderId));
+        if (cancellation.confirmed) {
+          createdOrderId = null;
           return NextResponse.json(
             { code: "attempt_rejected", error: "O provedor recusou esta tentativa e o cancelamento foi confirmado. Você pode iniciar uma nova tentativa de compra." },
             { status: 409, headers: { "Cache-Control": "no-store" } }
           );
         }
         return NextResponse.json(
-          { error: "A solicitação foi recusada, mas não foi possível confirmar a liberação do estoque. Tente novamente em instantes." },
+          { error: "O provedor recusou a tentativa, mas o cancelamento e a restauração do estoque ainda não foram confirmados. Não inicie outra tentativa; tente novamente em instantes." },
           { status: 503, headers: { "Cache-Control": "no-store" } }
         );
       }
@@ -488,11 +496,23 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      await cancelOrder(createdOrderId);
+      const cancellation = classifyCheckoutCancellation(await cancelOrder(createdOrderId));
+      if (cancellation.confirmed) {
+        createdOrderId = null;
+        return NextResponse.json(
+          { code: "attempt_rejected", error: "Ocorreu um erro antes de iniciar o pagamento. O cancelamento e a restauração do estoque foram confirmados; você pode iniciar uma nova tentativa." },
+          { status: 409, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+      console.error("RECUPERAÇÃO DE CHECKOUT PENDENTE:", { orderId: createdOrderId });
+      return NextResponse.json(
+        { error: "Ocorreu um erro antes de iniciar o pagamento e não foi possível confirmar a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     return NextResponse.json(
-      { error: "Ocorreu um erro ao iniciar o pagamento. Tente novamente." },
+      { error: "Ocorreu um erro ao iniciar o pagamento. A situação do pedido foi preservada para recuperação; tente novamente sem alterar os dados." },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
