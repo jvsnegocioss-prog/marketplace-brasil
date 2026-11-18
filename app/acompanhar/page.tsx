@@ -93,7 +93,11 @@ export default function AcompanharPedidoPage() {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Não foi possível carregar o pedido.");
-        const selected = (result.orders || []).find((item: any) => item.id === selectedOrderId);
+        const selected = (result.orders || []).find((item: any) =>
+          String(item.id || "").trim().toUpperCase() === selectedOrderId.trim().toUpperCase() ||
+          String(item.order_number || "").trim().toUpperCase() === selectedOrderId.trim().toUpperCase() ||
+          String(item.tracking_code || "").trim().toUpperCase() === selectedOrderId.trim().toUpperCase()
+        );
         if (!selected) throw new Error("Este pedido não foi encontrado no histórico da sua conta.");
         if (active) setOrder({
           order_id: selected.id,
@@ -243,7 +247,7 @@ export default function AcompanharPedidoPage() {
             </div>
           </div>
 
-          {!order && <form onSubmit={handleSearch} className="tracking-form">
+          {!order && !loading && <form onSubmit={handleSearch} className="tracking-form">
             <label>
               <span>Número do pedido ou código de rastreio</span>
               <input
