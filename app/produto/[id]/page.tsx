@@ -65,6 +65,7 @@ export default function ProductPage() {
   const [rating, setRating] = useState(5);
   const [reviewFiles, setReviewFiles] = useState<File[]>([]);
   const [reviewId, setReviewId] = useState("");
+  const [reviewEligible, setReviewEligible] = useState(false);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
@@ -180,6 +181,7 @@ export default function ProductPage() {
     const result = await response.json();
     if (response.ok) {
       setReviews(result.reviews || []);
+      setReviewEligible(result.canReview === true);
       if (result.ownReview) {
         setReviewId(result.ownReview.id);
         setRating(result.ownReview.rating);
@@ -188,6 +190,7 @@ export default function ProductPage() {
     } catch (error) {
       console.error("Não foi possível carregar as avaliações do produto:", error);
       setReviews([]);
+      setReviewEligible(false);
     }
   }
   useEffect(() => {
@@ -816,36 +819,45 @@ export default function ProductPage() {
 
           <div className="detail-panel review-form-panel">
             <h2 className="detail-panel-title">Avalie este produto</h2>
-            <p className="review-form-intro">Compartilhe fotos ou vídeo do produto recebido e sua nota. Disponível para clientes com compra paga e entregue.</p>
-            <label className="review-label">Fotos do produto recebido</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-              multiple
-              onChange={(event) => setReviewFiles(Array.from(event.target.files || []))}
-              className="review-input"
-            />
-            <p style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Até 5 arquivos, com limite total de 4 MB por envio.</p>
-            {reviewFiles.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(82px,1fr))", gap: 8, marginTop: 10 }}>
-                {reviewFiles.map((file, index) => (
-                  <div key={index} style={{ padding: 8, border: "1px solid #dbe3ef", borderRadius: 8, fontSize: 11, overflowWrap: "anywhere" }}>
-                    {file.type.startsWith("video/") ? "🎥 Vídeo" : "📷 Foto"}<br />{file.name}
+            {reviewEligible ? (
+              <>
+                <p className="review-form-intro">Compartilhe fotos ou vídeo do produto recebido e sua nota. Disponível para clientes com compra paga e entregue.</p>
+                <label className="review-label">Fotos do produto recebido</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                  multiple
+                  onChange={(event) => setReviewFiles(Array.from(event.target.files || []))}
+                  className="review-input"
+                />
+                <p style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Até 5 arquivos, com limite total de 4 MB por envio.</p>
+                {reviewFiles.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(82px,1fr))", gap: 8, marginTop: 10 }}>
+                    {reviewFiles.map((file, index) => (
+                      <div key={index} style={{ padding: 8, border: "1px solid #dbe3ef", borderRadius: 8, fontSize: 11, overflowWrap: "anywhere" }}>
+                        {file.type.startsWith("video/") ? "🎥 Vídeo" : "📷 Foto"}<br />{file.name}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+                <label className="review-label review-label-spaced">Sua nota</label>
+                <div className="review-star-picker" aria-label="Selecione sua nota de 1 a 5 estrelas">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} aria-pressed={value === rating} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
+                  ))}
+                </div>
+                <button onClick={submitReview} disabled={saving} className="review-submit-button">
+                  {saving ? "Enviando..." : reviewId ? "Atualizar avaliação" : "ENVIAR"}
+                </button>
+                {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
+                {message && <p className="review-message" role="status">{message}</p>}
+              </>
+            ) : (
+              <p className="review-form-intro" role="status">
+                Avaliações bloqueadas. Esta opção é liberada somente para clientes que entraram na conta e possuem uma compra deste produto paga e entregue.
+                {" "}<Link href="/conta" className="detail-back-link">Acessar minha conta</Link>
+              </p>
             )}
-            <label className="review-label review-label-spaced">Sua nota</label>
-            <div className="review-star-picker" aria-label="Selecione sua nota de 1 a 5 estrelas">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} estrelas`} aria-pressed={value === rating} className={value <= rating ? "review-star-selected" : "review-star-unselected"}>★</button>
-              ))}
-            </div>
-            <button onClick={submitReview} disabled={saving} className="review-submit-button">
-              {saving ? "Enviando..." : reviewId ? "Atualizar avaliação" : "ENVIAR"}
-            </button>
-            {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
-            {message && <p className="review-message" role="status">{message}</p>}
           </div>
         </section>
       </div>
