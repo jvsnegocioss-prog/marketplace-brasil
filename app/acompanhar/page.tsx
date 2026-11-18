@@ -122,18 +122,66 @@ export default function AcompanharPedidoPage() {
     setError("");
     setOrder(null);
 
-    if (!orderId.trim() || !phone.trim()) {
-      setError("Informe o número do pedido ou código de rastreio e o telefone utilizado na compra.");
+    if (!orderId.trim()) {
+      setError("Informe o número do pedido ou o código de rastreio.");
       return;
     }
 
     setLoading(true);
     try {
+      const normalizedOrderId = orderId.trim().replace(/^#\\s*/, "").toUpperCase();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (sessionError) {
+        throw new Error("Não foi possível validar sua sessão. Entre novamente na sua conta.");
+      }
+
+      if (token) {
+        const response = await fetch("/api/conta/pedidos", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Não foi possível consultar seus pedidos.");
+        }
+
+        const selected = (result.orders || []).find((item: any) =>
+          String(item.order_number || "").trim().toUpperCase() === normalizedOrderId ||
+          String(item.tracking_code || "").trim().toUpperCase() === normalizedOrderId ||
+          String(item.id || "").trim().toUpperCase() === normalizedOrderId
+        );
+
+        if (!selected) {
+          throw new Error("Não encontramos esse pedido no histórico da sua conta. Confira o número ou entre na conta utilizada na compra.");
+        }
+
+        setOrder({
+          order_id: selected.id,
+          order_number: selected.order_number,
+          payment_status: selected.status,
+          delivery_status: selected.delivery_status,
+          tracking_code: selected.tracking_code,
+          delivery_method: selected.delivery_method,
+          estimated_delivery_at: selected.estimated_delivery_at,
+          created_at: selected.created_at,
+          shipped_at: selected.shipped_at,
+          delivered_at: selected.delivered_at,
+        });
+        return;
+      }
+
+      if (!phone.trim()) {
+        setError("Para consultar sem entrar na conta, informe também o telefone utilizado na compra.");
+        return;
+      }
+
       const response = await fetch("/api/rastreamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderNumber: orderId.trim().replace(/^#\\s*/, ""),
+          orderNumber: normalizedOrderId,
           phone: phone.trim(),
         }),
         cache: "no-store",
@@ -149,8 +197,8 @@ export default function AcompanharPedidoPage() {
         return;
       }
       setOrder(result.order as TrackingResult);
-    } catch {
-      setError("Ocorreu um erro na consulta. Tente novamente.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro na consulta. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -191,7 +239,7 @@ export default function AcompanharPedidoPage() {
             <div className="tracking-panel-icon"><Search size={20} /></div>
             <div>
               <h2>Localizar meu pedido</h2>
-              <p>Informe o número do pedido ou o código de rastreio, junto com o telefone utilizado na compra.</p>
+              <p>Se estiver conectado, informe apenas o número do pedido ou código de rastreio. Sem entrar na conta, informe também o telefone da compra.</p>
             </div>
           </div>
 
@@ -208,14 +256,13 @@ export default function AcompanharPedidoPage() {
               />
             </label>
             <label>
-              <span>Telefone da compra</span>
+              <span>Telefone da compra (consulta sem entrar na conta)</span>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(92) 99999-9999"
                 className="tracking-input"
-                required
               />
             </label>
             {error && <p className="tracking-error">{error}</p>}
