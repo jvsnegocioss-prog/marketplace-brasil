@@ -6041,3 +6041,125 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   background: #fff0b8 !important;
   color: #06183d !important;
 }
+
+/* NOVASHOPP — aproveitamento de espaço em computadores e monitores largos */
+@media (min-width: 901px) {
+  .header {
+    padding: 16px clamp(28px, 4.5vw, 80px) !important;
+    gap: clamp(22px, 2.2vw, 38px) !important;
+  }
+
+  .search-box {
+    max-width: 780px !important;
+  }
+
+  .navigation {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: calc(100% - 64px) !important;
+    max-width: 1560px !important;
+    gap: 16px !important;
+    padding: 24px 0 !important;
+    justify-content: stretch !important;
+  }
+
+  .navigation > button,
+  .navigation > button:hover,
+  .navigation > button:focus,
+  .navigation > button:focus-visible,
+  .navigation > button:active {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 88px !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    border-radius: 22px !important;
+    font-size: clamp(16px, 1.25vw, 21px) !important;
+    white-space: normal !important;
+  }
+
+  .navigation > button .navigation-category-icon {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+  }
+
+  .navigation > button .navigation-category-icon svg {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .hero-campaign-carousel {
+    width: calc(100% - 64px) !important;
+    max-width: 1560px !important;
+    margin: 18px auto 24px !important;
+  }
+
+  .hero-campaign-slide {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: clamp(28px, 3.2vw, 56px) !important;
+    padding: clamp(34px, 3.2vw, 56px) clamp(34px, 4vw, 68px) 70px !important;
+  }
+
+  .hero-campaign-slide > div:first-child {
+    max-width: 700px;
+  }
+
+  .hero-campaign-slide h1 {
+    max-width: 720px !important;
+    font-size: clamp(34px, 3vw, 52px) !important;
+    line-height: 1.06 !important;
+  }
+
+  .hero-campaign-slide p {
+    max-width: 650px !important;
+    font-size: clamp(13px, 1vw, 16px) !important;
+    line-height: 1.65 !important;
+  }
+
+  .hero-campaign-media {
+    min-height: 260px !important;
+    max-height: 390px !important;
+  }
+
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 260px !important;
+    max-height: 390px !important;
+  }
+
+  .categories-section,
+  .products-section {
+    max-width: 1660px;
+    margin-inline: auto;
+    padding: 42px clamp(28px, 4vw, 64px) !important;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: clamp(18px, 1.8vw, 28px) !important;
+  }
+
+  .product-image {
+    height: clamp(210px, 18vw, 290px) !important;
+  }
+}
+
+@media (min-width: 1500px) {
+  .navigation {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .navigation {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: calc(100% - 40px) !important;
+  }
+
+  .hero-campaign-carousel {
+    width: calc(100% - 40px) !important;
+  }
+}
