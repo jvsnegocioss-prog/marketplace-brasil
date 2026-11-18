@@ -223,7 +223,11 @@ export default function ContaClientePage() {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: name.trim() },
+            // Retorna à área do cliente no mesmo ambiente após a confirmação do e-mail.
+            emailRedirectTo: `${window.location.origin}/conta`,
+          },
         });
 
         if (authError) throw authError;
