@@ -105,8 +105,29 @@ BEGIN
   IF NOT has_table_privilege('service_role', 'public.checkout_recovery_tokens', 'SELECT') THEN
     RAISE EXCEPTION 'service_role cannot read recovery token records';
   END IF;
+
+  IF has_function_privilege(
+       'anon',
+       'public.create_store_order_with_recovery_token(text,text,text,text,jsonb,text,uuid,text,text,text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'authenticated',
+       'public.create_store_order_with_recovery_token(text,text,text,text,jsonb,text,uuid,text,text,text)',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'public roles can execute the recovery-token RPC';
+  END IF;
+
+  IF NOT has_function_privilege(
+    'service_role',
+    'public.create_store_order_with_recovery_token(text,text,text,text,jsonb,text,uuid,text,text,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'service_role cannot execute the recovery-token RPC';
+  END IF;
 END
-$$;
+$;
 
 DELETE FROM public.checkout_recovery_tokens
 WHERE order_id IN (
