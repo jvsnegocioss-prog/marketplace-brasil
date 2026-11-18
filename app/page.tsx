@@ -8,6 +8,7 @@ import {
   Gamepad2, House, Shirt, Package
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { resolveCheckoutAttempt } from "@/lib/checkout-attempt.cjs";
 
 const SALES_ENABLED = process.env.NEXT_PUBLIC_STORE_SALES_ENABLED === "true";
 
@@ -633,48 +634,47 @@ export default function Home() {
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
       const idempotencyStorageKey = "novashopp_checkout_idempotency_v1";
-      let checkoutIdempotencyKey = "";
-      try {
-        const savedAttempt = JSON.parse(localStorage.getItem(idempotencyStorageKey) || "null");
-        const validSavedKey =
-          typeof savedAttempt?.key === "string" &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedAttempt.key);
+      const rawSavedAttempt = localStorage.getItem(idempotencyStorageKey);
+      let savedAttempt: any = null;
 
-        if (validSavedKey && typeof savedAttempt.fingerprint === "string") {
-          let savedFingerprint = savedAttempt.fingerprint;
-
-          // Migra registros antigos que continham o payload em texto puro,
-          // preservando a chave idempotente da tentativa já iniciada.
-          if (!/^[0-9a-f]{64}$/i.test(savedFingerprint)) {
-            const legacyBuffer = await crypto.subtle.digest(
-              "SHA-256",
-              new TextEncoder().encode(savedFingerprint)
-            );
-            savedFingerprint = Array.from(new Uint8Array(legacyBuffer))
-              .map((byte) => byte.toString(16).padStart(2, "0"))
-              .join("");
-            localStorage.setItem(idempotencyStorageKey, JSON.stringify({
-              fingerprint: savedFingerprint,
-              key: savedAttempt.key,
-            }));
-          }
-
-          if (savedFingerprint === checkoutFingerprint) {
-            checkoutIdempotencyKey = savedAttempt.key;
-          }
+      if (rawSavedAttempt !== null) {
+        try {
+          savedAttempt = JSON.parse(rawSavedAttempt);
+        } catch {
+          setCheckoutMessage("Existe uma tentativa anterior que não pôde ser validada. Não inicie outra compra; entre em contato com o atendimento.");
+          return;
         }
-      } catch {
-        // Uma entrada local inválida será substituída por uma nova tentativa.
-      }
-      if (!checkoutIdempotencyKey) {
-        checkoutIdempotencyKey = crypto.randomUUID();
-        localStorage.setItem(idempotencyStorageKey, JSON.stringify({
-          fingerprint: checkoutFingerprint,
-          key: checkoutIdempotencyKey,
-        }));
+
+        // Migra fingerprints antigos em texto puro para SHA-256 sem trocar a chave.
+        if (savedAttempt && typeof savedAttempt.fingerprint === "string" && !/^[0-9a-f]{64}$/i.test(savedAttempt.fingerprint)) {
+          const legacyBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(savedAttempt.fingerprint));
+          savedAttempt.fingerprint = Array.from(new Uint8Array(legacyBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+          localStorage.setItem(idempotencyStorageKey, JSON.stringify(savedAttempt));
+        }
       }
 
-      const response = await fetch("/api/checkout", {
+      const attemptDecision = resolveCheckoutAttempt(savedAttempt, checkoutFingerprint, sessionData.session?.user?.id || null, () => crypto.randomUUID());
+      if (!attemptDecision.ok) {
+        const message = attemptDecision.reason === "identity_mismatch"
+          ? "Existe uma tentativa anterior vinculada a outra conta. Entre na conta original e retome com os mesmos dados. Não inicie outra tentativa enquanto ela estiver pendente."
+          : attemptDecision.reason === "payload_mismatch"
+            ? "Existe uma tentativa anterior com dados diferentes. Restaure os mesmos dados do pedido anterior antes de continuar. Não foi criada uma nova tentativa."
+            : "Não foi possível validar a tentativa anterior. Não inicie outra compra; entre em contato com o atendimento.";
+        setCheckoutMessage(message);
+        return;
+      }
+
+      const checkoutIdempotencyKey = attemptDecision.attempt.key;
+      if (attemptDecision.created) {
+        try {
+          localStorage.setItem(idempotencyStorageKey, JSON.stringify(attemptDecision.attempt));
+        } catch {
+          setCheckoutMessage("Não foi possível salvar a identificação segura da tentativa neste aparelho. Verifique o armazenamento do navegador antes de tentar novamente.");
+          return;
+        }
+      }
+
+            const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -687,7 +687,8 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        if (response.status === 409) {
+        if (result.code === "attempt_rejected") {
+          // O servidor só envia este código após confirmar cancelamento e restauração do estoque.
           localStorage.removeItem(idempotencyStorageKey);
         }
         setCheckoutMessage(
