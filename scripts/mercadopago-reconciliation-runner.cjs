@@ -96,6 +96,9 @@ if (require.main === module) {
   runReconciliation({
     baseUrl: process.env.MERCADO_PAGO_RECONCILIATION_BASE_URL,
     secret: process.env.MERCADO_PAGO_RECONCILIATION_SECRET,
+    maxPages: process.env.MERCADO_PAGO_RECONCILIATION_MAX_PAGES
+      ? Number(process.env.MERCADO_PAGO_RECONCILIATION_MAX_PAGES)
+      : DEFAULT_MAX_PAGES,
   }).then((totals) => {
     // Only aggregate counters are printed; credentials and response payloads are never logged.
     process.stdout.write(JSON.stringify(totals) + "\n");
