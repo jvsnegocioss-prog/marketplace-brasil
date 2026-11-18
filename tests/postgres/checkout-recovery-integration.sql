@@ -1,5 +1,5 @@
 -- Exercises the recovery-token migration in the disposable PostgreSQL CI database only.
-DO $$
+DO $recovery_test$
 DECLARE
   v_order_id uuid;
   v_retry_order_id uuid;
@@ -127,7 +127,7 @@ BEGIN
     RAISE EXCEPTION 'service_role cannot execute the recovery-token RPC';
   END IF;
 END
-$;
+$recovery_test$;
 
 DELETE FROM public.checkout_recovery_tokens
 WHERE order_id IN (
