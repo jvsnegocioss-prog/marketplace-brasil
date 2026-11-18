@@ -6163,3 +6163,79 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     width: calc(100% - 40px) !important;
   }
 }
+
+/* PADRÃO GLOBAL DE FOTOGRAFIAS DE PRODUTOS E CAMPANHAS
+   Mantém proporção, centralização e enquadramento sem cortar imagens originais. */
+.hero-campaign-media {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  background: #f4f6fa !important;
+  overflow: hidden !important;
+}
+.hero-campaign-media img,
+.hero-campaign-media video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+.hero-campaign-media:hover img,
+.hero-campaign-media:hover video {
+  transform: none !important;
+}
+
+/* Cartões de produtos: área de imagem uniforme, independente do formato enviado. */
+.product-image {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+.product-image > a {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+.product-photo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  padding: 10px !important;
+}
+
+/* Detalhe do produto e galeria: nunca esticar nem recortar a foto original. */
+.detail-photo-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.detail-photo-frame img,
+.detail-photo-frame .detail-product-photo,
+.detail-image-lightbox-photo {
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+/* Imagens de campanhas inferiores mantêm enquadramento uniforme. */
+.campaign-bottom-image,
+section img[src] {
+  object-position: center center;
+}
