@@ -41,7 +41,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $fixture$
 declare
   v_order_id uuid;
   v_existing_hash text;
@@ -65,7 +65,7 @@ begin
 
   return v_order_id;
 end;
-$;
+$fixture$;
 
 create or replace function public.cancel_unpaid_order_and_restore_stock(p_order_id uuid)
 returns boolean
