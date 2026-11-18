@@ -18,9 +18,9 @@ test("checkout não gera nova chave quando a tentativa salva tem dados diferente
 
 test("chave só é removida após rejeição definitiva e cancelamento confirmado", () => {
   assert.match(page, /result\.code === "attempt_rejected"[\s\S]*?localStorage\.removeItem/);
-  const rejected = checkoutRoute.indexOf('code: "attempt_rejected"');
-  const canceled = checkoutRoute.lastIndexOf("if (canceled)", rejected);
-  assert.ok(rejected > -1 && canceled > -1 && canceled < rejected);
+  assert.match(checkoutRoute, /attemptCheckoutCancellation\(\(\) => cancelOrder\(/);
+  assert.match(checkoutRoute, /cancellation\.confirmed[\s\S]*?code: "attempt_rejected"/);
+  assert.doesNotMatch(checkoutRoute, /await cancelOrder\([^;]+\);\s*createdOrderId = null;/);
 });
 
 test("pedido já encerrado não é tratado como autorização automática para nova compra", () => {
