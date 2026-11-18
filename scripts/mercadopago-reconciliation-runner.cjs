@@ -1,7 +1,8 @@
 "use strict";
 
 const RECONCILIATION_PATH = "/api/mercadopago/reconcile";
-const DEFAULT_MAX_PAGES = 40;
+const DEFAULT_MAX_PAGES = 15;
+const REQUEST_TIMEOUT_MS = 240_000;
 
 async function runReconciliation({
   baseUrl,
@@ -47,7 +48,7 @@ async function runReconciliation({
           Accept: "application/json",
         },
         cache: "no-store",
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch {
       throw new Error("Reconciliation request failed before a response was received.");
