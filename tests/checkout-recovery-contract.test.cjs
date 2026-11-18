@@ -38,4 +38,6 @@ test("migration keeps token table private and binds token atomically", () => {
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /REVOKE ALL/i);
   assert.match(migration, /GRANT EXECUTE.*service_role/is);
+  assert.match(migration, /v_existing_order boolean/i);
+  assert.match(migration, /IF NOT FOUND OR v_saved_token_hash IS DISTINCT FROM/i);
 });
