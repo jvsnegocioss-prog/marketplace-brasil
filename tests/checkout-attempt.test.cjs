@@ -48,7 +48,11 @@ test("falha de forma segura para registros salvos inválidos", () => {
     ok: false, reason: "invalid",
   });
 });
-const { classifyCheckoutCancellation } = require("../lib/checkout-cancellation.cjs");
+const {
+  classifyCheckoutCancellation,
+  attemptCheckoutCancellation,
+  isConfirmedUnpaidCancellation,
+} = require("../lib/checkout-cancellation.cjs");
 
 test("só confirma liberação da tentativa quando o banco confirma cancelamento", () => {
   assert.deepEqual(classifyCheckoutCancellation(true), {
@@ -71,4 +75,24 @@ test("mantém tentativa pendente para respostas ausentes ou inesperadas", () => 
       code: "cancellation_pending",
     });
   }
+});
+
+test("trata erro retornado pela RPC como recuperação pendente", async () => {
+  const result = await attemptCheckoutCancellation(async () => false);
+  assert.deepEqual(result, { confirmed: false, code: "cancellation_pending" });
+});
+
+test("trata exceção durante cancelamento como recuperação pendente", async () => {
+  const result = await attemptCheckoutCancellation(async () => {
+    throw new Error("falha simulada da RPC");
+  });
+  assert.deepEqual(result, { confirmed: false, code: "cancellation_pending" });
+});
+
+test("só reconhece pedido cancelado sem vínculo local de pagamento como encerrado recuperável", () => {
+  assert.equal(isConfirmedUnpaidCancellation("Cancelado", null), true);
+  assert.equal(isConfirmedUnpaidCancellation(" cancelado ", undefined), true);
+  assert.equal(isConfirmedUnpaidCancellation("Pago", null), false);
+  assert.equal(isConfirmedUnpaidCancellation("Cancelado", "mp-order-123"), false);
+  assert.equal(isConfirmedUnpaidCancellation("aguardando", null), false);
 });
