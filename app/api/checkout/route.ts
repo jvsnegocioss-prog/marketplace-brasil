@@ -503,7 +503,8 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(createdOrderId));
+      const orderIdToCancel = createdOrderId;
+      const cancellation = await attemptCheckoutCancellation(() => cancelOrder(orderIdToCancel));
       if (cancellation.confirmed) {
         createdOrderId = null;
         return NextResponse.json(
@@ -511,7 +512,7 @@ export async function POST(request: Request) {
           { status: 409, headers: { "Cache-Control": "no-store" } }
         );
       }
-      console.error("RECUPERAÇÃO DE CHECKOUT PENDENTE:", { orderId: createdOrderId });
+      console.error("RECUPERAÇÃO DE CHECKOUT PENDENTE:", { orderId: orderIdToCancel });
       return NextResponse.json(
         { error: "Ocorreu um erro antes de iniciar o pagamento e não foi possível confirmar a restauração do estoque. Não inicie outra tentativa; tente novamente em instantes." },
         { status: 503, headers: { "Cache-Control": "no-store" } }
