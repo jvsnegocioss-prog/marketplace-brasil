@@ -21,7 +21,7 @@ test("recovery endpoint is GET-only and disables caching", () => {
 });
 
 test("checkout binds only a hash of a separate recovery token", () => {
-  assert.match(checkout, /X-Checkout-Recovery-Token/);
+  assert.match(checkout, /x-checkout-recovery-token/i);
   assert.match(checkout, /p_checkout_recovery_token_hash/);
   assert.match(checkout, /hashRecoveryToken/);
 });
@@ -29,7 +29,7 @@ test("checkout binds only a hash of a separate recovery token", () => {
 test("client persists the token and checks recovery before retrying checkout", () => {
   assert.match(page, /recoveryToken/);
   assert.match(page, /\/api\/checkout\/recovery/);
-  assert.match(page, /X-Checkout-Recovery-Token/);
+  assert.match(page, /x-checkout-recovery-token/i);
 });
 
 test("migration keeps token table private and binds token atomically", () => {
