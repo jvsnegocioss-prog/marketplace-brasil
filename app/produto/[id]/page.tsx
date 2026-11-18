@@ -854,8 +854,7 @@ export default function ProductPage() {
               </>
             ) : (
               <p className="review-form-intro" role="status">
-                Avaliações bloqueadas. Esta opção é liberada somente para clientes que entraram na conta e possuem uma compra deste produto paga e entregue.
-                {" "}<Link href="/conta" className="detail-back-link">Acessar minha conta</Link>
+                Você poderá avaliar este produto quando sua compra estiver aprovada e constar como entregue.
               </p>
             )}
           </div>
