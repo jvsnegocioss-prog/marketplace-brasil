@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+// Captura a aba que recebeu o link de recuperação antes de o Supabase
+// processar e limpar o fragmento da URL. O evento PASSWORD_RECOVERY é
+// sincronizado entre abas; somente a aba de retorno deve abrir o formulário.
+const isPasswordRecoveryCallback =
+  typeof window !== "undefined" &&
+  /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash.slice(1));
+
 type AccountUser = {
   email?: string;
   user_metadata?: {
@@ -110,6 +117,9 @@ export default function ContaClientePage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Não deixe o evento transmitido pelo Supabase alterar outras abas.
+      if (event === "PASSWORD_RECOVERY" && !isPasswordRecoveryCallback) return;
+
       setUser(session?.user ?? null);
       if (event === "PASSWORD_RECOVERY") {
         setMode("reset");
