@@ -3,18 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
 // Limite por instância: proteção básica contra rajadas; não substitui rate limiting distribuído.
 const requestBuckets = new Map<string, { minute: number; count: number }>();
 const recentViews = new Map<string, number>();
@@ -27,6 +15,18 @@ function getClientIp(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { error: "Serviço temporariamente indisponível." },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
     const contentLength = Number(request.headers.get("content-length") || 0);
     if (contentLength > 2000) {
       return NextResponse.json({ error: "Solicitação muito grande." }, { status: 413 });
@@ -63,6 +63,17 @@ export async function POST(request: Request) {
     let verifiedProductName: string | null = null;
 
     if (productId) {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!anonKey) {
+        return NextResponse.json(
+          { error: "Serviço temporariamente indisponível." },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+      const supabasePublic = createClient(supabaseUrl, anonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
         return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
       }
