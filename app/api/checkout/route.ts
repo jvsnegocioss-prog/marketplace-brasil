@@ -13,18 +13,12 @@ function mercadoPagoIdempotencyKey(orderId: string) {
   return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
 }
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+type SupabaseAdminClient = ReturnType<typeof createClient>;
 
-async function cancelOrder(orderId: string) {
+async function cancelOrder(
+  supabaseAdmin: SupabaseAdminClient,
+  orderId: string
+) {
   const { error } = await supabaseAdmin.rpc(
     "cancel_unpaid_order_and_restore_stock",
     { p_order_id: orderId }
@@ -42,6 +36,22 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json(
+      { error: "Configuração do serviço indisponível." },
+      { status: 503 }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 
   let createdOrderId: string | null = null;
   let mercadoPagoRequestStarted = false;
@@ -173,7 +183,7 @@ export async function POST(request: Request) {
     if (fetchOrderError || !order) {
       console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
 
-      await cancelOrder(orderId);
+      await cancelOrder(supabaseAdmin, orderId);
       createdOrderId = null;
 
       return NextResponse.json(
@@ -202,7 +212,7 @@ export async function POST(request: Request) {
     if (itemsError || !orderItems?.length) {
       console.error("ERRO AO BUSCAR ITENS:", itemsError);
 
-      await cancelOrder(orderId);
+      await cancelOrder(supabaseAdmin, orderId);
       createdOrderId = null;
 
       return NextResponse.json(
@@ -363,7 +373,7 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      await cancelOrder(createdOrderId);
+      await cancelOrder(supabaseAdmin, createdOrderId);
     }
 
     return NextResponse.json(
