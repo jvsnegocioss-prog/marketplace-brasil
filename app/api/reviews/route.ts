@@ -4,11 +4,16 @@ import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Configuração do serviço indisponível.");
+  }
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 const paidStatuses = ["pago", "aprovado", "approved", "concluido", "concluído"];
 const mediaBucket = "products-media";
@@ -17,12 +22,14 @@ async function getAccount(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return null;
   const token = authorization.slice(7);
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !data.user?.email) return null;
   return data.user;
 }
 
 async function validatePurchase(email: string, productId: string, requiredOrderId?: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   let ordersQuery = supabaseAdmin
     .from("orders")
     .select("id,customer_name,status,delivery_status,customer_email")
@@ -53,6 +60,7 @@ async function validatePurchase(email: string, productId: string, requiredOrderI
 }
 
 async function uploadReviewFiles(files: File[], userId: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   const allowedTypes: Record<string, { extension: string; maxBytes: number; kind: "image" | "video" }> = {
     "image/jpeg": { extension: "jpg", maxBytes: 4 * 1024 * 1024, kind: "image" },
     "image/png": { extension: "png", maxBytes: 10 * 1024 * 1024, kind: "image" },
@@ -107,6 +115,8 @@ async function uploadReviewFiles(files: File[], userId: string) {
 }
 
 export async function GET(request: Request) {
+  try {
+  const supabaseAdmin = getSupabaseAdmin();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
   if (!productId) return NextResponse.json({ error: "Informe o produto." }, { status: 400 });
@@ -143,10 +153,15 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({ reviews: data || [], ownReview });
+  } catch (error) {
+    console.error("Erro ao carregar avaliações:", error);
+    return NextResponse.json({ error: "Serviço temporariamente indisponível." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }
 
 export async function POST(request: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para avaliar este produto." }, { status: 401 });
 
@@ -192,6 +207,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para editar a avaliação." }, { status: 401 });
     const form = await request.formData();
@@ -243,6 +259,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const user = await getAccount(request);
     if (!user?.email) return NextResponse.json({ error: "Entre na sua conta para excluir a avaliação." }, { status: 401 });
     const body = await request.json();
