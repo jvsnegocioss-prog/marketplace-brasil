@@ -19,7 +19,12 @@ async function cancelOrder(
   supabaseAdmin: SupabaseAdminClient,
   orderId: string
 ) {
-  const { error } = await supabaseAdmin.rpc(
+  const rpc = supabaseAdmin.rpc as unknown as (
+    functionName: string,
+    args: { p_order_id: string }
+  ) => Promise<{ error: { message: string } | null }>;
+
+  const { error } = await rpc(
     "cancel_unpaid_order_and_restore_stock",
     { p_order_id: orderId }
   );
