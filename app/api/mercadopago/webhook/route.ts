@@ -5,16 +5,6 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 export const runtime = "nodejs";
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
 function compareSignatures(expected: string, received: string) {
   if (!/^[a-f0-9]{64}$/i.test(received)) {
     return false;
@@ -38,6 +28,24 @@ function amountToCents(value: unknown): number | null {
   return Math.round(amount * 100);
 }
 export async function POST(request: Request) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error("[MP webhook] Configuração do Supabase ausente.");
+    return NextResponse.json(
+      { error: "Configuração do serviço indisponível." },
+      { status: 503 }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
   try {
     const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
