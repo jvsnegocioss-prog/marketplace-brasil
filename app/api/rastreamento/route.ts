@@ -4,12 +4,6 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
 function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for");
   const realIp = request.headers.get("x-real-ip");
@@ -37,13 +31,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!secret) {
+    if (!supabaseUrl || !secret) {
       return NextResponse.json(
         { error: "Serviço temporariamente indisponível." },
         { status: 503, headers: { "Cache-Control": "no-store" } }
       );
     }
+
+    const supabaseAdmin = createClient(supabaseUrl, secret, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const ipHash = createHash("sha256").update(secret + ":" + ip).digest("hex");
     const { data: allowed, error: limitError } = await supabaseAdmin.rpc(
