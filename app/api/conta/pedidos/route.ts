@@ -3,12 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
 export async function GET(request: Request) {
   try {
     const authorization = request.headers.get("authorization") || "";
@@ -19,6 +13,23 @@ export async function GET(request: Request) {
     if (!token) {
       return NextResponse.json({ error: "Acesso não autorizado." }, { status: 401 });
     }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("CONFIGURAÇÃO DO SUPABASE ADMIN AUSENTE NO AMBIENTE.");
+      return NextResponse.json(
+        { error: "Histórico temporariamente indisponível." },
+        { status: 503 }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.getUser(token);
