@@ -320,7 +320,7 @@ export async function POST(request: Request) {
         : process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : "https://novashoppstore.vercel.app";
-    const returnSignature = createHmac("sha256", accessToken)
+    const returnSignature = createHmac("sha256", serviceRoleKey)
       .update(`novashopp-checkout-return:${orderId}`)
       .digest("hex");
     const checkoutReturnUrl = `${returnOrigin}${returnPath}?pedido=${encodeURIComponent(orderId)}&verificacao=${returnSignature}`;
