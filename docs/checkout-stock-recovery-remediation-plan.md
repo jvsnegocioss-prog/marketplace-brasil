@@ -133,3 +133,14 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Se o vínculo não puder ser confirmado, a rota preserva o pedido (não chama cancelamento depois de iniciar a chamada externa), não entrega a URL de pagamento e responde com indicação de reconciliação. Divergência de IDs retorna conflito.
 - A interface atual mantém a mesma chave de idempotência no armazenamento local enquanto a resposta do checkout não for bem-sucedida; portanto, uma nova tentativa com o mesmo conteúdo reutiliza a chave. A chave do Mercado Pago também é determinística por pedido.
 - Esta é uma correção estática de código. Não houve chamada real ao Mercado Pago, teste de banco, build, Preview ou teste de concorrência.
+
+
+## Quarta rodada — compatibilidade do tipo de retorno da RPC de cancelamento
+
+- Consulta somente leitura ao catálogo PostgreSQL de produção confirmou que já existe `public.cancel_unpaid_order_and_restore_stock(uuid)` com retorno `boolean`.
+- A versão preparada na branch declara a mesma assinatura com retorno `jsonb`, para fornecer resultados explícitos (`cancelled`, `already_restored`, `cancelled_unverified`, entre outros) consumidos pela rota.
+- PostgreSQL não permite trocar o tipo de retorno com `CREATE OR REPLACE FUNCTION`. Sem tratamento, a migration falharia ao ser aplicada.
+- A migration isolada foi corrigida para executar `DROP FUNCTION IF EXISTS public.cancel_unpaid_order_and_restore_stock(uuid)` imediatamente antes de recriar a função com retorno `jsonb`. A remoção e recriação precisam ocorrer na mesma transação de migration; revisar dependências e grants no ensaio isolado.
+- Também foi incluída validação defensiva para não restaurar quantidades nulas ou menores/iguais a zero.
+- O banco de produção não foi alterado. A correção foi feita somente no arquivo SQL da branch.
+- Ainda é obrigatório testar a migration inteira em um clone/ambiente descartável com schema equivalente, inclusive o comportamento de rollback e a permissão de execução final.
