@@ -105,3 +105,20 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - A função falha integralmente se houver item sem vínculo de produto, produto ausente ou contador de cupom inconsistente; esse cenário exige reconciliação manual.
 - Próxima validação necessária: revisão SQL estática detalhada, execução em banco de teste isolado e testes de concorrência/idempotência antes de qualquer Preview ou produção.
 - Não foi criado PR, não foi feito merge, não foi autorizado deploy e as vendas continuam sem ativação por este trabalho.
+
+
+## Segunda rodada de revisão estática
+
+- O trigger `enforce_order_delivery_transition()` só valida mudanças de `delivery_status` e datas de entrega. A alteração isolada de `orders.status` para `Cancelado` não é bloqueada por esse trigger.
+- A busca no repositório não encontrou outra rotina ativa que altere o status para cancelado; a interface administrativa apenas reconhece/rotula estados cancelados. Ainda assim, registros cancelados legados ou alterações manuais precisam ser tratados como não verificados.
+- Para impedir dupla devolução, a migration agora inclui a tabela interna `order_stock_restorations`, com `order_id` como chave primária, RLS habilitado e sem acesso direto de `anon` ou `authenticated`. A RPC grava o registro na mesma transação que devolve estoque/cupom e muda o pedido para `Cancelado`.
+- Repetições com registro no ledger retornam `already_restored`. Pedidos já cancelados sem registro de restauração retornam `cancelled_unverified` e não alteram estoque, evitando assumir que uma devolução anterior não ocorreu.
+- A migration e as rotas foram ajustadas para reconhecer somente `cancelled` e `already_restored` como confirmações de devolução.
+- O hash da solicitação do checkout foi mantido no formato anterior (sem incluir `customer_user_id`) para não quebrar a idempotência de tentativas antigas de visitantes. A nova RPC ainda confere separadamente o titular armazenado no pedido. Pedidos antigos autenticados sem titular não são associados retroativamente por e-mail.
+
+## Pendências de validação que permanecem
+
+- Confirmar em ambiente isolado que o usuário proprietário da migration/função tem os privilégios necessários para a tabela do ledger e para chamar a RPC original de criação.
+- Testar cancelamento concorrente e repetido; rollback se faltar produto/cupom; pedido cancelado legado sem ledger; e aprovação do Mercado Pago concorrente com cancelamento.
+- Testar compatibilidade de tentativas antigas de visitantes e rejeição segura de tentativas antigas de contas sem titular.
+- Nenhum desses testes foi executado ainda. A migration continua sem aplicação no banco de produção.
