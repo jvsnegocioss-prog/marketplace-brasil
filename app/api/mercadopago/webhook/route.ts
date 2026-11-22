@@ -252,6 +252,21 @@ export async function POST(request: Request) {
       }
     }
 
+    if (mpStatus === "refunded" || mpStatus === "charged_back") {
+      // Reembolso e contestação são eventos financeiros posteriores à aprovação.
+      // Não restaurar estoque automaticamente: exigem conciliação administrativa.
+      console.error("[MP webhook] Evento financeiro posterior à aprovação exige reconciliação manual:", {
+        orderId,
+        mercadoPagoOrderId: dataId,
+        paymentStatus: mpStatus,
+      });
+      return NextResponse.json({
+        received: true,
+        reconciliationRequired: true,
+        paymentStatus: mpStatus,
+      });
+    }
+
     const currentStoreStatus = String(storeOrder.status).trim().toLowerCase();
     if (currentStoreStatus !== "aguardando") {
       const isCancelled = ["cancelado", "cancelada", "canceled", "cancelled"].includes(currentStoreStatus);
