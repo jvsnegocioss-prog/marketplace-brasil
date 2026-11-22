@@ -1,4 +1,4 @@
-\\set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
 -- Disposable PostgreSQL only. This test never connects to Supabase.
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
@@ -46,7 +46,7 @@ BEGIN
 END;
 $$;
 
-\\ir ../migrations/20261121010000_checkout_stock_recovery_and_customer_binding.sql
+\ir ../migrations/20261121010000_checkout_stock_recovery_and_customer_binding.sql
 
 DO $$
 DECLARE
@@ -182,4 +182,4 @@ BEGIN
 END;
 $$;
 
-\\echo 'PASS: migration applies; customer binding and idempotency; atomic stock/coupon restoration; no double restore; paid and legacy cancellation guards; RPC grants.'
+\echo 'PASS: migration applies; customer binding and idempotency; atomic stock/coupon restoration; no double restore; paid and legacy cancellation guards; RPC grants.'
