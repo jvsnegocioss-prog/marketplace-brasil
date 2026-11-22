@@ -93,7 +93,7 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 
 - Migration de rascunho: `supabase/migrations/20261121010000_checkout_stock_recovery_and_customer_binding.sql`.
 - Nova RPC `create_store_order_with_coupon_and_delivery_for_customer`: reutiliza a criação transacional existente, grava `customer_user_id` na mesma transação e mantém a idempotência vinculada ao hash e ao titular.
-- Nova RPC `cancel_unpaid_order_and_restore_stock`: bloqueia o pedido, permite cancelar apenas `aguardando`, restaura estoque por produto e reverte o uso do cupom dentro da mesma transação. Repetições retornam `already_cancelled`; pedidos pagos não são alterados.
+- Nova RPC `cancel_unpaid_order_and_restore_stock`: bloqueia o pedido, permite cancelar apenas `aguardando`, restaura estoque por produto e reverte o uso do cupom dentro da mesma transação. Repetições com registro no ledger retornam `already_restored`; pedidos cancelados sem registro retornam `cancelled_unverified` sem alterar estoque; pedidos pagos não são alterados.
 - Checkout atualizado para usar a RPC com titular autenticado e verificar o resultado do cancelamento antes de afirmar que a reserva foi liberada.
 - Webhook atualizado para verificar o resultado da RPC e detectar a corrida entre cancelamento e aprovação tardia, retornando conflito para reconciliação manual em vez de marcar automaticamente o pedido como pago.
 
@@ -122,3 +122,14 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Testar cancelamento concorrente e repetido; rollback se faltar produto/cupom; pedido cancelado legado sem ledger; e aprovação do Mercado Pago concorrente com cancelamento.
 - Testar compatibilidade de tentativas antigas de visitantes e rejeição segura de tentativas antigas de contas sem titular.
 - Nenhum desses testes foi executado ainda. A migration continua sem aplicação no banco de produção.
+
+
+## Terceira rodada — persistência do identificador Mercado Pago
+
+- O checkout agora consulta o vínculo atual antes de gravar o ID retornado pelo Mercado Pago.
+- A gravação ocorre somente quando `mercado_pago_order_id` ainda está NULL, evitando sobrescrever um identificador diferente em uma corrida.
+- Depois da gravação, o checkout verifica o valor persistido. Se a resposta da gravação falhar, faz uma nova leitura para distinguir falha de resposta de gravação efetivamente concluída.
+- O checkout só retorna `success: true` e `checkoutUrl` quando o banco confirma que o pedido está vinculado ao mesmo ID Mercado Pago.
+- Se o vínculo não puder ser confirmado, a rota preserva o pedido (não chama cancelamento depois de iniciar a chamada externa), não entrega a URL de pagamento e responde com indicação de reconciliação. Divergência de IDs retorna conflito.
+- A interface atual mantém a mesma chave de idempotência no armazenamento local enquanto a resposta do checkout não for bem-sucedida; portanto, uma nova tentativa com o mesmo conteúdo reutiliza a chave. A chave do Mercado Pago também é determinística por pedido.
+- Esta é uma correção estática de código. Não houve chamada real ao Mercado Pago, teste de banco, build, Preview ou teste de concorrência.
