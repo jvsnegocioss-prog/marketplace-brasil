@@ -1,6 +1,6 @@
 # Trilha de auditoria da conciliação financeira — proposta técnica
 
-**Estado:** desenho técnico em branch isolada; ainda não implementado nem aplicado ao banco.  
+**Estado:** API e interface de registro preparadas na branch isolada; schema ainda não criado/testado e nenhum recurso aplicado ao banco.  
 **Base funcional:** revisão aprovada de 21/11/2026 (`6abaaac`).  
 **Branch de trabalho:** `fix/checkout-stock-recovery`.
 
@@ -71,4 +71,4 @@ Qualquer fluxo futuro de resolução financeira exigirá projeto próprio, confi
 - Nenhuma migration foi aplicada.
 - Nenhuma escrita foi feita em pedidos, eventos, pagamentos, estoque ou cupons.
 - A tela e os endpoints existentes continuam somente leitura.
-- Este documento é especificação; não representa implementação ou validação funcional.
+- A implementação de aplicação foi salva no GitHub, mas ainda não foi compilada nem testada funcionalmente.\n- O rascunho SQL não é uma migration formal e não foi aplicado em nenhum banco.\n- Antes de criar migration formal, seguir `supabase migration new`, validar em banco descartável, conferir grants/RLS/triggers e executar os advisors.\n- Confirmar que o schema `public`/tabela está exposto ao Data API para uso server-side via PostgREST; a exposição não deve conceder acesso a `anon` ou `authenticated`.
