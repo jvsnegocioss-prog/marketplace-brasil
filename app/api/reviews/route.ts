@@ -28,12 +28,12 @@ async function getAccount(request: Request) {
   return data.user;
 }
 
-async function validatePurchase(email: string, productId: string, requiredOrderId?: string) {
+async function validatePurchase(userId: string, productId: string, requiredOrderId?: string) {
   const supabaseAdmin = getSupabaseAdmin();
   let ordersQuery = supabaseAdmin
     .from("orders")
-    .select("id,customer_name,status,delivery_status,customer_email")
-    .ilike("customer_email", email)
+     .select("id,customer_name,status,delivery_status,customer_user_id")
+    .eq("customer_user_id", userId)
     .order("created_at", { ascending: false });
   if (requiredOrderId) ordersQuery = ordersQuery.eq("id", requiredOrderId);
   const { data: orders, error } = await ordersQuery;
@@ -137,19 +137,19 @@ export async function GET(request: Request) {
     ? "Não foi possível confirmar uma compra elegível para este produto."
     : "Entre na sua conta para verificar se você pode avaliar este produto.";
 
-  const userEmail = user?.email;
-  if (userEmail) {
+  const userId = user?.id;
+  if (userId) {
     // A autorização é calculada no servidor: somente uma compra deste produto,
     // paga e entregue, libera o formulário de avaliação.
-    const purchase = await validatePurchase(userEmail, productId);
+    const purchase = await validatePurchase(userId, productId);
     canReview = !("error" in purchase);
     if ("error" in purchase) reviewAccessMessage = purchase.error || "Não foi possível confirmar uma compra elegível para este produto.";
     else reviewAccessMessage = "Compra confirmada. Você pode avaliar este produto.";
 
     const { data: orders } = await supabaseAdmin
       .from("orders")
-      .select("id")
-      .ilike("customer_email", userEmail);
+       .select("id")
+      .eq("customer_user_id", userId);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
       const { data: owned } = await supabaseAdmin
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     if (files.length > 5) return NextResponse.json({ error: "Você pode enviar até 5 fotos ou vídeos por avaliação." }, { status: 400 });
-    const validation = await validatePurchase(user.email, productId);
+    const validation = await validatePurchase(user.id, productId);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const uploaded = await uploadReviewFiles(files, user.id);
@@ -247,7 +247,7 @@ export async function PATCH(request: Request) {
     if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
     if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
 
-    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
+    const validation = await validatePurchase(user.id, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const files = form.getAll("media").filter((item): item is File => item instanceof File && item.size > 0);
@@ -296,7 +296,7 @@ export async function DELETE(request: Request) {
     if (ownedReviewError) return NextResponse.json({ error: "Não foi possível localizar sua avaliação." }, { status: 500 });
     if (!ownedReview) return NextResponse.json({ error: "Avaliação não encontrada para esta conta." }, { status: 404 });
 
-    const validation = await validatePurchase(user.email, productId, ownedReview.order_id);
+    const validation = await validatePurchase(user.id, productId, ownedReview.order_id);
     if ("error" in validation) return NextResponse.json({ error: validation.error }, { status: validation.status });
 
     const { data, error } = await supabaseAdmin
