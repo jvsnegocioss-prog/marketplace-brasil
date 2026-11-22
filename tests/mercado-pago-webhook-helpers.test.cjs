@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   compareSignatures,
+  createMercadoPagoWebhookSignature,
   amountToCents,
   classifyMercadoPagoOrderStatus,
   validateProcessedPayment,
@@ -50,4 +51,29 @@ test("compares webhook signatures and rejects malformed or altered hashes", () =
   assert.equal(compareSignatures(expected, expected), true);
   assert.equal(compareSignatures(expected, "b" + "a".repeat(63)), false);
   assert.equal(compareSignatures(expected, "not-a-signature"), false);
+});
+
+test("builds the exact Mercado Pago HMAC manifest and normalizes data.id", () => {
+  const secret = "test-webhook-secret";
+  const requestId = "req-123";
+  const timestamp = "1730000000000";
+  const upperId = "ABCDEF123456";
+  const lowerId = "abcdef123456";
+  const signature = createMercadoPagoWebhookSignature(secret, upperId, requestId, timestamp);
+  const expected = createMercadoPagoWebhookSignature(secret, lowerId, requestId, timestamp);
+
+  assert.match(signature, /^[a-f0-9]{64}$/);
+  assert.equal(signature, expected);
+  assert.equal(
+    compareSignatures(signature, createMercadoPagoWebhookSignature(secret, lowerId, requestId, timestamp)),
+    true
+  );
+  assert.notEqual(
+    signature,
+    createMercadoPagoWebhookSignature(secret, lowerId, "different-request", timestamp)
+  );
+  assert.notEqual(
+    signature,
+    createMercadoPagoWebhookSignature(secret, lowerId, requestId, "1730000000001")
+  );
 });
