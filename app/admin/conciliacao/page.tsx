@@ -14,6 +14,36 @@ type ReconciliationEvent = {
   receivedAt: string | null;
 };
 
+
+type AuditEntry = {
+  id: string;
+  notification_id: string;
+  resource_id: string;
+  admin_user_id: string;
+  action: string;
+  decision_note: string;
+  evidence_reference: string | null;
+  created_at: string;
+};
+
+type AuditForm = {
+  action: string;
+  decisionNote: string;
+  evidenceReference: string;
+};
+
+const AUDIT_ACTIONS = [
+  { value: "reviewed_pending", label: "Analisado — permanece pendente" },
+  { value: "evidence_requested", label: "Comprovante ou esclarecimento solicitado" },
+  { value: "escalated", label: "Encaminhado para análise financeira" },
+  { value: "manual_followup", label: "Acompanhamento manual necessário" },
+  { value: "other", label: "Outra providência" },
+];
+
+function auditActionLabel(value: string) {
+  return AUDIT_ACTIONS.find((item) => item.value === value)?.label || value;
+}
+
 type LookupResult = {
   error?: string;
   event?: { reason: string | null; resourceId: string };
@@ -44,6 +74,12 @@ export default function AdminReconciliationPage() {
   const [error, setError] = useState("");
   const [lookups, setLookups] = useState<Record<string, LookupResult>>({});
   const [lookingUp, setLookingUp] = useState<string | null>(null);
+  const [auditForms, setAuditForms] = useState<Record<string, AuditForm>>({});
+  const [audits, setAudits] = useState<Record<string, AuditEntry[]>>({});
+  const [auditLoading, setAuditLoading] = useState<string | null>(null);
+  const [auditSaving, setAuditSaving] = useState<string | null>(null);
+  const [auditMessages, setAuditMessages] = useState<Record<string, string>>({});
+  const [submissionKeys, setSubmissionKeys] = useState<Record<string, string>>({});
 
   const loadEvents = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true);
@@ -93,6 +129,74 @@ export default function AdminReconciliationPage() {
       setLookups((current) => ({ ...current, [notificationId]: { error: cause instanceof Error ? cause.message : "Falha na consulta." } }));
     } finally {
       setLookingUp(null);
+    }
+  }
+
+  async function loadAuditHistory(notificationId: string) {
+    setAuditLoading(notificationId);
+    setAuditMessages((current) => ({ ...current, [notificationId]: "" }));
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente.");
+      const response = await fetch("/api/admin/conciliacao/auditoria?notificationId=" + encodeURIComponent(notificationId), {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store",
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível carregar o histórico.");
+      setAudits((current) => ({ ...current, [notificationId]: Array.isArray(result.entries) ? result.entries : [] }));
+    } catch (cause) {
+      setAuditMessages((current) => ({ ...current, [notificationId]: cause instanceof Error ? cause.message : "Falha ao consultar o histórico." }));
+    } finally {
+      setAuditLoading(null);
+    }
+  }
+
+  async function recordAudit(notificationId: string) {
+    const form = auditForms[notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" };
+    if (form.decisionNote.trim().length < 20) {
+      setAuditMessages((current) => ({ ...current, [notificationId]: "A justificativa deve conter pelo menos 20 caracteres." }));
+      return;
+    }
+
+    setAuditSaving(notificationId);
+    setAuditMessages((current) => ({ ...current, [notificationId]: "" }));
+    const submissionKey = submissionKeys[notificationId] || crypto.randomUUID();
+    setSubmissionKeys((current) => ({ ...current, [notificationId]: submissionKey }));
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente.");
+      const response = await fetch("/api/admin/conciliacao/auditoria", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notificationId,
+          action: form.action,
+          decisionNote: form.decisionNote,
+          evidenceReference: form.evidenceReference,
+          submissionKey,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível registrar a análise.");
+      setAuditMessages((current) => ({ ...current, [notificationId]: result.alreadyRecorded ? "Este registro já havia sido confirmado anteriormente." : "Análise registrada no histórico. O evento e o pedido não foram alterados." }));
+      setSubmissionKeys((current) => {
+        const next = { ...current };
+        delete next[notificationId];
+        return next;
+      });
+      setAuditForms((current) => ({
+        ...current,
+        [notificationId]: { ...form, decisionNote: "", evidenceReference: "" },
+      }));
+      await loadAuditHistory(notificationId);
+    } catch (cause) {
+      setAuditMessages((current) => ({ ...current, [notificationId]: cause instanceof Error ? cause.message : "Falha ao registrar análise." }));
+    } finally {
+      setAuditSaving(null);
     }
   }
 
@@ -165,6 +269,74 @@ export default function AdminReconciliationPage() {
                 </section>
               )}
             </div>
+
+            <section style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
+              <h3 style={{ margin: "0 0 10px" }}>Registrar análise administrativa</h3>
+              <p style={{ color: "#64748b", fontSize: 13, marginTop: 0 }}>
+                O registro identifica o administrador e fica preservado no histórico. Não resolve o reembolso/chargeback nem altera o pedido.
+              </p>
+              <label style={{ display: "block", fontWeight: 700, marginBottom: 5 }} htmlFor={"audit-action-" + event.notificationId}>Tipo de análise</label>
+              <select
+                id={"audit-action-" + event.notificationId}
+                value={(auditForms[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }).action}
+                onChange={(e) => setAuditForms((current) => ({
+                  ...current,
+                  [event.notificationId]: { ...(current[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }), action: e.target.value },
+                }))}
+                style={{ width: "100%", padding: 10, border: "1px solid #cbd5e1", borderRadius: 8, marginBottom: 10 }}
+              >
+                {AUDIT_ACTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              <label style={{ display: "block", fontWeight: 700, marginBottom: 5 }} htmlFor={"audit-note-" + event.notificationId}>Justificativa (obrigatória, mínimo 20 caracteres)</label>
+              <textarea
+                id={"audit-note-" + event.notificationId}
+                value={(auditForms[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }).decisionNote}
+                maxLength={2000}
+                rows={3}
+                onChange={(e) => setAuditForms((current) => ({
+                  ...current,
+                  [event.notificationId]: { ...(current[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }), decisionNote: e.target.value },
+                }))}
+                style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #cbd5e1", borderRadius: 8, resize: "vertical" }}
+                placeholder="Descreva o que foi conferido e qual providência foi tomada..."
+              />
+              <label style={{ display: "block", fontWeight: 700, margin: "10px 0 5px" }} htmlFor={"audit-evidence-" + event.notificationId}>Referência interna privada do comprovante (opcional)</label>
+              <input
+                id={"audit-evidence-" + event.notificationId}
+                value={(auditForms[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }).evidenceReference}
+                maxLength={500}
+                onChange={(e) => setAuditForms((current) => ({
+                  ...current,
+                  [event.notificationId]: { ...(current[event.notificationId] || { action: "reviewed_pending", decisionNote: "", evidenceReference: "" }), evidenceReference: e.target.value },
+                }))}
+                style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #cbd5e1", borderRadius: 8 }}
+                placeholder="Ex.: reconciliation-evidence/arquivo-interno.pdf"
+              />
+              <p style={{ color: "#64748b", fontSize: 12, margin: "5px 0 10px" }}>Não cole links públicos, senhas, tokens ou dados de cartão. O campo aceita apenas referência interna, não faz upload de arquivo.</p>
+              <button type="button" onClick={() => void recordAudit(event.notificationId)} disabled={auditSaving === event.notificationId}
+                style={{ padding: "10px 14px", border: 0, borderRadius: 8, background: "#173b68", color: "white", fontWeight: 700, cursor: "pointer" }}>
+                {auditSaving === event.notificationId ? "Registrando..." : "Registrar análise no histórico"}
+              </button>
+              {auditMessages[event.notificationId] && <p role="status" aria-live="polite" style={{ color: auditMessages[event.notificationId].toLowerCase().includes("não") || auditMessages[event.notificationId].toLowerCase().includes("falha") ? "#9f1239" : "#166534", fontSize: 13 }}>{auditMessages[event.notificationId]}</p>}
+              <div style={{ marginTop: 12 }}>
+                <button type="button" onClick={() => void loadAuditHistory(event.notificationId)} disabled={auditLoading === event.notificationId}
+                  style={{ padding: "8px 12px", border: "1px solid #64748b", borderRadius: 8, background: "white", color: "#334155", fontWeight: 700, cursor: "pointer" }}>
+                  {auditLoading === event.notificationId ? "Carregando histórico..." : "Consultar histórico de análises"}
+                </button>
+              </div>
+              {audits[event.notificationId] && (
+                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                  {audits[event.notificationId].length === 0 ? <p style={{ color: "#64748b" }}>Nenhuma análise registrada para este evento.</p> : audits[event.notificationId].map((entry) => (
+                    <article key={entry.id} style={{ border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, background: "#f8fafc" }}>
+                      <strong>{auditActionLabel(entry.action)}</strong>
+                      <p style={{ margin: "6px 0" }}>{entry.decision_note}</p>
+                      <p style={{ color: "#64748b", fontSize: 12, margin: 0 }}>Administrador: {entry.admin_user_id} · {formatDate(entry.created_at)}</p>
+                      {entry.evidence_reference && <p style={{ color: "#475569", fontSize: 12, marginBottom: 0 }}>Referência interna: {entry.evidence_reference}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </article>
         ))}
       </div>
