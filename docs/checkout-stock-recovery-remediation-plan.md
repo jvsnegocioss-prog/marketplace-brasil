@@ -9,9 +9,9 @@
 
 ## Problemas confirmados na revisão-base
 
-1. O checkout e o webhook chamam `cancel_unpaid_order_and_restore_stock`, mas essa função não existe no banco de produção.
-2. No checkout, falhas em etapas posteriores à criação do pedido podem acionar a RPC ausente. O tratamento registra o erro, mas não comprova que o pedido foi cancelado nem que o estoque foi devolvido.
-3. O webhook devolve erro HTTP 500 se a RPC de cancelamento falhar, mas a rotina de cancelamento continua indisponível até a função ser criada.
+1. O banco de produção possui `public.cancel_unpaid_order_and_restore_stock(uuid)`, mas a função legada retorna `boolean`; a implementação preparada nesta branch exige um retorno estruturado `jsonb` para distinguir os resultados do cancelamento.
+2. Na revisão-base, checkout e webhook chamam a função legada. O retorno booleano não comprova que estoque e cupom foram restaurados de forma idempotente, nem fornece os resultados detalhados exigidos pelo novo fluxo.
+3. A migration preparada precisa substituir a assinatura existente com retorno `jsonb`. Como PostgreSQL não permite alterar o tipo de retorno com `CREATE OR REPLACE FUNCTION`, ela inclui `DROP FUNCTION` antes da recriação; essa troca ainda precisa ser ensaiada em banco descartável equivalente.
 4. O checkout identifica o usuário autenticado, mas a chamada atual de criação do pedido não persiste `customer_user_id`. O histórico da conta filtra por esse campo.
 5. O pedido guarda `coupon_id`; a tabela `discount_coupons` controla `usage_count`. A reversão do cupom deve ocorrer no mesmo procedimento transacional e somente uma vez.
 
