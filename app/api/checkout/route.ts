@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -320,7 +320,10 @@ export async function POST(request: Request) {
         : process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : "https://novashoppstore.vercel.app";
-    const checkoutReturnUrl = `${returnOrigin}${returnPath}?pedido=${encodeURIComponent(orderId)}`;
+    const returnSignature = createHmac("sha256", accessToken)
+      .update(`novashopp-checkout-return:${orderId}`)
+      .digest("hex");
+    const checkoutReturnUrl = `${returnOrigin}${returnPath}?pedido=${encodeURIComponent(orderId)}&verificacao=${returnSignature}`;
 
     const paymentBody: Record<string, unknown> = {
       type: "online",
