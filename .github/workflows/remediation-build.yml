@@ -1,0 +1,34 @@
+name: Remediation TypeScript and Next.js build check
+
+on:
+  push:
+    branches:
+      - fix/checkout-stock-recovery
+    paths:
+      - .github/workflows/remediation-build.yml
+      - app/**
+      - lib/**
+      - package.json
+      - tsconfig.json
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/checkout-stock-recovery
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies without modifying repository
+        run: npm install --no-package-lock
+      - name: TypeScript validation
+        run: npx tsc --noEmit
+      - name: Next.js production build
+        run: npm run build
