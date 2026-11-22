@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await auth.admin
       .from("mercado_pago_reconciliation_audit")
-      .select("id,notification_id,resource_id,admin_user_id,action,decision_note,evidence_reference,submission_key,created_at")
+      .select("id,notification_id,resource_id,admin_user_id,action,decision_note,evidence_reference,created_at")
       .eq("notification_id", notificationId)
       .order("created_at", { ascending: false })
       .limit(50);
