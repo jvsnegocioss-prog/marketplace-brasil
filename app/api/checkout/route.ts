@@ -370,18 +370,122 @@ export async function POST(request: Request) {
 
     const mercadoPagoOrderId = String(paymentData.id);
 
-    const { error: savePaymentIdError } =
+    // Só confirmamos o checkout depois de provar que o vínculo foi persistido.
+    // A condição IS NULL evita sobrescrever um ID diferente em uma corrida.
+    const { data: existingPaymentLink, error: lookupPaymentLinkError } =
       await supabaseAdmin
         .from("orders")
-        .update({
-          mercado_pago_order_id: mercadoPagoOrderId,
-        })
-        .eq("id", orderId);
+        .select("mercado_pago_order_id")
+        .eq("id", orderId)
+        .maybeSingle();
 
-    if (savePaymentIdError) {
-      console.error(
-        "ERRO AO SALVAR ID MERCADO PAGO:",
-        savePaymentIdError
+    if (lookupPaymentLinkError || !existingPaymentLink) {
+      console.error("ERRO AO CONFERIR VÍNCULO MERCADO PAGO:", lookupPaymentLinkError);
+      createdOrderId = null;
+      return NextResponse.json(
+        {
+          error: "O pagamento foi iniciado, mas não foi possível confirmar o vínculo com o pedido. Não refaça a compra nem altere os dados; tente novamente a mesma tentativa ou contate o suporte.",
+          orderId,
+          mercadoPagoOrderId,
+          reconciliationRequired: true,
+        },
+        { status: 503 }
+      );
+    }
+
+    let paymentLinkConfirmed =
+      existingPaymentLink.mercado_pago_order_id === mercadoPagoOrderId;
+
+    if (
+      existingPaymentLink.mercado_pago_order_id &&
+      existingPaymentLink.mercado_pago_order_id !== mercadoPagoOrderId
+    ) {
+      console.error("CONFLITO DE VÍNCULO MERCADO PAGO:", {
+        orderId,
+        storedId: existingPaymentLink.mercado_pago_order_id,
+        receivedId: mercadoPagoOrderId,
+      });
+      createdOrderId = null;
+      return NextResponse.json(
+        {
+          error: "Foi detectada uma divergência entre o pedido e o pagamento. Não tente pagar novamente; o caso precisa de conferência do suporte.",
+          orderId,
+          reconciliationRequired: true,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (!paymentLinkConfirmed) {
+      const { data: savedPaymentLink, error: savePaymentIdError } =
+        await supabaseAdmin
+          .from("orders")
+          .update({ mercado_pago_order_id: mercadoPagoOrderId })
+          .eq("id", orderId)
+          .is("mercado_pago_order_id", null)
+          .select("mercado_pago_order_id")
+          .maybeSingle();
+
+      if (savePaymentIdError) {
+        console.error("ERRO AO SALVAR ID MERCADO PAGO:", savePaymentIdError);
+      }
+
+      paymentLinkConfirmed =
+        savedPaymentLink?.mercado_pago_order_id === mercadoPagoOrderId;
+
+      // Confirma novamente após erro/concorrência: a gravação pode ter sido
+      // concluída no banco mesmo que a resposta da operação tenha falhado.
+      if (!paymentLinkConfirmed) {
+        const { data: verifiedPaymentLink, error: verifyPaymentLinkError } =
+          await supabaseAdmin
+            .from("orders")
+            .select("mercado_pago_order_id")
+            .eq("id", orderId)
+            .maybeSingle();
+
+        if (verifyPaymentLinkError) {
+          console.error("ERRO AO RECONFERIR VÍNCULO MERCADO PAGO:", verifyPaymentLinkError);
+        }
+
+        if (
+          verifiedPaymentLink?.mercado_pago_order_id &&
+          verifiedPaymentLink.mercado_pago_order_id !== mercadoPagoOrderId
+        ) {
+          console.error("VÍNCULO MERCADO PAGO DIVERGENTE APÓS GRAVAÇÃO:", {
+            orderId,
+            storedId: verifiedPaymentLink.mercado_pago_order_id,
+            receivedId: mercadoPagoOrderId,
+          });
+          createdOrderId = null;
+          return NextResponse.json(
+            {
+              error: "Foi detectada uma divergência entre o pedido e o pagamento. Não tente pagar novamente; o caso precisa de conferência do suporte.",
+              orderId,
+              reconciliationRequired: true,
+            },
+            { status: 409 }
+          );
+        }
+
+        paymentLinkConfirmed =
+          verifiedPaymentLink?.mercado_pago_order_id === mercadoPagoOrderId;
+      }
+    }
+
+    if (!paymentLinkConfirmed) {
+      console.error("VÍNCULO MERCADO PAGO NÃO CONFIRMADO; PEDIDO PRESERVADO PARA RECUPERAÇÃO:", {
+        orderId,
+        mercadoPagoOrderId,
+      });
+      createdOrderId = null;
+      return NextResponse.json(
+        {
+          error: "O pagamento foi criado, mas o vínculo com o pedido ainda não pôde ser confirmado. Não refaça a compra nem gere outra tentativa; contate o suporte para conferência.",
+          orderId,
+          mercadoPagoOrderId,
+          reconciliationRequired: true,
+        },
+        { status: 503 }
       );
     }
 
