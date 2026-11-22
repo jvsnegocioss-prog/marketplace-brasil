@@ -254,8 +254,31 @@ export async function POST(request: Request) {
 
     if (mpStatus === "refunded" || mpStatus === "charged_back") {
       // Reembolso e contestação são eventos financeiros posteriores à aprovação.
-      // Não restaurar estoque automaticamente: exigem conciliação administrativa.
-      console.error("[MP webhook] Evento financeiro posterior à aprovação exige reconciliação manual:", {
+      // Persistir para conciliação administrativa; nunca devolver estoque automaticamente.
+      const { error: reconciliationEventError } = await supabaseAdmin
+        .from("mercado_pago_webhook_events")
+        .upsert(
+          {
+            notification_id: requestId,
+            resource_id: String(dataId),
+            request_id: requestId,
+            notification_type: "order",
+            processing_status: "reconciliation_required",
+            last_error_code: `mercado_pago_${mpStatus}`,
+            last_received_at: new Date().toISOString(),
+          },
+          { onConflict: "notification_id" }
+        );
+
+      if (reconciliationEventError) {
+        console.error("[MP webhook] Não foi possível registrar evento para conciliação:", reconciliationEventError.message);
+        return NextResponse.json(
+          { error: "Não foi possível registrar o evento financeiro para conciliação." },
+          { status: 500 }
+        );
+      }
+
+      console.error("[MP webhook] Evento financeiro registrado para reconciliação manual:", {
         orderId,
         mercadoPagoOrderId: dataId,
         paymentStatus: mpStatus,
