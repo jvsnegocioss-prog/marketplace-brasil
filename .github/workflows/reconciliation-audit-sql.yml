@@ -1,6 +1,9 @@
 name: Disposable reconciliation audit SQL test
 
 on:
+  push:
+    branches:
+      - fix/checkout-stock-recovery
   workflow_dispatch:
 
 permissions:
