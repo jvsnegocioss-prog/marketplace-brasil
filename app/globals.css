@@ -5846,3 +5846,46 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     object-position: center;
   }
 }
+
+
+/* NOVASHOPP — alinhar o carrossel e exibir a mídia inteira em todos os slides */
+.hero-campaign-slide {
+  align-items: center !important;
+}
+.hero-campaign-media {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.hero-campaign-media img,
+.hero-campaign-media video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+@media (min-width: 901px) {
+  .hero-campaign-slide {
+    min-height: 390px !important;
+    align-items: center !important;
+  }
+  .hero-campaign-media {
+    height: clamp(230px, 24vw, 310px) !important;
+    min-height: clamp(230px, 24vw, 310px) !important;
+    max-height: clamp(230px, 24vw, 310px) !important;
+  }
+}
+@media (max-width: 900px) {
+  .hero-campaign-media img,
+  .hero-campaign-media video {
+    min-height: 0 !important;
+    max-height: none !important;
+    object-fit: contain !important;
+  }
+}
