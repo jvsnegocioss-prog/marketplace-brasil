@@ -132,7 +132,19 @@ export async function GET(request: Request) {
 
   const user = await getAccount(request);
   let ownReview = null;
+  let canReview = false;
+  let reviewAccessMessage = user?.email
+    ? "Não foi possível confirmar uma compra elegível para este produto."
+    : "Entre na sua conta para verificar se você pode avaliar este produto.";
+
   if (user?.email) {
+    // A autorização é calculada no servidor: somente uma compra deste produto,
+    // paga e entregue, libera o formulário de avaliação.
+    const purchase = await validatePurchase(user.email, productId);
+    canReview = !("error" in purchase);
+    if ("error" in purchase) reviewAccessMessage = purchase.error;
+    else reviewAccessMessage = "Compra confirmada. Você pode avaliar este produto.";
+
     const { data: orders } = await supabaseAdmin
       .from("orders")
       .select("id")
@@ -152,7 +164,13 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ reviews: data || [], ownReview });
+  return NextResponse.json({
+    reviews: data || [],
+    ownReview,
+    authenticated: Boolean(user?.email),
+    canReview,
+    reviewAccessMessage,
+  });
   } catch (error) {
     console.error("Erro ao carregar avaliações:", error);
     return NextResponse.json({ error: "Serviço temporariamente indisponível." }, { status: 503, headers: { "Cache-Control": "no-store" } });
