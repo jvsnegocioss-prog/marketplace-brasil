@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 export type MercadoPagoWebhookAction = "approve" | "cancel" | "reconcile" | "ignore";
 
 export function compareSignatures(expected: string, received: string): boolean {
@@ -10,12 +12,7 @@ export function compareSignatures(expected: string, received: string): boolean {
 }
 
 function requireTimingSafeEqual(a: Buffer, b: Buffer): boolean {
-  // Implemented with a fixed-time byte comparison after equal-length validation.
-  let difference = 0;
-  for (let index = 0; index < a.length; index += 1) {
-    difference |= a[index] ^ b[index];
-  }
-  return difference === 0;
+  return timingSafeEqual(a, b);
 }
 
 export function amountToCents(value: unknown): number | null {
