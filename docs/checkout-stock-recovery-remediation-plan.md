@@ -4,8 +4,8 @@
 
 - Branch criada a partir da revisão aprovada de 21/11/2026.
 - Commit-base: `6abaaac027777f967ab77aec9981cd0572878bd6`.
-- Este documento é planejamento técnico; não altera banco, rotas, checkout, webhook ou configurações.
-- Não aplicar migrations em produção, não ativar vendas e não executar compras/pagamentos reais durante a auditoria.
+- Este documento registra o plano e o estado da remediação. O código de checkout/webhook e a migration permanecem em rascunho somente nesta branch isolada.
+- A migration não foi aplicada; não alterar o banco de produção, não ativar vendas e não executar compras/pagamentos reais durante a auditoria.
 
 ## Problemas confirmados na revisão-base
 
