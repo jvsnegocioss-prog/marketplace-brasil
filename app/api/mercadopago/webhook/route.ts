@@ -342,7 +342,7 @@ export async function POST(request: Request) {
       }
 
       const outcome = (cancellation as { outcome?: string } | null)?.outcome;
-      if (outcome !== "cancelled" && outcome !== "already_cancelled") {
+      if (outcome !== "cancelled" && outcome !== "already_restored") {
         console.error("[MP webhook] RPC não confirmou cancelamento elegível:", {
           orderId,
           outcome,
