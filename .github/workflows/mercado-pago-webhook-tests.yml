@@ -9,6 +9,7 @@ on:
       - 'lib/mercado-pago-webhook-helpers.ts'
       - 'tests/mercado-pago-webhook-helpers.test.cjs'
       - '.github/workflows/mercado-pago-webhook-tests.yml'
+      - '.github/workflows/remediation-build.yml'
   workflow_dispatch:
 
 permissions:
