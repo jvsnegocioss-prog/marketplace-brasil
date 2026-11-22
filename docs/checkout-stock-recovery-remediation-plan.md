@@ -78,3 +78,30 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Revisão de segurança das permissões da RPC.
 - Preview validado manualmente.
 - Liberação de produção, ativação de vendas e qualquer alteração no Supabase de produção exigem autorização separada e explícita.
+
+
+## Confirmações adicionais da inspeção do schema
+
+- `orders.status` é texto sem constraint CHECK de valores. O único pedido existente no momento da consulta estava com status `Pago`; isso não comprova todos os estados históricos possíveis.
+- `order_items.product_id` referencia `products.id` com `ON DELETE SET NULL`. Se o produto foi excluído, o vínculo necessário para devolver estoque se perde. A RPC proposta falha de forma transacional nesse cenário, sem marcar o pedido como cancelado nem fingir que o estoque foi restaurado.
+- `orders.coupon_id` referencia `discount_coupons.id` com `ON DELETE SET NULL`. Quando o cupom ainda existe, a reversão exige contador positivo; caso contrário, a transação falha e não cancela parcialmente.
+- A chave de idempotência possui índice único parcial em `orders.checkout_idempotency_key`.
+- As duas RPCs de criação atuais são executáveis somente por `service_role`; a nova RPC segue o mesmo limite.
+- O histórico da conta usa o JWT do cliente e filtra por `customer_user_id`; não usa chave privilegiada.
+
+## Código preparado na branch isolada
+
+- Migration de rascunho: `supabase/migrations/20261121010000_checkout_stock_recovery_and_customer_binding.sql`.
+- Nova RPC `create_store_order_with_coupon_and_delivery_for_customer`: reutiliza a criação transacional existente, grava `customer_user_id` na mesma transação e mantém a idempotência vinculada ao hash e ao titular.
+- Nova RPC `cancel_unpaid_order_and_restore_stock`: bloqueia o pedido, permite cancelar apenas `aguardando`, restaura estoque por produto e reverte o uso do cupom dentro da mesma transação. Repetições retornam `already_cancelled`; pedidos pagos não são alterados.
+- Checkout atualizado para usar a RPC com titular autenticado e verificar o resultado do cancelamento antes de afirmar que a reserva foi liberada.
+- Webhook atualizado para verificar o resultado da RPC e detectar a corrida entre cancelamento e aprovação tardia, retornando conflito para reconciliação manual em vez de marcar automaticamente o pedido como pago.
+
+## Estado de validação
+
+- As alterações estão somente na branch `fix/checkout-stock-recovery`.
+- Migration ainda é rascunho: não foi aplicada nem executada contra o Supabase.
+- Nenhum teste de integração, pagamento simulado ou build foi executado nesta etapa.
+- A função falha integralmente se houver item sem vínculo de produto, produto ausente ou contador de cupom inconsistente; esse cenário exige reconciliação manual.
+- Próxima validação necessária: revisão SQL estática detalhada, execução em banco de teste isolado e testes de concorrência/idempotência antes de qualquer Preview ou produção.
+- Não foi criado PR, não foi feito merge, não foi autorizado deploy e as vendas continuam sem ativação por este trabalho.
