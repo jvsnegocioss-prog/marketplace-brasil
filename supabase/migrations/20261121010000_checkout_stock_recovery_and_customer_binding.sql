@@ -79,6 +79,17 @@ GRANT EXECUTE ON FUNCTION public.create_store_order_with_coupon_and_delivery_for
 ) TO service_role;
 
 
+-- Internal ledger: proves stock and coupon reversal committed exactly once.
+CREATE TABLE IF NOT EXISTS public.order_stock_restorations (
+  order_id uuid PRIMARY KEY REFERENCES public.orders(id) ON DELETE RESTRICT,
+  restored_at timestamptz NOT NULL DEFAULT now(),
+  product_lines jsonb NOT NULL,
+  coupon_id uuid
+);
+
+ALTER TABLE public.order_stock_restorations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.order_stock_restorations FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.cancel_unpaid_order_and_restore_stock(
   p_order_id uuid
 )
@@ -92,6 +103,7 @@ DECLARE
   v_item record;
   v_item_count integer := 0;
   v_updated_count integer := 0;
+  v_product_lines jsonb := '[]'::jsonb;
 BEGIN
   SELECT *
     INTO v_order
@@ -103,9 +115,19 @@ BEGIN
     RETURN pg_catalog.jsonb_build_object('outcome', 'not_found');
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM public.order_stock_restorations AS r
+    WHERE r.order_id = p_order_id
+  ) THEN
+    RETURN pg_catalog.jsonb_build_object('outcome', 'already_restored');
+  END IF;
+
   IF pg_catalog.lower(pg_catalog.btrim(v_order.status)) IN
      ('cancelado', 'cancelada', 'canceled', 'cancelled') THEN
-    RETURN pg_catalog.jsonb_build_object('outcome', 'already_cancelled');
+    -- Legacy/manual cancellation without proof of stock restoration:
+    -- never guess whether inventory was already returned.
+    RETURN pg_catalog.jsonb_build_object('outcome', 'cancelled_unverified');
   END IF;
 
   IF pg_catalog.lower(pg_catalog.btrim(v_order.status)) <> 'aguardando' THEN
@@ -141,6 +163,13 @@ BEGIN
     UPDATE public.products
        SET stock = stock + v_item.quantity
      WHERE id = v_item.product_id;
+
+    v_product_lines := v_product_lines || pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'product_id', v_item.product_id,
+        'quantity', v_item.quantity
+      )
+    );
   END LOOP;
 
   IF v_item_count = 0 THEN
@@ -168,6 +197,12 @@ BEGIN
   IF v_updated_count <> 1 THEN
     RAISE EXCEPTION 'O pedido mudou de estado durante o cancelamento';
   END IF;
+
+  INSERT INTO public.order_stock_restorations (
+    order_id, product_lines, coupon_id
+  ) VALUES (
+    p_order_id, v_product_lines, v_order.coupon_id
+  );
 
   RETURN pg_catalog.jsonb_build_object('outcome', 'cancelled');
 END;
