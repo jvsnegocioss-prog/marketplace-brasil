@@ -58,12 +58,12 @@ BEGIN
   v_order := public.create_store_order_with_coupon_and_delivery_for_customer(
     'Cliente Teste','teste@example.invalid','92999999999','Rua Teste',
     '[]'::jsonb,NULL,NULL,
-    '00000000-0000-0000-0000-000000000101',v_hash,v_user
+    '11111111-1111-4111-8111-111111111101',v_hash,v_user
   );
   v_again := public.create_store_order_with_coupon_and_delivery_for_customer(
     'Cliente Teste','teste@example.invalid','92999999999','Rua Teste',
     '[]'::jsonb,NULL,NULL,
-    '00000000-0000-0000-0000-000000000101',v_hash,v_user
+    '11111111-1111-4111-8111-111111111101',v_hash,v_user
   );
   IF v_order IS DISTINCT FROM v_again THEN
     RAISE EXCEPTION 'Idempotency did not return the original order';
@@ -76,7 +76,7 @@ BEGIN
     PERFORM public.create_store_order_with_coupon_and_delivery_for_customer(
       'Outro Cliente','outro@example.invalid','92988888888','Rua Teste',
       '[]'::jsonb,NULL,NULL,
-      '00000000-0000-0000-0000-000000000101',v_hash,
+      '11111111-1111-4111-8111-111111111101',v_hash,
       '00000000-0000-0000-0000-000000000012'
     );
     RAISE EXCEPTION 'Idempotency key was reused by another customer';
