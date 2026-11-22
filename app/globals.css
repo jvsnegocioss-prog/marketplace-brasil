@@ -5837,3 +5837,12 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
     transform: none;
   }
 }
+
+
+/* NOVASHOPP STORE — banner: mostrar a foto completa no desktop sem alterar o mobile */
+@media (min-width: 761px) {
+  .hero-campaign-media img {
+    object-fit: contain !important;
+    object-position: center;
+  }
+}
