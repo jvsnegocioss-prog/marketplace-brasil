@@ -1,32 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHmac } from "node:crypto";
 import {
-  createHmac,
-  timingSafeEqual,
-} from "node:crypto";
+  amountToCents,
+  classifyMercadoPagoOrderStatus,
+  compareSignatures,
+  validateProcessedPayment,
+} from "@/lib/mercado-pago-webhook-helpers";
 export const runtime = "nodejs";
-function compareSignatures(expected: string, received: string) {
-  if (!/^[a-f0-9]{64}$/i.test(received)) {
-    return false;
-  }
-  const expectedBuffer = Buffer.from(expected, "hex");
-  const receivedBuffer = Buffer.from(received, "hex");
-  return (
-    expectedBuffer.length === receivedBuffer.length &&
-    timingSafeEqual(expectedBuffer, receivedBuffer)
-  );
-}
-
-function amountToCents(value: unknown): number | null {
-  if (typeof value !== "string" && typeof value !== "number") {
-    return null;
-  }
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount < 0) {
-    return null;
-  }
-  return Math.round(amount * 100);
-}
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -219,31 +200,13 @@ export async function POST(request: Request) {
       );
     }
 
-    if (mpStatus === "processed") {
-      const expectedCents = amountToCents(storeOrder.total);
-      const orderAmountCents = amountToCents(mpOrder.total_amount);
-      const paidAmountCents = amountToCents(mpOrder.total_paid_amount);
-      const payments = mpOrder.transactions?.payments;
-      const paymentsAreProcessed =
-        Array.isArray(payments) &&
-        payments.length > 0 &&
-        payments.every((payment: { status?: unknown }) => payment?.status === "processed");
+    const webhookAction = classifyMercadoPagoOrderStatus(mpStatus);
 
-      if (
-        mpOrder.currency_id !== "BRL" ||
-        expectedCents === null ||
-        orderAmountCents === null ||
-        paidAmountCents === null ||
-        orderAmountCents !== expectedCents ||
-        paidAmountCents !== expectedCents ||
-        !paymentsAreProcessed
-      ) {
+    if (webhookAction === "approve") {
+      const paymentValidation = validateProcessedPayment(storeOrder.total, mpOrder);
+      if (!paymentValidation.valid) {
         console.error("[MP webhook] Pagamento processado com valor, moeda ou transações divergentes.", {
-          currencyMatches: mpOrder.currency_id === "BRL",
-          expectedCents,
-          orderAmountCents,
-          paidAmountCents,
-          paymentsAreProcessed,
+          reason: paymentValidation.reason,
         });
         return NextResponse.json(
           { error: "Pagamento não corresponde integralmente ao pedido." },
@@ -252,7 +215,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (mpStatus === "refunded" || mpStatus === "charged_back") {
+    if (webhookAction === "reconcile") {
       // Reembolso e contestação são eventos financeiros posteriores à aprovação.
       // Persistir para conciliação administrativa; nunca devolver estoque automaticamente.
       const { error: reconciliationEventError } = await supabaseAdmin
@@ -293,7 +256,7 @@ export async function POST(request: Request) {
     const currentStoreStatus = String(storeOrder.status).trim().toLowerCase();
     if (currentStoreStatus !== "aguardando") {
       const isCancelled = ["cancelado", "cancelada", "canceled", "cancelled"].includes(currentStoreStatus);
-      if (mpStatus === "processed" && isCancelled) {
+      if (webhookAction === "approve" && isCancelled) {
         console.error("[MP webhook] Pagamento aprovado após cancelamento; exige reconciliação manual.", {
           orderId,
           mercadoPagoOrderId: dataId,
@@ -307,7 +270,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
-    if (mpStatus === "processed") {
+    if (webhookAction === "approve") {
       const { data: updatedOrder, error } = await supabaseAdmin
         .from("orders")
         .update({ status: "Pago" })
@@ -360,10 +323,7 @@ export async function POST(request: Request) {
         );
       }
     }
-    if (
-      mpStatus === "canceled" ||
-      mpStatus === "failed"
-    ) {
+    if (webhookAction === "cancel") {
       const { data: cancellation, error } = await supabaseAdmin.rpc(
         "cancel_unpaid_order_and_restore_stock",
         { p_order_id: orderId }
