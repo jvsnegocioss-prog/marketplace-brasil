@@ -39,7 +39,7 @@ async function cancelOrder(
 
   const outcome = data?.outcome;
   return {
-    confirmed: outcome === "cancelled" || outcome === "already_cancelled",
+    confirmed: outcome === "cancelled" || outcome === "already_restored",
     outcome,
     message: outcome ? undefined : "A RPC não confirmou o resultado do cancelamento.",
   };
@@ -156,7 +156,6 @@ export async function POST(request: Request) {
     const requestHash = createHash("sha256").update(JSON.stringify({
       customerName: customerName.trim(),
       customerEmail: verifiedCustomerEmail,
-      customerUserId: authenticatedCustomerUserId,
       customerPhone: customerPhone.trim(),
       deliveryAddress: deliveryAddress.trim(),
       couponCode: typeof couponCode === "string" ? couponCode.trim().toUpperCase() : null,
