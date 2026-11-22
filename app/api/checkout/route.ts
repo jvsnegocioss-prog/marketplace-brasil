@@ -320,7 +320,7 @@ export async function POST(request: Request) {
         : process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : "https://novashoppstore.vercel.app";
-    const checkoutReturnUrl = `${returnOrigin}${returnPath}`;
+    const checkoutReturnUrl = `${returnOrigin}${returnPath}?pedido=${encodeURIComponent(orderId)}`;
 
     const paymentBody: Record<string, unknown> = {
       type: "online",
