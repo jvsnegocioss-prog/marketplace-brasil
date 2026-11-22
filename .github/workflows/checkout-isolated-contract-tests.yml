@@ -6,7 +6,10 @@ on:
       - test/checkout-isolated-homologation
     paths:
       - 'app/api/checkout/route.ts'
+      - 'app/api/mercadopago/webhook/route.ts'
+      - 'lib/mercado-pago-webhook-helpers.ts'
       - 'tests/checkout-route-contract.test.cjs'
+      - 'tests/mercado-pago-webhook-contract.test.cjs'
       - '.github/workflows/checkout-isolated-contract-tests.yml'
   workflow_dispatch:
 
@@ -23,5 +26,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Run checkout route contract tests
-        run: node --test tests/checkout-route-contract.test.cjs
+      - name: Run isolated checkout and webhook contract tests
+        run: node --test tests/checkout-route-contract.test.cjs tests/mercado-pago-webhook-contract.test.cjs
