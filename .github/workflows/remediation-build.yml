@@ -10,6 +10,10 @@ on:
       - lib/**
       - package.json
       - tsconfig.json
+      - tests/mercado-pago-webhook-helpers.test.cjs
+      - .github/workflows/mercado-pago-webhook-tests.yml
+      - .github/workflows/remediation-build.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
