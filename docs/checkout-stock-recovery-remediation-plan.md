@@ -206,3 +206,17 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Atenção: na documentação Checkout Pro Orders o status consolidado de cancelamento é `canceled` (um L), e sucesso é `processed`. O código usa essas grafias.
 - Esta rodada foi somente leitura e documental. Nenhuma rota funcional foi modificada, nenhuma migration foi aplicada, nenhuma credencial foi acessada e nenhum teste de pagamento foi executado.
 - Próxima etapa segura: desenhar a página única de retorno com estado não confiável vindo da URL, ajustar resolução de URL por ambiente, corrigir retenção da chave idempotente e adicionar cobertura para todos os estados oficiais do webhook antes de qualquer ensaio de sandbox.
+
+
+## Nona rodada — implementação inicial do retorno do Checkout Pro
+
+- `app/api/checkout/route.ts` agora envia `config.online.success_url`, `failure_url`, `pending_url` e `auto_return: "approved"` para o Checkout Pro.
+- A URL usa `VERCEL_PROJECT_PRODUCTION_URL` (com fallback para o domínio canônico `novashoppstore.vercel.app`) em produção e `VERCEL_URL` no Preview. Não usa o cabeçalho Host fornecido pelo navegador.
+- Criada `app/checkout/retorno/page.tsx`. A página é deliberadamente neutra: explica que o comprador retornou do Mercado Pago, mas não interpreta query params como confirmação de pagamento. O link de acompanhamento leva à área de rastreamento existente.
+- Em `app/page.tsx`, a chave local `novashopp_checkout_idempotency_v1` deixa de ser removida antes do redirecionamento e também deixa de ser apagada automaticamente em respostas HTTP 409. Isso prioriza não criar outro pedido enquanto a situação da tentativa anterior não estiver confirmada.
+- Limitação conhecida: a chave fica retida para o mesmo fingerprint mesmo se o pedido anterior já tiver sido cancelado/encerrado. Antes de permitir nova tentativa com o mesmo conteúdo, será necessário consultar de forma autenticada o estado do pedido e só então limpar/rotacionar a chave com segurança. A página de retorno ainda não consulta nem exibe o estado real do pedido.
+- Em `app/api/mercadopago/webhook/route.ts`, os estados `refunded` e `charged_back` agora geram log de reconciliação e resposta de recebimento, sem alterar status nem restaurar estoque automaticamente.
+- Limitação importante: esse sinal de reembolso/chargeback está apenas no log da função e na resposta HTTP; ainda não existe registro persistente de reconciliação nem painel administrativo para esses eventos. Implementar trilha persistente antes de liberar vendas.
+- O Preview automático da Vercel para o commit documental anterior `8b533b7` foi encontrado em estado `READY`; isso não é evidência de teste sandbox nem validação funcional destas mudanças mais recentes.
+- As alterações desta rodada estão apenas na branch de preparação. Não houve teste de pagamento, chamada real ao Mercado Pago, aplicação de migration, alteração do Supabase de produção, merge, deploy de produção ou ativação de vendas.
+- Próximas validações: revisar o contrato exato do `config.online` no Preview, verificar a compilação dos novos arquivos, implementar consulta autenticada do estado do pedido e persistência de eventos de reconciliação, e então testar os estados de retorno e webhook com credenciais sandbox.
