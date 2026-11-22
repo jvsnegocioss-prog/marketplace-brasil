@@ -65,6 +65,9 @@ export default function ProductPage() {
   const [rating, setRating] = useState(5);
   const [reviewFiles, setReviewFiles] = useState<File[]>([]);
   const [reviewId, setReviewId] = useState("");
+  const [reviewAccessStatus, setReviewAccessStatus] = useState<"loading" | "allowed" | "blocked" | "error">("loading");
+  const [reviewAccessMessage, setReviewAccessMessage] = useState("Verificando se sua conta tem uma compra elegível...");
+  const [isReviewUserAuthenticated, setIsReviewUserAuthenticated] = useState(false);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
@@ -177,12 +180,20 @@ export default function ProductPage() {
       cache: "no-store",
     });
     const result = await response.json();
-    if (response.ok) {
-      setReviews(result.reviews || []);
-      if (result.ownReview) {
-        setReviewId(result.ownReview.id);
-        setRating(result.ownReview.rating);
-      }
+    if (!response.ok) {
+      setReviewAccessStatus("error");
+      setReviewAccessMessage(result.error || "Não foi possível verificar sua permissão para avaliar.");
+      setIsReviewUserAuthenticated(Boolean(token));
+      return;
+    }
+
+    setReviews(result.reviews || []);
+    setIsReviewUserAuthenticated(Boolean(result.authenticated));
+    setReviewAccessStatus(result.canReview ? "allowed" : "blocked");
+    setReviewAccessMessage(result.reviewAccessMessage || "A avaliação está disponível somente após a confirmação de uma compra paga e entregue.");
+    if (result.ownReview) {
+      setReviewId(result.ownReview.id);
+      setRating(result.ownReview.rating);
     }
   }
 
@@ -812,6 +823,9 @@ export default function ProductPage() {
 
           <div className="detail-panel review-form-panel">
             <h2 className="detail-panel-title">Avalie este produto</h2>
+            {reviewAccessStatus === "allowed" ? (
+              <>
+
             <p className="review-form-intro">Compartilhe fotos ou vídeo do produto recebido e sua nota. Disponível para clientes com compra paga e entregue.</p>
             <label className="review-label">Fotos do produto recebido</label>
             <input
@@ -842,6 +856,22 @@ export default function ProductPage() {
             </button>
             {reviewId && <button onClick={deleteReview} disabled={saving} className="review-delete-button">Excluir minha avaliação</button>}
             {message && <p className="review-message" role="status">{message}</p>}
+              </>
+            ) : (
+              <div className="review-access-notice" role="status" aria-live="polite">
+                <strong>
+                  {reviewAccessStatus === "loading"
+                    ? "Verificando sua compra..."
+                    : reviewAccessStatus === "error"
+                      ? "Não foi possível liberar a avaliação"
+                      : "Avaliação exclusiva para compradores"}
+                </strong>
+                <p>{reviewAccessMessage}</p>
+                {reviewAccessStatus === "blocked" && !isReviewUserAuthenticated && (
+                  <Link href="/conta" className="review-access-link">Entrar na minha conta</Link>
+                )}
+              </div>
+            )}
           </div>
         </section>
       </div>
