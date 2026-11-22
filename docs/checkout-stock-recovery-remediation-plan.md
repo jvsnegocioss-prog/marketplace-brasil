@@ -187,3 +187,22 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - A sexta rodada permanece no histórico para rastreabilidade, mas seu bloqueio sobre ausência de `checkout_url` fica expressamente revogado por esta correção documental.
 - Próxima etapa: revisar o frontend que consome `checkoutUrl`, definir e validar URLs de retorno no domínio correto, revisar o webhook contra o payload oficial Checkout Pro Orders e preparar testes com credenciais de teste. Nenhuma credencial foi acessada e nenhuma chamada de pagamento foi feita.
 - Esta atualização é documental. Não altera rotas, banco, variáveis de ambiente, produção ou estado de vendas.
+
+
+
+## Oitava rodada — retorno do Checkout Pro e auditoria do webhook
+
+- A documentação oficial atual do Checkout Pro via Orders confirma que as URLs de retorno são configuradas em `config.online.success_url`, `failure_url`, `pending_url` e `auto_return`. Os parâmetros que retornam na URL são informativos: não podem, sozinhos, marcar pedido como pago; o estado precisa ser confirmado pela API/notificação.
+- Domínio canônico atualmente associado ao projeto Vercel, confirmado por consulta somente leitura: `https://novashoppstore.vercel.app`. O domínio alternativo `marketplace-brasil.vercel.app` redireciona para ele.
+- Na branch `fix/checkout-stock-recovery`, não foram encontrados arquivos de retorno em `app/checkout/retorno/page.tsx`, `app/checkout/sucesso/page.tsx`, `app/checkout/falha/page.tsx`, `app/checkout/pendente/page.tsx` ou `app/checkout/return/page.tsx`. Portanto, ainda é necessário criar uma página de retorno que explique aprovado/recusado/pendente sem confiar nos parâmetros como confirmação financeira.
+- A rota de checkout já devolve `checkoutUrl` e o frontend redireciona para ela. O frontend apaga a chave de idempotência local imediatamente antes do redirecionamento. Isso merece ajuste: se a navegação externa falhar ou o comprador voltar para repetir a mesma tentativa, uma nova chave local pode gerar outro pedido. Preservar a chave até uma condição de conclusão segura ou associá-la ao orderId precisa ser desenhado sem quebrar o reuso de tentativa.
+- A rota de checkout ainda não inclui `config.online` com URLs de retorno. A implementação deve usar o domínio do deployment correto (Preview para testes e domínio canônico em produção), sem fixar URL de Preview no ambiente de produção. O domínio canônico acima está identificado; o mecanismo de resolução de URL por ambiente ainda precisa ser definido e revisado.
+- Auditoria estática do webhook atual:
+  - exige `data.id`, `x-signature` e `x-request-id`, valida HMAC com comparação em tempo constante e consulta a order diretamente em `GET /v1/orders/{id}`;
+  - confere `external_reference` UUID, ID Mercado Pago, vínculo do pedido, moeda BRL, total da order, total pago e transações processadas antes de marcar como Pago;
+  - reconhece o status de sucesso `processed` e os estados terminais `canceled`/`failed` para tentar cancelamento idempotente.
+- A documentação atual do Checkout Pro recomenda evento Order e confirma que o corpo inclui `data.id`, que deve ser consultado em `GET /v1/orders/{id}`; o webhook deve responder HTTP 200/201 quando a notificação foi recebida corretamente. A rota já consulta o recurso oficial, mas seu tratamento de status e resposta precisa ser testado com payloads reais de sandbox.
+- A tabela oficial de status também inclui `created`, `processing`, `action_required`, `refunded` e `charged_back`. O código atual não trata explicitamente reembolso/chargeback; não deve restaurar estoque automaticamente nesses estados, mas deve sinalizar/reconciliar o pedido e manter a trilha financeira para tratamento administrativo.
+- Atenção: na documentação Checkout Pro Orders o status consolidado de cancelamento é `canceled` (um L), e sucesso é `processed`. O código usa essas grafias.
+- Esta rodada foi somente leitura e documental. Nenhuma rota funcional foi modificada, nenhuma migration foi aplicada, nenhuma credencial foi acessada e nenhum teste de pagamento foi executado.
+- Próxima etapa segura: desenhar a página única de retorno com estado não confiável vindo da URL, ajustar resolução de URL por ambiente, corrigir retenção da chave idempotente e adicionar cobertura para todos os estados oficiais do webhook antes de qualquer ensaio de sandbox.
