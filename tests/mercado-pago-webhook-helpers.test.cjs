@@ -63,6 +63,7 @@ test("builds the exact Mercado Pago HMAC manifest and normalizes data.id", () =>
   const expected = createMercadoPagoWebhookSignature(secret, lowerId, requestId, timestamp);
 
   assert.match(signature, /^[a-f0-9]{64}$/);
+  assert.equal(signature, "c179d6f5af80cb6edea7a489ba5422137b0f2867a008777d5495f3140fc05b41");
   assert.equal(signature, expected);
   assert.equal(
     compareSignatures(signature, createMercadoPagoWebhookSignature(secret, lowerId, requestId, timestamp)),
