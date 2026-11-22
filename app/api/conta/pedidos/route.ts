@@ -15,31 +15,33 @@ export async function GET(request: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error("CONFIGURAÇÃO DO SUPABASE ADMIN AUSENTE NO AMBIENTE.");
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("CONFIGURAÇÃO PÚBLICA DO SUPABASE AUSENTE NO AMBIENTE.");
       return NextResponse.json(
         { error: "Histórico temporariamente indisponível." },
         { status: 503 }
       );
     }
 
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      serviceRoleKey,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    // Consulta em nome do cliente autenticado. O JWT ativa as políticas RLS
+    // existentes, que limitam orders e order_items ao próprio customer_user_id.
+    // Não depende da chave privilegiada service_role.
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const { data: authData, error: authError } =
-      await supabaseAdmin.auth.getUser(token);
+      await supabaseUser.auth.getUser(token);
 
     const user = authData?.user;
-    if (authError || !user?.email) {
+    if (authError || !user?.id) {
       return NextResponse.json({ error: "Sessão inválida. Entre novamente." }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseUser
       .from("orders")
       .select(`
         id,
@@ -62,7 +64,7 @@ export async function GET(request: Request) {
           subtotal
         )
       `)
-      .eq("customer_email", user.email)
+      .eq("customer_user_id", user.id)
       .in("status", ["Pago", "pago", "Aprovado", "aprovado", "approved", "paid"])
       .order("created_at", { ascending: false })
       .limit(50);
