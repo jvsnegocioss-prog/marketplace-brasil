@@ -1,6 +1,14 @@
 -- Draft only: review and apply in a controlled test environment before production.
 -- Adds an atomic cancellation routine and a customer-aware idempotent checkout RPC.
 
+-- Persist financial events that require manual reconciliation.
+ALTER TABLE public.mercado_pago_webhook_events
+  DROP CONSTRAINT IF EXISTS mercado_pago_webhook_events_processing_status_check;
+
+ALTER TABLE public.mercado_pago_webhook_events
+  ADD CONSTRAINT mercado_pago_webhook_events_processing_status_check
+  CHECK (processing_status = ANY (ARRAY['received'::text, 'processing'::text, 'processed'::text, 'failed'::text, 'ignored'::text, 'reconciliation_required'::text]));
+
 CREATE OR REPLACE FUNCTION public.create_store_order_with_coupon_and_delivery_for_customer(
   p_customer_name text,
   p_customer_email text,
