@@ -28,8 +28,7 @@ export async function GET(request: Request) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const mercadoPagoAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-  if (!supabaseUrl || !serviceRoleKey || !mercadoPagoAccessToken) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json({ error: "Consulta temporariamente indisponível." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 
@@ -38,7 +37,7 @@ export async function GET(request: Request) {
   });
 
   try {
-    const expectedSignature = createHmac("sha256", mercadoPagoAccessToken)
+    const expectedSignature = createHmac("sha256", serviceRoleKey)
       .update(`novashopp-checkout-return:${orderId}`)
       .digest("hex");
     const signatureBuffer = Buffer.from(suppliedSignature, "hex");
