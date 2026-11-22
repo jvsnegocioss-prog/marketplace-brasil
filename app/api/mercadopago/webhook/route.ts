@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "node:crypto";
 import {
-  amountToCents,
   classifyMercadoPagoOrderStatus,
   compareSignatures,
   validateProcessedPayment,
