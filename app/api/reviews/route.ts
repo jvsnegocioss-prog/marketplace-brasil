@@ -143,7 +143,7 @@ export async function GET(request: Request) {
     // paga e entregue, libera o formulário de avaliação.
     const purchase = await validatePurchase(userEmail, productId);
     canReview = !("error" in purchase);
-    if ("error" in purchase) reviewAccessMessage = purchase.error;
+    if ("error" in purchase) reviewAccessMessage = purchase.error || "Não foi possível confirmar uma compra elegível para este produto.";
     else reviewAccessMessage = "Compra confirmada. Você pode avaliar este produto.";
 
     const { data: orders } = await supabaseAdmin
