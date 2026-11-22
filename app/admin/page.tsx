@@ -741,6 +741,7 @@ export default function AdminPage() {
             <button className="admin-nav-button" onClick={() => router.push("/admin/avaliacoes")} style={buttonStyle}>Gestão de avaliações</button>
             <button className="admin-nav-button" onClick={() => router.push("/admin/cupons")} style={buttonStyle}>Cupons de desconto</button>
             <button className="admin-nav-button" onClick={() => router.push("/admin/publicidade")} style={buttonStyle}>Publicidade e Promoções</button>
+            <button className="admin-nav-button" onClick={() => router.push("/admin/conciliacao")} style={buttonStyle}>Conciliação financeira</button>
           </nav>
         </div>
 
