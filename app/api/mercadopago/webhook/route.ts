@@ -252,17 +252,31 @@ export async function POST(request: Request) {
       }
     }
 
-    if (String(storeOrder.status).trim().toLowerCase() !== "aguardando") {
+    const currentStoreStatus = String(storeOrder.status).trim().toLowerCase();
+    if (currentStoreStatus !== "aguardando") {
+      const isCancelled = ["cancelado", "cancelada", "canceled", "cancelled"].includes(currentStoreStatus);
+      if (mpStatus === "processed" && isCancelled) {
+        console.error("[MP webhook] Pagamento aprovado após cancelamento; exige reconciliação manual.", {
+          orderId,
+          mercadoPagoOrderId: dataId,
+        });
+        return NextResponse.json(
+          { error: "Pagamento aprovado para pedido cancelado. O caso foi sinalizado para reconciliação manual." },
+          { status: 409 }
+        );
+      }
       console.info("[MP webhook] Pedido já finalizado; notificação sem alteração.");
       return NextResponse.json({ received: true, ignored: true });
     }
 
     if (mpStatus === "processed") {
-      const { error } = await supabaseAdmin
+      const { data: updatedOrder, error } = await supabaseAdmin
         .from("orders")
         .update({ status: "Pago" })
         .eq("id", orderId)
-        .ilike("status", "aguardando");
+        .ilike("status", "aguardando")
+        .select("id")
+        .maybeSingle();
       if (error) {
         console.error(
           "[MP webhook] Erro ao atualizar pedido:",
@@ -273,12 +287,46 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
+
+      if (!updatedOrder) {
+        const { data: latestOrder, error: latestOrderError } = await supabaseAdmin
+          .from("orders")
+          .select("status")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (latestOrderError) {
+          console.error("[MP webhook] Não foi possível reconciliar estado após conflito:", latestOrderError.message);
+          return NextResponse.json({ error: "Não foi possível confirmar o estado do pedido." }, { status: 500 });
+        }
+
+        const latestStatus = String(latestOrder?.status || "").trim().toLowerCase();
+        if (["cancelado", "cancelada", "canceled", "cancelled"].includes(latestStatus)) {
+          console.error("[MP webhook] Corrida entre cancelamento e aprovação; pagamento exige reconciliação manual.", {
+            orderId,
+            mercadoPagoOrderId: dataId,
+          });
+          return NextResponse.json(
+            { error: "Pagamento aprovado para pedido cancelado. O caso foi sinalizado para reconciliação manual." },
+            { status: 409 }
+          );
+        }
+
+        if (["pago", "aprovado", "approved", "paid"].includes(latestStatus)) {
+          return NextResponse.json({ received: true, alreadyProcessed: true });
+        }
+
+        return NextResponse.json(
+          { error: "O estado do pedido mudou durante a confirmação do pagamento." },
+          { status: 409 }
+        );
+      }
     }
     if (
       mpStatus === "canceled" ||
       mpStatus === "failed"
     ) {
-      const { error } = await supabaseAdmin.rpc(
+      const { data: cancellation, error } = await supabaseAdmin.rpc(
         "cancel_unpaid_order_and_restore_stock",
         { p_order_id: orderId }
       );
@@ -288,8 +336,20 @@ export async function POST(request: Request) {
           error.message
         );
         return NextResponse.json(
-          { error: "Erro ao cancelar pedido." },
+          { error: "Erro ao cancelar pedido; a reconciliação do estoque continua pendente." },
           { status: 500 }
+        );
+      }
+
+      const outcome = (cancellation as { outcome?: string } | null)?.outcome;
+      if (outcome !== "cancelled" && outcome !== "already_cancelled") {
+        console.error("[MP webhook] RPC não confirmou cancelamento elegível:", {
+          orderId,
+          outcome,
+        });
+        return NextResponse.json(
+          { error: "O pedido não pôde ser cancelado automaticamente; requer reconciliação." },
+          { status: 409 }
         );
       }
     }
