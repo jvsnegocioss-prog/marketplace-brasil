@@ -19,14 +19,14 @@ async function requireAdmin(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
   if (!token) {
-    return { response: NextResponse.json({ error: "Autenticação necessária." }, { status: 401, headers: NO_STORE }) };
+    return NextResponse.json({ error: "Autenticação necessária." }, { status: 401, headers: NO_STORE });
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !anon || !service) {
-    return { response: NextResponse.json({ error: "Serviço administrativo indisponível." }, { status: 503, headers: NO_STORE }) };
+    return NextResponse.json({ error: "Serviço administrativo indisponível." }, { status: 503, headers: NO_STORE });
   }
 
   const userClient = createClient(url, anon, {
@@ -35,12 +35,12 @@ async function requireAdmin(request: Request) {
   });
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) {
-    return { response: NextResponse.json({ error: "Sessão inválida ou expirada." }, { status: 401, headers: NO_STORE }) };
+    return NextResponse.json({ error: "Sessão inválida ou expirada." }, { status: 401, headers: NO_STORE });
   }
 
   const { data: isAdmin, error: adminError } = await userClient.rpc("is_marketplace_admin");
   if (adminError || isAdmin !== true) {
-    return { response: NextResponse.json({ error: "Acesso administrativo não autorizado." }, { status: 403, headers: NO_STORE }) };
+    return NextResponse.json({ error: "Acesso administrativo não autorizado." }, { status: 403, headers: NO_STORE });
   }
 
   const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
 
   try {
     const auth = await requireAdmin(request);
-    if (auth.response) return auth.response;
+    if (auth instanceof NextResponse) return auth;
 
     const { data, error } = await auth.admin
       .from("mercado_pago_reconciliation_audit")
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const auth = await requireAdmin(request);
-    if (auth.response) return auth.response;
+    if (auth instanceof NextResponse) return auth;
 
     const contentType = request.headers.get("content-type") || "";
     if (!contentType.toLowerCase().includes("application/json")) {
