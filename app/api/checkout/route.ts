@@ -313,6 +313,15 @@ export async function POST(request: Request) {
       });
     }
 
+    const returnPath = "/checkout/retorno";
+    const returnOrigin =
+      process.env.VERCEL_ENV === "production"
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || "novashoppstore.vercel.app"}`
+        : process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "https://novashoppstore.vercel.app";
+    const checkoutReturnUrl = `${returnOrigin}${returnPath}`;
+
     const paymentBody: Record<string, unknown> = {
       type: "online",
       processing_mode: "manual",
@@ -321,6 +330,14 @@ export async function POST(request: Request) {
       external_reference: orderId,
       description: `Pedido ${orderId}`,
       items: paymentItems,
+      config: {
+        online: {
+          success_url: checkoutReturnUrl,
+          failure_url: checkoutReturnUrl,
+          pending_url: checkoutReturnUrl,
+          auto_return: "approved",
+        },
+      },
     };
 
     if (
