@@ -1,18 +1,25 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type MercadoPagoWebhookAction = "approve" | "cancel" | "reconcile" | "ignore";
 
+export function createMercadoPagoWebhookSignature(
+  secret: string,
+  dataId: string,
+  requestId: string,
+  timestamp: string
+): string {
+  const normalizedDataId = dataId.toLowerCase();
+  const manifest = `id:${normalizedDataId};request-id:${requestId};ts:${timestamp};`;
+  return createHmac("sha256", secret).update(manifest).digest("hex");
+}
+
 export function compareSignatures(expected: string, received: string): boolean {
-  if (!/^[a-f0-9]{64}$/i.test(received)) return false;
+  if (!/^[a-f0-9]{64}$/i.test(expected) || !/^[a-f0-9]{64}$/i.test(received)) return false;
   const expectedBuffer = Buffer.from(expected, "hex");
   const receivedBuffer = Buffer.from(received, "hex");
   return expectedBuffer.length === receivedBuffer.length &&
     expectedBuffer.length > 0 &&
-    requireTimingSafeEqual(expectedBuffer, receivedBuffer);
-}
-
-function requireTimingSafeEqual(a: Buffer, b: Buffer): boolean {
-  return timingSafeEqual(a, b);
+    timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
 export function amountToCents(value: unknown): number | null {
