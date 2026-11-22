@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       .from("orders")
       .select("id, order_number, status, delivery_status, created_at, customer_user_id")
       .eq("id", orderId);
-    if (authenticatedUserId) {
+    if (!validSignedReturn && authenticatedUserId) {
       orderQuery = orderQuery.eq("customer_user_id", authenticatedUserId);
     }
     const { data: order, error } = await orderQuery.maybeSingle();
