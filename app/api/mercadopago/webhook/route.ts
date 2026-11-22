@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createHmac } from "node:crypto";
 import {
   classifyMercadoPagoOrderStatus,
+  createMercadoPagoWebhookSignature,
   compareSignatures,
   validateProcessedPayment,
 } from "@/lib/mercado-pago-webhook-helpers";
@@ -97,11 +97,12 @@ export async function POST(request: Request) {
     // O Mercado Pago exige data.id em letras minúsculas
     // para identificadores alfanuméricos.
     const normalizedDataId = dataId.toLowerCase();
-    const normalizedManifest =
-      `id:${normalizedDataId};request-id:${requestId};ts:${ts};`;
-    const normalizedHash = createHmac("sha256", secret)
-      .update(normalizedManifest)
-      .digest("hex");
+    const normalizedHash = createMercadoPagoWebhookSignature(
+      secret,
+      dataId,
+      requestId,
+      ts
+    );
     const signatureMatches = compareSignatures(
       normalizedHash,
       receivedHash
