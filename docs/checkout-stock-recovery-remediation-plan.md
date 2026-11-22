@@ -231,3 +231,16 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - O uso de `x-request-id` como chave de registro identifica a entrega HTTP; reentregas que chegarem com outro request ID podem gerar linhas separadas para o mesmo recurso. Isso preserva a trilha de entregas, mas não substitui uma chave de evento nativa caso o Mercado Pago disponibilize uma no payload.
 - A consulta ao banco foi somente leitura. A constraint não foi alterada em produção, a migration continua não aplicada e não foram inseridos eventos de teste.
 - Ainda falta uma tela administrativa para listar e resolver os eventos `reconciliation_required`, além de testes de integração/sandbox para confirmar o upsert e o comportamento de reentrega.
+
+
+## Décima primeira rodada — consulta segura do estado no retorno
+
+- A URL de retorno do Checkout Pro agora leva a referência UUID do pedido e uma assinatura HMAC-SHA256 calculada no servidor. A chave usada é `SUPABASE_SERVICE_ROLE_KEY`, que já é necessária no backend e não é exposta ao navegador. A assinatura funciona como uma capacidade de acesso limitada ao estado resumido daquele pedido, inclusive para checkout de visitante.
+- Criada `app/api/checkout/estado/route.ts`. A rota valida o formato da referência, compara a assinatura em tempo constante e consulta o pedido no Supabase com `service_role`. Se não houver assinatura válida, aceita somente sessão Supabase validada e filtra por `customer_user_id`. A resposta expõe apenas número do pedido, status de pagamento/entrega e data; não expõe endereço, telefone, e-mail, itens ou valores.
+- Se o comprador estiver autenticado e a assinatura da URL for válida, o link assinado funciona como autorização específica para aquela consulta. A URL completa deve ser tratada como privada; não compartilhar links de retorno publicamente.
+- A página `/checkout/retorno` agora lê a referência e assinatura, consulta a rota do servidor e tenta novamente por até cinco consultas espaçadas quando o status ainda está pendente. Só exibe “Pagamento confirmado” quando o estado salvo no pedido corresponde a um status aprovado reconhecido pelo servidor.
+- A página não usa `status`, `collection_status` ou outros parâmetros de retorno do navegador como prova de pagamento. O webhook continua sendo a origem da atualização do pedido; o retorno apenas lê o estado gravado.
+- A consulta não altera pedidos, estoque, cupons ou pagamentos. Não há chamada à API Mercado Pago nessa rota de leitura.
+- Limitação: a assinatura depende da chave `SUPABASE_SERVICE_ROLE_KEY`; se essa chave for rotacionada entre criação e abertura do link, o link antigo deixa de validar. A sessão autenticada continua sendo alternativa para pedidos vinculados a `customer_user_id`.
+- As compras autenticadas dependem do vínculo `customer_user_id` criado pela migration ainda não aplicada; até a migration ser testada/aplicada, a rota pode não localizar pedidos autenticados criados na base de produção atual. Compras de visitante usam a assinatura do retorno.
+- Essas mudanças estão apenas na branch. Não houve teste funcional, build, teste sandbox, aplicação da migration, alteração no Supabase de produção, merge, deploy de produção ou ativação de vendas.
