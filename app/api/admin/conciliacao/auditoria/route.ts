@@ -102,18 +102,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "A referência do comprovante deve ser um caminho interno privado, sem URL pública." }, { status: 400, headers: NO_STORE });
     }
 
-    const { data: event, error: eventError } = await auth.admin
-      .from("mercado_pago_webhook_events")
-      .select("notification_id,resource_id,processing_status")
-      .eq("notification_id", notificationId)
-      .eq("processing_status", "reconciliation_required")
-      .maybeSingle();
-
-    if (eventError) throw eventError;
-    if (!event || !event.resource_id) {
-      return NextResponse.json({ error: "Evento não encontrado ou não está mais pendente de conciliação." }, { status: 404, headers: NO_STORE });
-    }
-
     const { data: existing, error: existingError } = await auth.admin
       .from("mercado_pago_reconciliation_audit")
       .select("id,notification_id,admin_user_id")
@@ -126,6 +114,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, alreadyRecorded: true, id: existing.id }, { headers: NO_STORE });
       }
       return NextResponse.json({ error: "Esta chave de envio já foi utilizada." }, { status: 409, headers: NO_STORE });
+    }
+
+    const { data: event, error: eventError } = await auth.admin
+      .from("mercado_pago_webhook_events")
+      .select("notification_id,resource_id,processing_status")
+      .eq("notification_id", notificationId)
+      .eq("processing_status", "reconciliation_required")
+      .maybeSingle();
+
+    if (eventError) throw eventError;
+    if (!event || !event.resource_id) {
+      return NextResponse.json({ error: "Evento não encontrado ou não está mais pendente de conciliação." }, { status: 404, headers: NO_STORE });
     }
 
     const { data: inserted, error: insertError } = await auth.admin
