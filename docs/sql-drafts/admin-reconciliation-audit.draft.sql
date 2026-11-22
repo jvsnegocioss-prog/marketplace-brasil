@@ -65,7 +65,9 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.prevent_reconciliation_audit_mutation()
-  FROM PUBLIC, anon, authenticated, service_role;
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.prevent_reconciliation_audit_mutation()
+  TO service_role;
 
 CREATE TRIGGER mercado_pago_reconciliation_audit_immutable
 BEFORE UPDATE OR DELETE ON public.mercado_pago_reconciliation_audit
