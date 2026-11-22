@@ -220,3 +220,14 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - O Preview automático da Vercel para o commit documental anterior `8b533b7` foi encontrado em estado `READY`; isso não é evidência de teste sandbox nem validação funcional destas mudanças mais recentes.
 - As alterações desta rodada estão apenas na branch de preparação. Não houve teste de pagamento, chamada real ao Mercado Pago, aplicação de migration, alteração do Supabase de produção, merge, deploy de produção ou ativação de vendas.
 - Próximas validações: revisar o contrato exato do `config.online` no Preview, verificar a compilação dos novos arquivos, implementar consulta autenticada do estado do pedido e persistência de eventos de reconciliação, e então testar os estados de retorno e webhook com credenciais sandbox.
+
+
+## Décima rodada — trilha persistente para reembolso e contestação
+
+- Consulta somente leitura ao schema de produção confirmou que `public.mercado_pago_webhook_events` já existe, tem RLS habilitado, chave primária `notification_id`, campos `resource_id`, `request_id`, `notification_type`, `processing_status`, `last_error_code` e `last_received_at`, e concede INSERT/SELECT/UPDATE a `service_role` (sem acesso direto para `anon`/`authenticated`).
+- A constraint atual de `processing_status` aceita `received`, `processing`, `processed`, `failed` e `ignored`. A migration da branch agora amplia a lista para incluir `reconciliation_required`.
+- Para `refunded` e `charged_back`, o webhook passa a fazer upsert de um registro com `notification_id` baseado no `x-request-id`, `resource_id` igual ao ID da order Mercado Pago, `notification_type: "order"` e `last_error_code` específico do status.
+- Se a gravação falhar, o webhook responde HTTP 500 para permitir nova tentativa da notificação. Se for gravada, responde recebimento confirmado com `reconciliationRequired: true`. Nenhuma alteração de status do pedido ou estoque é feita automaticamente.
+- O uso de `x-request-id` como chave de registro identifica a entrega HTTP; reentregas que chegarem com outro request ID podem gerar linhas separadas para o mesmo recurso. Isso preserva a trilha de entregas, mas não substitui uma chave de evento nativa caso o Mercado Pago disponibilize uma no payload.
+- A consulta ao banco foi somente leitura. A constraint não foi alterada em produção, a migration continua não aplicada e não foram inseridos eventos de teste.
+- Ainda falta uma tela administrativa para listar e resolver os eventos `reconciliation_required`, além de testes de integração/sandbox para confirmar o upsert e o comportamento de reentrega.
