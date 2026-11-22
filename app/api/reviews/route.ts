@@ -137,10 +137,11 @@ export async function GET(request: Request) {
     ? "Não foi possível confirmar uma compra elegível para este produto."
     : "Entre na sua conta para verificar se você pode avaliar este produto.";
 
-  if (user?.email) {
+  const userEmail = user?.email;
+  if (userEmail) {
     // A autorização é calculada no servidor: somente uma compra deste produto,
     // paga e entregue, libera o formulário de avaliação.
-    const purchase = await validatePurchase(user.email, productId);
+    const purchase = await validatePurchase(userEmail, productId);
     canReview = !("error" in purchase);
     if ("error" in purchase) reviewAccessMessage = purchase.error;
     else reviewAccessMessage = "Compra confirmada. Você pode avaliar este produto.";
@@ -148,7 +149,7 @@ export async function GET(request: Request) {
     const { data: orders } = await supabaseAdmin
       .from("orders")
       .select("id")
-      .ilike("customer_email", user.email);
+      .ilike("customer_email", userEmail);
     const orderIds = (orders || []).map((order) => order.id);
     if (orderIds.length) {
       const { data: owned } = await supabaseAdmin
