@@ -30,5 +30,8 @@ jobs:
         run: npm install --no-package-lock
       - name: TypeScript validation
         run: npx tsc --noEmit
-      - name: Next.js production build
+      - name: Next.js production build (isolated placeholder config)
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://build-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-only-placeholder-anon-key
