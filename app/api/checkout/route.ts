@@ -18,20 +18,31 @@ type SupabaseAdminClient = ReturnType<typeof createClient<any>>;
 async function cancelOrder(
   supabaseAdmin: SupabaseAdminClient,
   orderId: string
-) {
+): Promise<{ confirmed: boolean; outcome?: string; message?: string }> {
   const rpc = supabaseAdmin.rpc as unknown as (
     functionName: string,
     args: { p_order_id: string }
-  ) => Promise<{ error: { message: string } | null }>;
+  ) => Promise<{
+    data: { outcome?: string } | null;
+    error: { message: string } | null;
+  }>;
 
-  const { error } = await rpc(
+  const { data, error } = await rpc(
     "cancel_unpaid_order_and_restore_stock",
     { p_order_id: orderId }
   );
 
   if (error) {
     console.error("ERRO AO RESTAURAR ESTOQUE:", error);
+    return { confirmed: false, message: error.message };
   }
+
+  const outcome = data?.outcome;
+  return {
+    confirmed: outcome === "cancelled" || outcome === "already_cancelled",
+    outcome,
+    message: outcome ? undefined : "A RPC não confirmou o resultado do cancelamento.",
+  };
 }
 
 export async function POST(request: Request) {
@@ -101,6 +112,7 @@ export async function POST(request: Request) {
 
     let verifiedCustomerEmail =
       typeof customerEmail === "string" ? customerEmail.trim() : "";
+    let authenticatedCustomerUserId: string | null = null;
 
     const authorization = request.headers.get("authorization") || "";
     if (authorization.startsWith("Bearer ")) {
@@ -115,8 +127,9 @@ export async function POST(request: Request) {
         );
       }
 
-      // Usa o e-mail confirmado da sessão, nunca um e-mail enviado livremente pelo navegador.
+      // Usa os dados confirmados da sessão, nunca os dados de identidade enviados livremente pelo navegador.
       verifiedCustomerEmail = customerAuth.user.email;
+      authenticatedCustomerUserId = customerAuth.user.id;
     }
 
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -143,6 +156,7 @@ export async function POST(request: Request) {
     const requestHash = createHash("sha256").update(JSON.stringify({
       customerName: customerName.trim(),
       customerEmail: verifiedCustomerEmail,
+      customerUserId: authenticatedCustomerUserId,
       customerPhone: customerPhone.trim(),
       deliveryAddress: deliveryAddress.trim(),
       couponCode: typeof couponCode === "string" ? couponCode.trim().toUpperCase() : null,
@@ -151,7 +165,7 @@ export async function POST(request: Request) {
     })).digest("hex");
 
     const { data: orderId, error: orderError } =
-      await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery", {
+      await supabaseAdmin.rpc("create_store_order_with_coupon_and_delivery_for_customer", {
         p_customer_name: customerName.trim(),
         p_customer_email: verifiedCustomerEmail,
         p_customer_phone: customerPhone.trim(),
@@ -161,6 +175,7 @@ export async function POST(request: Request) {
         p_items: normalizedItems,
         p_checkout_idempotency_key: checkoutIdempotencyKey,
         p_checkout_request_hash: requestHash,
+        p_customer_user_id: authenticatedCustomerUserId,
       });
 
     if (orderError || !orderId) {
@@ -188,15 +203,18 @@ export async function POST(request: Request) {
     if (fetchOrderError || !order) {
       console.error("ERRO AO BUSCAR PEDIDO:", fetchOrderError);
 
-      await cancelOrder(supabaseAdmin, orderId);
-      createdOrderId = null;
+      const cancellation = await cancelOrder(supabaseAdmin, orderId);
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
         {
-          error: "Falha ao consultar o pedido.",
-          detalhe: fetchOrderError?.message || "Pedido não encontrado.",
+          error: cancellation.confirmed
+            ? "Falha ao consultar o pedido; a reserva foi cancelada."
+            : "Falha ao consultar o pedido e não foi possível confirmar a liberação do estoque. Não refaça a compra; entre em contato com o suporte.",
+          orderId,
+          detalhe: cancellation.message || fetchOrderError?.message || "Pedido não encontrado.",
         },
-        { status: 500 }
+        { status: cancellation.confirmed ? 500 : 503 }
       );
     }
 
@@ -217,15 +235,18 @@ export async function POST(request: Request) {
     if (itemsError || !orderItems?.length) {
       console.error("ERRO AO BUSCAR ITENS:", itemsError);
 
-      await cancelOrder(supabaseAdmin, orderId);
-      createdOrderId = null;
+      const cancellation = await cancelOrder(supabaseAdmin, orderId);
+      if (cancellation.confirmed) createdOrderId = null;
 
       return NextResponse.json(
         {
-          error: "Falha ao consultar os itens do pedido.",
-          detalhe: itemsError?.message || "Nenhum item encontrado.",
+          error: cancellation.confirmed
+            ? "Falha ao consultar os itens; a reserva foi cancelada."
+            : "Falha ao consultar os itens e não foi possível confirmar a liberação do estoque. Não refaça a compra; entre em contato com o suporte.",
+          orderId,
+          detalhe: cancellation.message || itemsError?.message || "Nenhum item encontrado.",
         },
-        { status: 500 }
+        { status: cancellation.confirmed ? 500 : 503 }
       );
     }
 
@@ -378,7 +399,13 @@ export async function POST(request: Request) {
     // Depois do início da chamada externa, preservamos o pedido para que uma
     // repetição use a mesma chave idempotente e não gere um pagamento duplicado.
     if (createdOrderId && !mercadoPagoRequestStarted) {
-      await cancelOrder(supabaseAdmin, createdOrderId);
+      const cancellation = await cancelOrder(supabaseAdmin, createdOrderId);
+      if (!cancellation.confirmed) {
+        console.error("RESERVA DO PEDIDO PERMANECE PENDENTE DE RECONCILIAÇÃO:", {
+          orderId: createdOrderId,
+          message: cancellation.message,
+        });
+      }
     }
 
     return NextResponse.json(
