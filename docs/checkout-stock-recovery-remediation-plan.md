@@ -153,3 +153,14 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Também existe a versão legada de 9 argumentos com chave/hash de idempotência. A nova RPC de 10 argumentos usa nome próprio e chama diretamente a RPC-base de 7 argumentos; não substitui nem altera a versão legada.
 - A consulta foi somente leitura. Nenhuma função, tabela, permissão ou dado de produção foi alterado.
 - Ainda não foi possível provar em ambiente descartável que a migration completa executa e reverte corretamente. A validação dinâmica continua bloqueada até existir banco de teste equivalente.
+
+## Sexta rodada — bloqueio de contrato na integração Mercado Pago (documentação oficial)
+
+- Revisada a referência oficial do endpoint Checkout Transparente `POST /v1/orders`: https://www.mercadopago.com.br/developers/pt/reference/online-payments/checkout-api/create-order/post
+- A documentação descreve `processing_mode` como `automatic` ou `manual`. O modo automático processa a transação em uma etapa e exige os dados da transação; o modo manual permite criar uma order em etapas e processá-la depois.
+- O código desta branch envia `processing_mode: "manual"`, `capture_mode: "automatic_async"` e não envia `transactions`. A documentação informa que `transactions` é opcional em modo manual, mas não documenta `checkout_url` como campo da resposta de criação.
+- A rota, porém, considera a criação bem-sucedida somente quando a resposta contém `checkout_url`, e depois devolve esse link ao navegador. Portanto, o contrato usado pela rota não está demonstrado pela referência oficial do endpoint.
+- A documentação oficial mostra que Checkout Transparente processa pagamentos por meio de dados de transação (por exemplo, método de pagamento e token) ou por um fluxo manual com etapas posteriores. Ela não sustenta que criar uma order manual sem transação gere uma URL hospedada de checkout.
+- **Bloqueio:** não mudar `processing_mode`, payload, endpoint nem interface até decidir e validar qual produto/fluxo Mercado Pago a loja pretende usar: Checkout Pro com preferência/URL de checkout hospedada, ou Checkout Transparente com coleta e envio dos dados do meio de pagamento.
+- A referência de migração oficial também informa que `checkout_url` não é um campo equivalente documentado na resposta da Orders API; a resposta traz ID, status, transações e demais campos próprios da order.
+- Nenhuma chamada real à API do Mercado Pago foi feita nesta revisão. Nenhuma credencial foi acessada. Nenhuma alteração no Supabase de produção.
