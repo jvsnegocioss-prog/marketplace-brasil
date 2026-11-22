@@ -5705,3 +5705,100 @@ button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
   border-radius: 5px;
 }
+
+
+/* NOVASHOPP STORE — enquadramento consistente das fotos em desktop e celular */
+.product-image > a {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.product-photo,
+.product-card:hover .product-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: none;
+}
+.detail-photo-frame {
+  position: relative;
+  min-width: 0;
+}
+.detail-image-open {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+.detail-image-open .detail-product-photo {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+.detail-image-lightbox {
+  padding: 60px 16px 72px;
+}
+.detail-image-lightbox-photo {
+  max-width: 100%;
+  max-height: calc(100dvh - 140px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+.review-access-notice {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e4eaf3;
+  border-radius: 13px;
+  background: #f7f9fc;
+  color: #344762;
+}
+.review-access-notice strong {
+  display: block;
+  color: #102747;
+  font-size: 13px;
+}
+.review-access-notice p {
+  margin-top: 7px;
+  color: #68778d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.review-access-link {
+  display: inline-flex;
+  margin-top: 12px;
+  color: #315b91;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: underline;
+}
+@media (max-width: 760px) {
+  .detail-photo-frame {
+    width: 100%;
+    height: clamp(280px, 92vw, 440px);
+    min-height: 280px;
+    padding: 10px;
+  }
+  .detail-image-open { min-height: 0; }
+  .detail-media-thumbnails {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 2px 0 7px;
+    scrollbar-width: thin;
+  }
+  .detail-media-thumb { flex: 0 0 66px; }
+  .detail-image-lightbox { padding: 64px 10px 76px; }
+  .detail-image-lightbox-photo { max-height: calc(100dvh - 150px); }
+}
