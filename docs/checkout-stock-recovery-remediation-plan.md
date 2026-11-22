@@ -164,3 +164,26 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - **Bloqueio:** não mudar `processing_mode`, payload, endpoint nem interface até decidir e validar qual produto/fluxo Mercado Pago a loja pretende usar: Checkout Pro com preferência/URL de checkout hospedada, ou Checkout Transparente com coleta e envio dos dados do meio de pagamento.
 - A referência de migração oficial também informa que `checkout_url` não é um campo equivalente documentado na resposta da Orders API; a resposta traz ID, status, transações e demais campos próprios da order.
 - Nenhuma chamada real à API do Mercado Pago foi feita nesta revisão. Nenhuma credencial foi acessada. Nenhuma alteração no Supabase de produção.
+
+
+
+## Sétima rodada — correção da análise do contrato: Checkout Pro via Orders API
+
+- **Correção importante da sexta rodada:** a conclusão anterior de que a Orders API não documentava `checkout_url` foi incorreta porque a referência consultada era a do Checkout Transparente. A documentação oficial atual separa explicitamente Checkout Pro via Orders API e Checkout Transparente via Orders API.
+- A documentação oficial do Checkout Pro via Orders API confirma que:
+  - `POST https://api.mercadopago.com/v1/orders` é o endpoint de criação.
+  - `type: "online"` e `processing_mode: "manual"` são os valores exigidos para Checkout Pro.
+  - `capture_mode: "automatic_async"` é uma opção documentada.
+  - `items`, `total_amount`, `external_reference` e `payer.email` seguem o formato usado na rota atual.
+  - A resposta contém `id` e `checkout_url`, e o comprador deve ser redirecionado para essa URL.
+- Portanto, o payload e o contrato central de criação já presentes em `app/api/checkout/route.ts` são compatíveis, em princípio, com o Checkout Pro via Orders API. Não é necessário migrar para Preferences API; a documentação oficial recomenda o caminho Orders API para novas integrações.
+- Referências oficiais corretas:
+  - Criar order Checkout Pro: https://www.mercadopago.com.br/developers/pt/docs/checkout-pro-orders/create-order
+  - URLs de retorno: https://www.mercadopago.com.br/developers/pt/docs/checkout-pro-orders/web-integration/configure-back-urls
+  - Notificações Checkout Pro: https://www.mercadopago.com.br/developers/pt/docs/checkout-pro-orders/notifications
+  - Status da order: https://www.mercadopago.com.br/developers/pt/docs/checkout-pro-orders/payment-management/status/order-status
+- A documentação de URLs de retorno recomenda configurar `config.online.success_url`, `failure_url`, `pending_url` e, quando desejado, `auto_return`. O código atual ainda não envia esse objeto; é uma melhoria de integração a avaliar após identificar a URL pública correta e as rotas de retorno existentes.
+- A documentação de notificações Checkout Pro mostra evento `type: "order"`, dados em `data.id`, status e valores, e orienta consultar `GET /v1/orders/{order_id}` antes de atualizar o sistema. O webhook atual já consulta a order pela API, valida assinatura, referência externa, vínculo, valores e transações; esses controles devem ser preservados e confrontados com o formato oficial em testes.
+- A sexta rodada permanece no histórico para rastreabilidade, mas seu bloqueio sobre ausência de `checkout_url` fica expressamente revogado por esta correção documental.
+- Próxima etapa: revisar o frontend que consome `checkoutUrl`, definir e validar URLs de retorno no domínio correto, revisar o webhook contra o payload oficial Checkout Pro Orders e preparar testes com credenciais de teste. Nenhuma credencial foi acessada e nenhuma chamada de pagamento foi feita.
+- Esta atualização é documental. Não altera rotas, banco, variáveis de ambiente, produção ou estado de vendas.
