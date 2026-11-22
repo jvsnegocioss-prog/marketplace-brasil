@@ -175,8 +175,9 @@ BEGIN
     'public.cancel_unpaid_order_and_restore_stock(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'Browser role can execute privileged cancel RPC';
   END IF;
-  IF NOT has_table_privilege('anon','public.order_stock_restorations','SELECT') = false THEN
-    RAISE EXCEPTION 'Anonymous role unexpectedly reads restoration ledger';
+  IF has_table_privilege('anon','public.order_stock_restorations','SELECT')
+     OR has_table_privilege('authenticated','public.order_stock_restorations','SELECT') THEN
+    RAISE EXCEPTION 'Browser role unexpectedly reads restoration ledger';
   END IF;
 END;
 $$;
