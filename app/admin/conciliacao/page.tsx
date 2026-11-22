@@ -154,7 +154,7 @@ export default function AdminReconciliationPage() {
                   {lookups[event.notificationId].error ? <p role="alert" style={{ color: "#9f1239", margin: 0 }}>{lookups[event.notificationId].error}</p> : (
                     <>
                       <strong style={{ color: lookups[event.notificationId].correlation?.matched ? "#166534" : "#92400e" }}>
-                        {lookups[event.notificationId].correlation?.matched ? "Vínculo conferido: pedido e ordem correspondem" : "Vínculo não confirmado — análise manual necessária"}
+                        {lookups[event.notificationId].correlation?.matched ? "Referência, identificador, moeda e valor original conferem" : "Vínculo não confirmado — análise manual necessária"}
                       </strong>
                       {lookups[event.notificationId].correlation?.reason && <p>{lookups[event.notificationId].correlation?.reason}</p>}
                       {lookups[event.notificationId].mercadoPago && <p style={{ marginBottom: 6 }}>Mercado Pago: estado <strong>{lookups[event.notificationId].mercadoPago?.status}</strong> · moeda {lookups[event.notificationId].mercadoPago?.currency || "não informada"} · total {lookups[event.notificationId].mercadoPago?.totalAmount ?? "não informado"} · pago {lookups[event.notificationId].mercadoPago?.paidAmount ?? "não informado"}</p>}
