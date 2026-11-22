@@ -144,3 +144,12 @@ Antes de codificar, confirmar valores de status existentes, constraints/FKs e po
 - Também foi incluída validação defensiva para não restaurar quantidades nulas ou menores/iguais a zero.
 - O banco de produção não foi alterado. A correção foi feita somente no arquivo SQL da branch.
 - Ainda é obrigatório testar a migration inteira em um clone/ambiente descartável com schema equivalente, inclusive o comportamento de rollback e a permissão de execução final.
+
+## Quinta rodada — confirmação somente leitura dos tipos e da RPC de criação
+
+- Consulta ao catálogo de produção confirmou que `products.stock` é `integer NOT NULL DEFAULT 0`, `order_items.quantity` é `integer NOT NULL DEFAULT 1`, `discount_coupons.usage_count` é `integer NOT NULL DEFAULT 0`, e `order_items.product_id` permanece anulável por causa do vínculo histórico com produto.
+- Os tipos usados pela RPC de cancelamento preparada são compatíveis com essas colunas. A verificação de quantidade nula continua defensiva; a verificação de quantidade menor/igual a zero permanece necessária.
+- Foi confirmada a existência da RPC-base de 7 argumentos `create_store_order_with_coupon_and_delivery(text,text,text,text,jsonb,text,uuid)`, com retorno UUID, proprietária `postgres`, SECURITY DEFINER e execução concedida a `service_role`, não a `anon` ou `authenticated`.
+- Também existe a versão legada de 9 argumentos com chave/hash de idempotência. A nova RPC de 10 argumentos usa nome próprio e chama diretamente a RPC-base de 7 argumentos; não substitui nem altera a versão legada.
+- A consulta foi somente leitura. Nenhuma função, tabela, permissão ou dado de produção foi alterado.
+- Ainda não foi possível provar em ambiente descartável que a migration completa executa e reverte corretamente. A validação dinâmica continua bloqueada até existir banco de teste equivalente.
