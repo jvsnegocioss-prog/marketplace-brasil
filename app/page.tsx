@@ -657,9 +657,8 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        if (response.status === 409) {
-          localStorage.removeItem(idempotencyStorageKey);
-        }
+        // Mantém a chave para que uma repetição da mesma tentativa não crie
+        // outro pedido enquanto o estado do primeiro ainda não foi confirmado.
         setCheckoutMessage(
           result.error || "Não foi possível iniciar o pagamento."
         );
@@ -676,7 +675,8 @@ export default function Home() {
         return;
       }
 
-      localStorage.removeItem(idempotencyStorageKey);
+      // Não remover a chave antes de sair para o Mercado Pago: se o usuário
+      // retornar ou a navegação falhar, a repetição reutiliza a mesma tentativa.
       window.location.href = result.checkoutUrl;
     } catch (error) {
       console.error("Erro ao iniciar checkout:", error);
