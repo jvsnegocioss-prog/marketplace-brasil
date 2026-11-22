@@ -30,6 +30,10 @@ BEGIN
      OR NOT has_table_privilege('service_role', 'public.mercado_pago_reconciliation_audit', 'INSERT') THEN
     RAISE EXCEPTION 'service_role is missing required table privileges';
   END IF;
+  IF has_table_privilege('service_role', 'public.mercado_pago_reconciliation_audit', 'UPDATE')
+     OR has_table_privilege('service_role', 'public.mercado_pago_reconciliation_audit', 'DELETE') THEN
+    RAISE EXCEPTION 'service_role unexpectedly has mutation privileges';
+  END IF;
   IF NOT has_function_privilege('service_role', 'public.prevent_reconciliation_audit_mutation()', 'EXECUTE') THEN
     RAISE EXCEPTION 'service_role is missing trigger function EXECUTE';
   END IF;
@@ -45,12 +49,12 @@ VALUES
    'reviewed_pending', 'Registro de teste para validar a trilha administrativa.', 
    '00000000-0000-0000-0000-000000000101');
 
+RESET ROLE;
+
+-- Verify the immutable trigger using the table owner, who has UPDATE/DELETE
+-- privileges in this disposable database. Browser/service roles do not.
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM public.mercado_pago_reconciliation_audit) <> 1 THEN
-    RAISE EXCEPTION 'service_role could not read inserted audit row';
-  END IF;
-
   BEGIN
     UPDATE public.mercado_pago_reconciliation_audit
       SET decision_note = 'Tentativa de alteração do histórico';
@@ -67,6 +71,15 @@ BEGIN
     IF SQLERRM = 'DELETE unexpectedly succeeded' THEN RAISE; END IF;
     IF SQLERRM <> 'Registros de auditoria são imutáveis' THEN RAISE; END IF;
   END;
+END;
+$$;
+
+SET ROLE service_role;
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM public.mercado_pago_reconciliation_audit) <> 1 THEN
+    RAISE EXCEPTION 'Audit row count changed unexpectedly';
+  END IF;
 
   BEGIN
     INSERT INTO public.mercado_pago_reconciliation_audit
