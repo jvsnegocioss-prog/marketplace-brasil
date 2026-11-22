@@ -14,6 +14,15 @@ type ReconciliationEvent = {
   receivedAt: string | null;
 };
 
+type LookupResult = {
+  error?: string;
+  event?: { reason: string | null; resourceId: string };
+  mercadoPago?: { id: string; status: string; currency: string | null; totalAmount: string | number | null; paidAmount: string | number | null };
+  storeOrder?: { id: string; orderNumber: string | null; status: string; total: string | number } | null;
+  correlation?: { matched: boolean; reason?: string; orderFound?: boolean; externalReferenceMatchesOrder?: boolean; mercadoPagoIdMatches?: boolean; currencyMatches?: boolean; amountMatches?: boolean };
+  notice?: string;
+};
+
 function formatDate(value: string | null) {
   if (!value) return "Data não informada";
   const date = new Date(value);
@@ -33,6 +42,8 @@ export default function AdminReconciliationPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [lookups, setLookups] = useState<Record<string, LookupResult>>({});
+  const [lookingUp, setLookingUp] = useState<string | null>(null);
 
   const loadEvents = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true);
@@ -63,6 +74,27 @@ export default function AdminReconciliationPage() {
       setRefreshing(false);
     }
   }, []);
+
+  async function lookupEvent(notificationId: string) {
+    setLookingUp(notificationId);
+    setLookups((current) => ({ ...current, [notificationId]: {} }));
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente.");
+      const response = await fetch("/api/admin/conciliacao/detalhe?notificationId=" + encodeURIComponent(notificationId), {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store",
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Falha ao consultar a ordem.");
+      setLookups((current) => ({ ...current, [notificationId]: result }));
+    } catch (cause) {
+      setLookups((current) => ({ ...current, [notificationId]: { error: cause instanceof Error ? cause.message : "Falha na consulta." } }));
+    } finally {
+      setLookingUp(null);
+    }
+  }
 
   useEffect(() => {
     void loadEvents();
@@ -112,6 +144,27 @@ export default function AdminReconciliationPage() {
               <div><dt style={{ color: "#64748b", fontSize: 12 }}>Tipo</dt><dd style={{ margin: "4px 0" }}>{event.notificationType || "Não informado"}</dd></div>
               <div><dt style={{ color: "#64748b", fontSize: 12 }}>Recebido em</dt><dd style={{ margin: "4px 0" }}>{formatDate(event.receivedAt)}</dd></div>
             </dl>
+            <div style={{ marginTop: 14 }}>
+              <button type="button" onClick={() => void lookupEvent(event.notificationId)} disabled={lookingUp === event.notificationId}
+                style={{ padding: "9px 13px", border: "1px solid #173b68", borderRadius: 8, background: "#fff", color: "#173b68", fontWeight: 700, cursor: "pointer" }}>
+                {lookingUp === event.notificationId ? "Consultando..." : "Consultar ordem e pedido correspondente"}
+              </button>
+              {lookups[event.notificationId] && (
+                <section aria-live="polite" style={{ marginTop: 12, padding: 14, borderRadius: 10, background: "#f8fafc", border: "1px solid #dbe3ef" }}>
+                  {lookups[event.notificationId].error ? <p role="alert" style={{ color: "#9f1239", margin: 0 }}>{lookups[event.notificationId].error}</p> : (
+                    <>
+                      <strong style={{ color: lookups[event.notificationId].correlation?.matched ? "#166534" : "#92400e" }}>
+                        {lookups[event.notificationId].correlation?.matched ? "Vínculo conferido: pedido e ordem correspondem" : "Vínculo não confirmado — análise manual necessária"}
+                      </strong>
+                      {lookups[event.notificationId].correlation?.reason && <p>{lookups[event.notificationId].correlation?.reason}</p>}
+                      {lookups[event.notificationId].mercadoPago && <p style={{ marginBottom: 6 }}>Mercado Pago: estado <strong>{lookups[event.notificationId].mercadoPago?.status}</strong> · moeda {lookups[event.notificationId].mercadoPago?.currency || "não informada"} · total {lookups[event.notificationId].mercadoPago?.totalAmount ?? "não informado"} · pago {lookups[event.notificationId].mercadoPago?.paidAmount ?? "não informado"}</p>}
+                      {lookups[event.notificationId].storeOrder && <p style={{ marginTop: 6 }}>Loja: pedido <strong>{lookups[event.notificationId].storeOrder?.orderNumber || lookups[event.notificationId].storeOrder?.id}</strong> · estado <strong>{lookups[event.notificationId].storeOrder?.status}</strong> · total {lookups[event.notificationId].storeOrder?.total}</p>}
+                      <p style={{ marginBottom: 0, color: "#64748b", fontSize: 12 }}>{lookups[event.notificationId].notice || "Consulta somente leitura."}</p>
+                    </>
+                  )}
+                </section>
+              )}
+            </div>
           </article>
         ))}
       </div>
