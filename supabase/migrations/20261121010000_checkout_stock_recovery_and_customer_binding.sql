@@ -90,6 +90,12 @@ CREATE TABLE IF NOT EXISTS public.order_stock_restorations (
 ALTER TABLE public.order_stock_restorations ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.order_stock_restorations FROM PUBLIC, anon, authenticated;
 
+-- Production currently has this exact signature returning boolean.
+-- PostgreSQL cannot change a function's return type with CREATE OR REPLACE;
+-- drop the old signature in this migration transaction before recreating it
+-- with the JSONB outcome contract consumed by the updated API route.
+DROP FUNCTION IF EXISTS public.cancel_unpaid_order_and_restore_stock(uuid);
+
 CREATE OR REPLACE FUNCTION public.cancel_unpaid_order_and_restore_stock(
   p_order_id uuid
 )
@@ -145,6 +151,10 @@ BEGIN
     ORDER BY oi.product_id
   LOOP
     v_item_count := v_item_count + 1;
+
+    IF v_item.quantity IS NULL OR v_item.quantity <= 0 THEN
+      RAISE EXCEPTION 'Não é possível restaurar o estoque: quantidade inválida';
+    END IF;
 
     IF v_item.product_id IS NULL THEN
       RAISE EXCEPTION 'Não é possível restaurar o estoque: item sem vínculo com produto';
