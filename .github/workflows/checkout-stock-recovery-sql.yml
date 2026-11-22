@@ -1,0 +1,43 @@
+name: Disposable checkout stock recovery migration test
+
+on:
+  push:
+    branches:
+      - fix/checkout-stock-recovery
+    paths:
+      - 'supabase/migrations/20261121010000_checkout_stock_recovery_and_customer_binding.sql'
+      - 'supabase/tests/checkout-stock-recovery.sql'
+      - '.github/workflows/checkout-stock-recovery-sql.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: checkout_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d checkout_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v4
+      - name: Apply migration and run checkout integrity tests
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: checkout_test
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/checkout-stock-recovery.sql
