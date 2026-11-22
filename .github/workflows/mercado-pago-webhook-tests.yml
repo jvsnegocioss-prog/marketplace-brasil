@@ -1,0 +1,37 @@
+name: Mercado Pago webhook decision tests
+
+on:
+  push:
+    branches:
+      - fix/checkout-stock-recovery
+    paths:
+      - 'app/api/mercadopago/webhook/route.ts'
+      - 'lib/mercado-pago-webhook-helpers.ts'
+      - 'tests/mercado-pago-webhook-helpers.test.cjs'
+      - '.github/workflows/mercado-pago-webhook-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  webhook-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated remediation branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install --no-package-lock
+      - name: Compile production webhook helpers
+        run: |
+          mkdir -p .test-build
+          npx tsc lib/mercado-pago-webhook-helpers.ts --target ES2022 --module commonjs --moduleResolution node --outDir .test-build --skipLibCheck --types node
+      - name: Run Mercado Pago response simulations
+        run: node --test tests/mercado-pago-webhook-helpers.test.cjs
+      - name: Remove generated test output
+        if: always()
+        run: rm -rf .test-build
