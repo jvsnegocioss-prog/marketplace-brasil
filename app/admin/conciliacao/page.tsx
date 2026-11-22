@@ -215,9 +215,9 @@ export default function AdminReconciliationPage() {
       </header>
 
       <section style={{ border: "1px solid #dbe3ef", borderRadius: 12, padding: 16, margin: "18px 0", background: "#f8fafc" }}>
-        <strong>Somente consulta</strong>
+        <strong>Consulta e registro de análise</strong>
         <p style={{ marginBottom: 0, color: "#475569" }}>
-          Esta tela não altera pedidos, pagamentos, estoque, cupons ou o estado dos eventos. A análise e a resolução financeira continuam manuais.
+          Esta tela permite registrar o histórico administrativo, mas não altera pedidos, pagamentos, estoque, cupons ou o estado dos eventos. A resolução financeira continua manual e separada.
         </p>
       </section>
 
