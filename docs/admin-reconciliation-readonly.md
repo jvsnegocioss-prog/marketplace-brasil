@@ -25,3 +25,21 @@ Branch: `fix/checkout-stock-recovery`
 - Comparação com a revisão aprovada `6abaaac027777f967ab77aec9981cd0572878bd6`: branch com 38 commits à frente e zero atrás.
 - Os deployments automáticos Vercel correspondentes aos dois commits desta etapa foram cancelados para evitar Preview parcial.
 - Não houve build validado, teste funcional, teste de autorização, consulta a dados reais da tabela por esta tela, aplicação de migration, alteração no Supabase de produção, merge ou deploy de produção.
+
+
+## Segunda etapa — conferência técnica sob demanda
+
+- Adicionado atalho “Conciliação financeira” à navegação do painel administrativo.
+- Adicionada a rota `GET /api/admin/conciliacao/detalhe?notificationId=...`, com a mesma verificação de sessão e permissão administrativa.
+- A rota lê o evento pendente, consulta a ordem no Mercado Pago usando `MERCADO_PAGO_ACCESS_TOKEN` somente no servidor e compara a referência externa, o identificador vinculado, a moeda BRL e o valor original com o pedido da loja.
+- A interface permite abrir a conferência de cada evento e mostra o estado reportado pelo Mercado Pago e o estado/valor do pedido da loja.
+- A conferência é somente leitura e sob demanda. Não confirma liquidação, estorno ou resolução financeira; não atualiza pedidos nem eventos.
+- Se o token Mercado Pago não estiver configurado no ambiente, a consulta retorna indisponibilidade sem expor credenciais.
+- Divergência, ausência de pedido ou referência inválida nunca é corrigida automaticamente.
+
+## Limites que permanecem
+
+- Não há botão para resolver, baixar, descartar ou reprocessar eventos.
+- Não existe trilha de auditoria de resolução ainda; isso exige desenho próprio, tabela/registro de auditoria e autorização antes de qualquer alteração.
+- Não foram executados build, testes automatizados, teste sandbox Mercado Pago ou testes de permissão.
+- Nenhuma migration foi aplicada; nenhum dado de produção foi alterado.
