@@ -276,6 +276,23 @@ export default function Home() {
   useEffect(() => {
     loadProducts();
 
+    // Mantém o estoque da vitrine sincronizado após reservas, cancelamentos
+    // e liberações feitas em outra sessão ou pelo painel administrativo.
+    const refreshProducts = () => {
+      if (document.visibilityState === "visible") void loadProducts();
+    };
+    const productStockChannel = supabase
+      .channel("store-products-stock")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => { void loadProducts(); }
+      )
+      .subscribe();
+
+    document.addEventListener("visibilitychange", refreshProducts);
+    window.addEventListener("focus", refreshProducts);
+
     // Se o cliente já estiver autenticado, aproveita os dados da conta no checkout.
     supabase.auth.getSession().then(({ data }) => {
       const accountUser = data.session?.user;
@@ -310,7 +327,12 @@ export default function Home() {
       const metadata = session?.user?.user_metadata;
       setCustomerAvatarUrl(typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "");
     });
-    return () => authListener.subscription.unsubscribe();
+    return () => {
+      authListener.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", refreshProducts);
+      window.removeEventListener("focus", refreshProducts);
+      void supabase.removeChannel(productStockChannel);
+    };
   }, []);
 
   useEffect(() => {
