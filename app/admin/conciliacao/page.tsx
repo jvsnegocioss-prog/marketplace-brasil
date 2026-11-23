@@ -67,6 +67,15 @@ function reasonLabel(value: string | null) {
   return value || "Motivo não classificado";
 }
 
+type ReconciliationRunSummary = {
+  checked: number;
+  approved: number;
+  cancelledAndStockRestored: number;
+  stillPending: number;
+  manualReview: number;
+  errors: number;
+};
+
 export default function AdminReconciliationPage() {
   const [events, setEvents] = useState<ReconciliationEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +89,9 @@ export default function AdminReconciliationPage() {
   const [auditSaving, setAuditSaving] = useState<string | null>(null);
   const [auditMessages, setAuditMessages] = useState<Record<string, string>>({});
   const [submissionKeys, setSubmissionKeys] = useState<Record<string, string>>({});
+  const [runningReconciliation, setRunningReconciliation] = useState(false);
+  const [runSummary, setRunSummary] = useState<ReconciliationRunSummary | null>(null);
+  const [runMessage, setRunMessage] = useState("");
 
   const loadEvents = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true);
@@ -110,6 +122,31 @@ export default function AdminReconciliationPage() {
       setRefreshing(false);
     }
   }, []);
+
+  async function runPendingReconciliation() {
+    setRunningReconciliation(true);
+    setRunSummary(null);
+    setRunMessage("");
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (sessionError || !token) throw new Error("Sua sessão expirou. Entre novamente no painel.");
+      const response = await fetch("/api/admin/orders/reconcile", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível conferir os pedidos.");
+      setRunSummary(result.summary || null);
+      setRunMessage(result.message || "Conferência concluída.");
+      await loadEvents(true);
+    } catch (cause) {
+      setRunMessage(cause instanceof Error ? cause.message : "Falha ao conferir pedidos pendentes.");
+    } finally {
+      setRunningReconciliation(false);
+    }
+  }
 
   async function lookupEvent(notificationId: string) {
     setLookingUp(notificationId);
@@ -213,6 +250,28 @@ export default function AdminReconciliationPage() {
         </div>
         <Link href="/admin" style={{ color: "#173b68", fontWeight: 700 }}>Voltar ao painel</Link>
       </header>
+
+      <section style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: 16, margin: "18px 0", background: "#fff" }}>
+        <h2 style={{ marginTop: 0 }}>Conferir pedidos com pagamento pendente</h2>
+        <p style={{ color: "#475569" }}>
+          Consulta no Mercado Pago pedidos aguardando há pelo menos 10 minutos. Pagamentos confirmados podem ser aprovados; cancelamentos ou falhas confirmados podem liberar o estoque. Pagamentos ainda pendentes permanecem reservados.
+        </p>
+        <button type="button" onClick={() => void runPendingReconciliation()} disabled={runningReconciliation}
+          style={{ padding: "11px 16px", border: 0, borderRadius: 8, background: runningReconciliation ? "#94a3b8" : "#173b68", color: "#fff", fontWeight: 700, cursor: runningReconciliation ? "wait" : "pointer" }}>
+          {runningReconciliation ? "Consultando Mercado Pago..." : "Conferir pedidos pendentes agora"}
+        </button>
+        {runMessage && <p role="status" aria-live="polite" style={{ marginBottom: 0, color: runSummary ? "#166534" : "#9f1239" }}>{runMessage}</p>}
+        {runSummary && (
+          <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 0 }}>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Consultados</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.checked}</dd></div>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Pagamentos aprovados</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.approved}</dd></div>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Cancelados / estoque restaurado</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.cancelledAndStockRestored}</dd></div>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Ainda pendentes</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.stillPending}</dd></div>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Revisão manual</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.manualReview}</dd></div>
+            <div><dt style={{ color: "#64748b", fontSize: 12 }}>Erros de consulta</dt><dd style={{ margin: "4px 0", fontWeight: 800 }}>{runSummary.errors}</dd></div>
+          </dl>
+        )}
+      </section>
 
       <section style={{ border: "1px solid #dbe3ef", borderRadius: 12, padding: 16, margin: "18px 0", background: "#f8fafc" }}>
         <strong>Consulta e registro de análise</strong>
