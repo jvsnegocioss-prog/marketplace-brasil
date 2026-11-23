@@ -40,6 +40,8 @@ export function classifyMercadoPagoOrderStatus(status: unknown): MercadoPagoWebh
 export function validateProcessedPayment(
   storeTotal: unknown,
   mercadoPagoOrder: {
+    currency?: unknown;
+    /** Compatibilidade com respostas antigas; a Orders API atual usa `currency`. */
     currency_id?: unknown;
     total_amount?: unknown;
     total_paid_amount?: unknown;
@@ -58,7 +60,8 @@ export function validateProcessedPayment(
       (payment as { status?: unknown }).status === "processed"
     );
 
-  if (mercadoPagoOrder.currency_id !== "BRL") return { valid: false, reason: "currency_mismatch" };
+  const currency = mercadoPagoOrder.currency ?? mercadoPagoOrder.currency_id;
+  if (currency !== "BRL") return { valid: false, reason: "currency_mismatch" };
   if (expectedCents === null || orderAmountCents === null || paidAmountCents === null) {
     return { valid: false, reason: "invalid_amount" };
   }
