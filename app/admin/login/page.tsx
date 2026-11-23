@@ -17,13 +17,26 @@ export default function AdminLogin() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: loginError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
 
-    if (error) {
+    if (loginError) {
       setError("E-mail ou senha incorretos. Confira seus dados e tente novamente.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: isAdmin, error: permissionError } = await supabase.rpc(
+      "is_marketplace_admin"
+    );
+
+    if (permissionError || isAdmin !== true) {
+      await supabase.auth.signOut();
+      setError(
+        "Acesso negado. Somente usuários administradores autorizados podem entrar no painel."
+      );
       setLoading(false);
       return;
     }
@@ -75,7 +88,7 @@ export default function AdminLogin() {
             className="customer-account-submit"
             disabled={loading}
           >
-            {loading ? "Entrando..." : "Entrar no painel"}
+            {loading ? "Verificando acesso..." : "Entrar no painel"}
           </button>
         </form>
 
