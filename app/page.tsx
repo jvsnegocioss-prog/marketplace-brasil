@@ -969,6 +969,59 @@ export default function Home() {
           </div>
         </section>
       )}
+      <section
+        aria-label="Acompanhe seu pedido"
+        style={{
+          maxWidth: 1240,
+          width: "calc(100% - 32px)",
+          margin: "22px auto 28px",
+          padding: "clamp(20px, 3vw, 30px)",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 18,
+          border: "1px solid #dbe5f2",
+          borderLeft: "5px solid #ffc928",
+          borderRadius: 18,
+          background: "linear-gradient(115deg, #f5f8ff 0%, #ffffff 100%)",
+          boxShadow: "0 10px 28px rgba(7, 27, 67, .07)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 15, minWidth: 0 }}>
+          <span aria-hidden="true" style={{
+            display: "grid", placeItems: "center", flex: "0 0 52px",
+            width: 52, height: 52, borderRadius: 14,
+            background: "#fff3c4", color: "#9a7100",
+          }}>
+            <Truck size={27} />
+          </span>
+          <div>
+            <span style={{ display: "block", color: "#9a7100", fontSize: 11, fontWeight: 900, letterSpacing: 1.5 }}>
+              ACOMPANHAMENTO DE ENTREGA
+            </span>
+            <h2 style={{ margin: "5px 0 3px", color: "#102a56", fontSize: "clamp(18px, 2.5vw, 22px)", fontWeight: 850 }}>
+              Acompanhe seu pedido
+            </h2>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>
+              Consulte as etapas e atualizações da sua entrega.
+            </p>
+          </div>
+        </div>
+        <a
+          href="/acompanhar"
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            gap: 9, minHeight: 48, padding: "12px 20px",
+            borderRadius: 10, background: "#102f5c", color: "#ffffff",
+            fontWeight: 800, fontSize: 14, textDecoration: "none",
+            boxShadow: "0 5px 14px rgba(16, 47, 92, .16)",
+          }}
+        >
+          Acompanhar meu pedido <ArrowRight size={18} />
+        </a>
+      </section>
+
       <section className="products-section" id="produtos">
         <div className="section-heading">
           <div>
